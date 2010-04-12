@@ -1,22 +1,63 @@
-$|=1;
-$outdir = $ARGV[0];
-$chunk = $ARGV[1];
-$paired_end = "true";
-if($ARGV[2] eq "-single") {
-    $paired_end = "false";
+#/usr/bin/perl
+
+if(@ARGV != 8) {
+    print STDERR 
+"
+Usage: make_GU_and_TU.pl -infile NAME -gufile NAME -tufile NAME -type <single|paired>
+
+  Where: -infile is the file output from bowtie
+         -gufile is the file to be output containing unique genome alignments
+         -gnufile is the file to be output containing non-nique genome alignments
+         -type is 'single' for single-end reads and 'paired' for paired-end reads
+
+";
+    exit(1);
 }
+
+for($i=0; $i<@ARGV; $i++) {
+    $optionrecognized = 1;
+    if($ARGV[$i] eq "-infile") {
+	$i++;
+	$infile = $ARGV[$i];
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-gufile") {
+	$i++;
+	$outfile1 = $ARGV[$i];
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-gnufile") {
+	$i++;
+	$outfile2 = $ARGV[$i];
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-type") {
+	if($ARGV[$i+1] eq "single") {
+	    $paired_end = "false";
+	    $optionrecognzied = 0;
+	}
+	if($ARGV[$i+1] eq "paired") {
+	    $paired_end = "true";
+	    $optionrecognzied = 0;
+	}
+    }
+
+    if($optionrecognized == 0) {
+	die "\nERROR: option $ARGV[$i+1] not recognized\n";
+    }
+}
+
+$|=1;
+
 $max_fragment_length = 500000;
-$infile = "$outdir/X." . $chunk;
-open(INFILE, $infile);
+open(INFILE, $infile) or die "\nERROR: Cannot open -infile '$infile'\n";
 $t = `tail -1 $infile`;
 $t =~ /seq.(\d+)/;
 $num_seqs = $1;
 $line = <INFILE>;
 chomp($line);
-$outfile1 = "$outdir/GU." . $chunk;
-$outfile2 = "$outdir/GNU." . $chunk;
-open(OUTFILE1, ">$outfile1");
-open(OUTFILE2, ">$outfile2");
+open(OUTFILE1, ">$outfile1") or die "\nERROR: Cannot open -gufile '$outfile1' for writing\n";
+open(OUTFILE2, ">$outfile2") or die "\nERROR: Cannot open -tufile '$outfile2' for writing\n";
 print "num_seqs = $num_seqs\n";
 for($seqnum=1; $seqnum<$num_seqs; $seqnum++) {
     $numa=0;
