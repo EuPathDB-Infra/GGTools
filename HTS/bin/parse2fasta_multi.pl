@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 use strict;
-use File::Parse;
+use File::Basename;
 
 &usage unless scalar(@ARGV >= 2);
 
