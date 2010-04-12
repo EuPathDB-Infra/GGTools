@@ -1,63 +1,115 @@
 #/usr/bin/perl
+$|=1;
 
-if(@ARGV != 8) {
+if(@ARGV < 4) {
     print STDERR 
 "
-Usage: make_GU_and_TU.pl -infile NAME -gufile NAME -tufile NAME -type <single|paired>
+Usage: make_GU_and_TU.pl <input_filename> <gu_filename> <tu_filename> <type> [options]
 
-  Where: -infile is the file output from sort_bowtie.pl
-         -gufile is the file to be output containing unique genome alignments
-         -gnufile is the file to be output containing non-nique genome alignments
-         -type is 'single' for single-end reads and 'paired' for paired-end reads
+  Where: <input_filename> is the file output from sort_bowtie.pl
+
+         <gu_filename> is the name of the file to be written that will contain
+                       unique genome alignments
+
+         <gnu_filename> is the name of the file to be written that will contain
+                        non-nique genome alignments
+
+         <type> is 'single' for single-end reads, or 'paired' for paired-end reads
+
+  Options:
+         -maxfraglength N  : N is an integer greater than zero representing
+                             the furthest apart the forward and reverse reads
+                             can be.  They could be separated by an exon/exon
+                             junction so this number can be as large as the largest
+                             intron.  Default value = 500,000
+
+  This script takes the output of a bowtie mapping against the genome, which has
+  been sorted by sort_bowtie.pl, and parses it to have the four columns:
+        1) read name
+        2) chromosome
+        3) span
+        4) sequence
+
+  A line of the (input) bowtie file should look like this:
+
+  seq.1a   -   chr14   1031657   CACCTAATCATACAAGTTTGGCTAGTGGAAAA
+
+  Sequence names are expected to be of the form seq.Na where N in an integer
+  greater than 0.  The 'a' signifies this is a 'forward' read, and 'b' signifies
+  'reverse' reads.  The file may consist of all forward reads (single-end data), or
+  it may have both forward and reverse reads (paired-end data).  Even if single-end
+  the sequence names still must end with an 'a'.
+
+  The line above is modified by the script to look like this:
+ 
+  seq.1a   chr14   1031658-1031689   CACCTAATCATACAAGTTTGGCTAGTGGAAAA
+
+  In the case of single-end reads, if there is a unique such line for seq.1a then
+  it is written to the file specified by -gufile.  If there are multiple lines for
+  seq.1a then they are all written to the file specified by -gnufile.
+
+  In the case of paired-end reads the script tries to match up entries for seq.1a
+  and seq.1b consistently, which means:
+        1) both reads are on the same chromosome
+        2) the two reads map in opposite orientations
+        3) the start of reads are further apart than ends of reads
+           and no further apart than $max_fragment_length
+
+  If the two reads do not overlap then the consistent mapper is represented by two
+  consecutive lines, each with the same sequence name except the forward ends with
+  'a' and the reverse ends with 'b'.  In the case that the two reads overlap then 
+  they two lines are merged into one line and the a/b designation is removed.
+
+  If there is a unique set of consistent mappers it writes it to the file specified
+  by -gufile.  If there are multiple consistent mappers it writes to the file 
+  specified by -gnufile.  If only the forward or reverse read map then it does not
+  write anything.
 
 ";
     exit(1);
 }
 
-for($i=0; $i<@ARGV; $i++) {
-    $optionrecognized = 1;
-    if($ARGV[$i] eq "-infile") {
+$infile = $ARGV[0];
+$outfile1 = $ARGV[1];
+$outfile2 = $ARGV[2];
+$type = $ARGV[3];
+$typerecognized = 1;
+if($type eq "single") {
+    $paired_end = "false";
+    $typerecognized = 0;
+}
+if($type eq "paired") {
+    $paired_end = "true";
+    $typerecognized = 0;
+}
+if($typerecognized == 1) {
+    die "\nERROR: type '$type' not recognized.  Must be 'single' or 'paired'.\n";
+}
+
+$max_fragment_length = 500000;
+for($i=4; $i<@ARGV; $i++) {
+    $optionrecognized = 0;
+    if($ARGV[$i] eq "-maxfraglength") {
 	$i++;
-	$infile = $ARGV[$i];
+	$max_fragment_length = $ARGV[$i];
 	$optionrecognized = 1;
-    }
-    if($ARGV[$i] eq "-gufile") {
-	$i++;
-	$outfile1 = $ARGV[$i];
-	$optionrecognized = 1;
-    }
-    if($ARGV[$i] eq "-gnufile") {
-	$i++;
-	$outfile2 = $ARGV[$i];
-	$optionrecognized = 1;
-    }
-    if($ARGV[$i] eq "-type") {
-	if($ARGV[$i+1] eq "single") {
-	    $paired_end = "false";
-	    $optionrecognzied = 0;
-	}
-	if($ARGV[$i+1] eq "paired") {
-	    $paired_end = "true";
-	    $optionrecognzied = 0;
-	}
     }
 
     if($optionrecognized == 0) {
-	die "\nERROR: option $ARGV[$i+1] not recognized\n";
+	die "\nERROR: option '$ARGV[$i-1] $ARGV[$i]' not recognized\n";
     }
 }
 
-$|=1;
+print "max_fragment_length = $max_fragment_length\n";
 
-$max_fragment_length = 500000;
-open(INFILE, $infile) or die "\nERROR: Cannot open -infile '$infile'\n";
+open(INFILE, $infile) or die "\nERROR: Cannot open infile '$infile'\n";
 $t = `tail -1 $infile`;
 $t =~ /seq.(\d+)/;
 $num_seqs = $1;
 $line = <INFILE>;
 chomp($line);
-open(OUTFILE1, ">$outfile1") or die "\nERROR: Cannot open -gufile '$outfile1' for writing\n";
-open(OUTFILE2, ">$outfile2") or die "\nERROR: Cannot open -tufile '$outfile2' for writing\n";
+open(OUTFILE1, ">$outfile1") or die "\nERROR: Cannot open file '$outfile1' for writing\n";
+open(OUTFILE2, ">$outfile2") or die "\nERROR: Cannot open file '$outfile2' for writing\n";
 print "num_seqs = $num_seqs\n";
 for($seqnum=1; $seqnum<$num_seqs; $seqnum++) {
     $numa=0;
