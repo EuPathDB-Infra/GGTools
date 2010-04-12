@@ -23,7 +23,6 @@ foreach my $file (@ARGV) {
 
 sub usage {
   print "
-
 parse2fasta_multi.pl <single|paired> file1 file2 ...
 
 Parse one or more short read sequence files into GGTools compatible
