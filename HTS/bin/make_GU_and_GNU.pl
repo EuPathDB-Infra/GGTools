@@ -5,7 +5,7 @@ if(@ARGV != 8) {
 "
 Usage: make_GU_and_TU.pl -infile NAME -gufile NAME -tufile NAME -type <single|paired>
 
-  Where: -infile is the file output from bowtie
+  Where: -infile is the file output from sort_bowtie.pl
          -gufile is the file to be output containing unique genome alignments
          -gnufile is the file to be output containing non-nique genome alignments
          -type is 'single' for single-end reads and 'paired' for paired-end reads
