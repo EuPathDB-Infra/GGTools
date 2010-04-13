@@ -12,13 +12,23 @@ my $type = shift @ARGV;
 # before we get started, make sure all files exist
 foreach my $file (@ARGV) {
   die "input file '$file' does not exist" unless -e $file;
-  my ($basename, $path, $suffix) = fileparse($file, qr/\.[^.]*/);
+  my $tmpfile = $file;
+  $tmpfile =~ s/\.gz$//;
+  my ($basename, $path, $suffix) = fileparse($tmpfile, qr/\.[^.]*/);
   die "input files may not have .fa suffixes" if ($suffix eq '.fa');
 }
 
 foreach my $file (@ARGV) {
+  print STDERR "processing file '$file'\n";
+  if ($file =~ /\.gz$/) {
+    system("gunzip $file");
+    $file =~ s/\.gz$//;
+  }
   my ($basename, $path, $suffix) = fileparse($file, qr/\.[^.]*/);
-  system("parse2fasta_$type.pl $file > $path$file.fa");
+  my $cmd = "steve-parse2fasta_${type}-end.pl $file > $path$basename.fa"; 
+  print STDERR "$cmd\n";
+  system($cmd) == 0 or die "Failed running $cmd";
+  system("gzip $file");
 }
 
 sub usage {
