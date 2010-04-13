@@ -65,23 +65,37 @@ open(INFILE1, $ARGV[0]);
 open(INFILE2, $ARGV[1]);
 $cnt = 0;
 my $cnt2 = 1;
+my $linecnt1 = 0;
+my $linecnt2 = 0;
 while(my $line1 = <INFILE1>) {    # this loop writes out the fasta file for file $i
+    $linecnt1++;
     my $line2 = <INFILE2>;
+    $linecnt2++;
     $cnt++;
     if((($cnt - $firstNArow) % $block) == 0) {
 	print ">seq";
 	print ".$cnt2";
 	print "a\n";
 	chomp($line1);
+	my $line1_hold = $line1;
 	$line1 =~ s/\^M$//;
 	$line1 =~ s/[^ACGTN]+$//;
+	if($line1 =~ /[^ACGTN]/) {
+	    print STDERR "\nERROR: There's something wrong with line $linecnt1 in file $ARGV[0]\nIt should be a line of sequence but it is:\n$line1_hold\n\n";
+	    exit();
+	}
 	print "$line1\n";
 	print ">seq";
 	print ".$cnt2";
 	print "b\n";
 	chomp($line2);
+	my $line2_hold = $line2;
 	$line2 =~ s/\^M$//;
 	$line2 =~ s/[^ACGTN]+$//;
+	if($line2 =~ /[^ACGTN]/) {
+	    print STDERR "\nERROR: There's something wrong with line $linecnt2 in file $ARGV[1]\nIt should be a line of sequence but it is:\n$line2_hold\n\n";
+	    exit();
+	}
 	print "$line2\n";
 	$cnt2++;
     }
