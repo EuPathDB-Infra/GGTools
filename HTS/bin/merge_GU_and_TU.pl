@@ -67,7 +67,7 @@ for($i=7; $i<@ARGV; $i++) {
     }
 }
 
-open(INFILE, $infile1) or die "\nERROR: Cannot open infile '$infile1' for reading\n";
+open(INFILE, $infile1) or die "\nERROR: Cannot open file '$infile1' for reading\n";
 $line = <INFILE>;
 close(INFILE);
 chomp($line);
