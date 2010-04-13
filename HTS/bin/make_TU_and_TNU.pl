@@ -1,8 +1,6 @@
 #/usr/bin/perl
 $|=1;
 
-$min_size_intersection_allowed = 50;  # think about making this a parameter
-
 if(@ARGV < 5) {
     print STDERR 
 "
@@ -75,6 +73,21 @@ Usage: make_TU_and_TNU.pl <input_filename> <tu_filename> <tnu_filename> <type> [
 ";
     exit(1);
 }
+open(INFILE, $ARGV[0]) or die "\nError: input file '$ARGV[0]' is not a valid file.\n\n";
+$line = <INFILE>;
+close(INFILE);
+chomp($line);
+@a = split(/\t/,$line);
+$readlength = length($a[3]);
+if($readlength < 80) {
+    $min_overlap = 35;
+} else {
+    $min_overlap = 45;
+}
+if($min_overlap >= .8 * $readlength) {
+    $min_overlap = int(.6 * $readlength);
+}
+
 open(INFILE, $ARGV[0]) or die "\nError: input file '$ARGV[0]' is not a valid file.\n\n";
 open(ANNOTFILE, $ARGV[1]) or die "\nError: gene models file '$ARGV[1]' is not a valid file.\n\n";
 $outfile1 = $ARGV[2];
@@ -184,7 +197,7 @@ while(1 == 1) {
 		}
 		else {  # significant overlap, report to "Unique" file, if it's long enough
 		    @ss = split(/\t/,$str);
-		    if($ss[0] >= $min_size_intersection_allowed) {
+		    if($ss[0] >= $min_overlap) {
 			$seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 			print OUTFILE1 "seq.$seqnum_prev";
 			print OUTFILE1 "a\t$CHR\t$ss[1]\t$seq_new\n";			
@@ -458,7 +471,7 @@ while(1 == 1) {
 			$size1 = $1;
 			$str2 =~ s/^(\d+)\t/$CHR\t/;
 			$size2 = $1;
-			if($size1 >= $min_size_intersection_allowed && $size2 >= $min_size_intersection_allowed) {
+			if($size1 >= $min_overlap && $size2 >= $min_overlap) {
 			    $str1 =~ /^[^\t]+\t(\d+)[^\t+]-(\d+)\t/;
 			    $start1 = $1;
 			    $end1 = $2;
@@ -492,7 +505,7 @@ while(1 == 1) {
 		    if($str ne "NONE") {
 			$str =~ s/^(\d+)\t/$CHR\t/;
 			$size = $1;
-			if($size >= $min_size_intersection_allowed) {
+			if($size >= $min_overlap) {
 			    @ss = split(/\t/,$str);
 			    $seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 			    print OUTFILE1 "seq.$seqnum_prev\t$ss[0]\t$ss[1]\t$seq_new\n";
