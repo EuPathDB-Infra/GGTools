@@ -72,15 +72,22 @@ for(my $i=0; $i<$n; $i++) { # loop over all the input files
     my $cnt = 0;
     my $cnt2 = 1;
     my $line;
+    my $linecnt = 0;
     while($line = <INFILE>) {    # this loop writes out the fasta file for file $i
+	$linecnt++;
 	$cnt++;
 	if((($cnt - $firstNArow) % $block) == 0) {
 	    print ">seq";
 	    print ".$cnt2";
 	    print "a\n";
 	    chomp($line);
+	    my $line_hold = $line;
 	    $line =~ s/\^M$//;
 	    $line =~ s/[^ACGTN]+$//;
+	    if($line =~ /[^ACGTN]/) {
+		print STDERR "\nERROR: There's something wrong with line $linecnt in file $ARGV[$i]\nIt should be a line of sequence but it is:\n$line_hold\n\n";
+		exit();
+	    }
 	    print "$line\n";
 	    $cnt2++;
 	}
