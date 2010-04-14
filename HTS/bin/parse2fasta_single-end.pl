@@ -97,10 +97,10 @@ if($userparamsgiven == 0) {
 	}
     }
 }
-#print "firstNArow = $firstNArow\n";
-#print "secondNArow = $secondNArow\n";
+print "firstNArow = $firstNArow\n";
+print "secondNArow = $secondNArow\n";
 
-if($firstNArow == 0) {
+if($firstNArow == 0 && $secondNArow == 0) {
     print "\nThis does not appear to be a valid file.\n\n";
     exit();
 }
