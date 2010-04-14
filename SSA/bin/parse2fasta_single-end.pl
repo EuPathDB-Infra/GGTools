@@ -49,8 +49,8 @@ open(INFILE1, $ARGV[0]);
 my $cnt = 0;
 my @linearray;
 my $line;
-if($userparamsgiven == 0) {
-    while(1==1) {  # this loop figures out how many rows per block and which row the sequence is on.
+if($userparamsgiven == 0) {  # the following figures out how many rows per block and which row the sequence is on.
+    while(1==1) { # This loop simply records in an array whether each row looks like sequence or not
 	$line = <INFILE1>;
 	if($line eq '') {
 	    last;
@@ -70,6 +70,7 @@ if($userparamsgiven == 0) {
     }
     close(INFILE1);
     
+    # The following find an arithmetic progression of rows that look like sequence.
     my $k;
     my $i;
     my $j;
@@ -79,8 +80,6 @@ if($userparamsgiven == 0) {
 	    $flag = 0;
 	    for($j=0; $j<$cnt/20; $j++) {
 		my $x = $k+$i*$j;
-#	    print "k=$k, i=$i, j=$j\n";
-#	    print "linearray[$x] = $linearray[$x]\n";
 		if($linearray[$k+$i*$j] == 0) {
 		    $flag = 1;
 		}
@@ -127,7 +126,7 @@ for(my $i=0; $i<$n; $i++) { # loop over all the input files
 	    chomp($line);
 	    my $line_hold = $line;
 	    $line =~ s/\^M$//;
-	    $line =~ s/[^ACGTN]+$//;
+	    $line =~ s/[^ACGTN]$//;
 	    if($line =~ /[^ACGTN]/ || !($line =~ /\S/)) {
 		print STDERR "\nERROR: There's something wrong with line $linecnt in file $ARGV[$i]\nIt should be a line of sequence but it is:\n$line_hold\n\n";
 		exit();
