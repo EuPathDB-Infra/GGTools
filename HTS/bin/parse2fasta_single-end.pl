@@ -1,5 +1,3 @@
-#/usr/bin/perl
-
 # Written by Gregory R Grant
 # University of Pennsylvania, 2010
 
@@ -21,42 +19,59 @@ if(@ARGV < 1) {
 
 $|=1;
 open(INFILE1, $ARGV[0]);
-my $cnt = 1;
+my $cnt = 0;
 my $firstNArow = 0;
 my $secondNArow = 0;
+my @linearray;
+my $line;
 while(1==1) {  # this loop figures out how many rows per block and which row the sequence is on.
-    my $line = <INFILE1>;
+    $line = <INFILE1>;
     if($line eq '') {
 	last;
     }
     chomp($line);
     $line =~ s/\^M$//;
     $line =~ s/[^ACGTN]$//;
-    if($line =~ /^(A|C|G|T|N){10}(A|C|G|T|N)+$/) {  # find a line that looks like a line of seq,
-                                                    # it's all A's, C's, G's, T's and N's and at
-                                                    # least 11 chars long
-	$firstNArow = $cnt;
-	$line = <INFILE1>;
-	chomp($line);
-	$line =~ s/\^M$//;       #  This is to get rid of that pesky ^M character if it's there
-	$line =~ s/[^ACGTN]$//;  #  In case any other weird charcter at the end, this line gets rid of it
-	$cnt++;
-	until($line =~ /^(A|C|G|T|N){10}(A|C|G|T|N)+$/) {  # find the next line of seq
-	    $line = <INFILE1>;
-	    chomp($line);
-	    $line =~ s/\^M$//;
-	    $line =~ s/[^ACGTN]$//;
-	    if($line eq '') {
-		last;
-	    }
-	    $cnt++;
-	}
-	$secondNArow = $cnt;
-	last;
+    if($line =~ /^(A|C|G|T|N){10}(A|C|G|T|N)+$/) {
+	$linearray[$cnt] = 1;
+    } else {
+	$linearray[$cnt] = 0;
     }
     $cnt++;
+    if($cnt > 20000) {
+	last;
+    }
 }
 close(INFILE1);
+
+my $k;
+my $i;
+my $j;
+my $flag;
+for($k=0; $k<10; $k++) {
+    for($i=1; $i<10; $i++) {
+	$flag = 0;
+	for($j=0; $j<$cnt/20; $j++) {
+	    my $x = $k+$i*$j;
+#	    print "k=$k, i=$i, j=$j\n";
+#	    print "linearray[$x] = $linearray[$x]\n";
+	    if($linearray[$k+$i*$j] == 0) {
+		$flag = 1;
+	    }
+	}
+	if($flag == 0) {
+	    $firstNArow = $k;
+	    $secondNArow = $k+$i;
+	    $k=10;
+	    $i=10;
+	}
+    }
+    if($k==9 && $flag == 0) {
+	die "\nError: canont determine which lines have the sequence.\n\n";
+    }
+}
+#print "firstNArow = $firstNArow\n";
+#print "secondNArow = $secondNArow\n";
 
 if($firstNArow == 0) {
     print "\nThis does not appear to be a valid file.\n\n";
@@ -69,15 +84,15 @@ my $block = $secondNArow - $firstNArow;
 # The number of the row in each block that has the sequence is $firstNArow
 
 my $n = @ARGV;
+my $linecnt = 0;
 for(my $i=0; $i<$n; $i++) { # loop over all the input files
     open(INFILE, $ARGV[$i]);
-    my $cnt = 0;
+    $cnt = 0;
     my $cnt2 = 1;
-    my $line;
-    my $linecnt = 0;
+    $line;
+    $linecnt = 0;
     while($line = <INFILE>) {    # this loop writes out the fasta file for file $i
 	$linecnt++;
-	$cnt++;
 	if((($cnt - $firstNArow) % $block) == 0) {
 	    print ">seq";
 	    print ".$cnt2";
@@ -93,6 +108,10 @@ for(my $i=0; $i<$n; $i++) { # loop over all the input files
 	    print "$line\n";
 	    $cnt2++;
 	}
+	$cnt++;
     }
     close(INFILE);
+    if($linecnt % $block != 0) {
+	print STDERR "\nWarning: the last block of lines in file $ARGV[$i] is not the right size.\n\n";
+    }
 }
