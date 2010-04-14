@@ -93,7 +93,7 @@ if($userparamsgiven == 0) {
 	    }
 	}
 	if($k==9 && $flag == 0) {
-	    die "\nError: canont determine which lines have the sequence.\n\n";
+	    die "\nError: canont determine which lines have the sequence.  Consider using\nthe command line options -firstrow and -secondrow.\n\n";
 	}
     }
 }
