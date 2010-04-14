@@ -4,8 +4,11 @@
 use strict;
 
 if(@ARGV < 1) {
-    print "\nUsage: parse2fasta.pl <infile>\n\n";
+    print "\nUsage: parse2fasta.pl <infile> [options]\n\n";
     print "<infile> can be one file or a list of files separated by spaces.\n\n";
+    print "Options:\n";
+    print "     -firstrow n  : n is the first row that has sequence on it.\n";
+    print "     -secondrow n : n is the second row that has sequence on it.\n";
     print "PURPOSE: ";
     print "This program reformats files of reads into the appropriate fasta\nformat needed for the RUM pipeline.  If there are multiple files specified,\nthey are merged into one fasta file with consecutive sequence numbers.\n\n";
     print "NOTE: This script is for single-end reads only, for paired-end reads use\nparse2fasta_paried-end.pl\n\n";
@@ -17,57 +20,81 @@ if(@ARGV < 1) {
     exit();
 }
 
+my $firstNArow = 0;
+my $secondNArow = 0;
+my $userparamsgiven = 0;
+for(my $i=1; $i<@ARGV; $i++) {
+    my $optionrecognized = 1;
+    if($ARGV[$i] eq "-firstrow") {
+	$firstNArow = $ARGV[$i+1] - 1;
+	$optionrecognized = 0;
+	$i++;
+	$userparamsgiven = 1;
+    }
+    if($ARGV[$i] eq "-secondrow") {
+	$secondNArow = $ARGV[$i+1] - 1;
+	$optionrecognized = 0;
+	$i++;
+    }
+    if($optionrecognized == 1) {
+	die "\nERROR: option '$ARGV[$i-1]' not recognized.  Must be 'single' or 'paired'.\n";
+    }
+}
+if(($firstNArow =~ /\S/ && !($secondNArow =~ /\S/)) && ($secondNArow =~ /\S/ && !($firstNArow =~ /\S/))) {
+    die "\nERROR: you must set *both* -firstrow and -secondrow, or neither\n";
+}
+
 $|=1;
 open(INFILE1, $ARGV[0]);
 my $cnt = 0;
-my $firstNArow = 0;
-my $secondNArow = 0;
 my @linearray;
 my $line;
-while(1==1) {  # this loop figures out how many rows per block and which row the sequence is on.
-    $line = <INFILE1>;
-    if($line eq '') {
-	last;
+if($userparamsgiven == 0) {
+    while(1==1) {  # this loop figures out how many rows per block and which row the sequence is on.
+	$line = <INFILE1>;
+	if($line eq '') {
+	    last;
+	}
+	chomp($line);
+	$line =~ s/\^M$//;
+	$line =~ s/[^ACGTN]$//;
+	if($line =~ /^(A|C|G|T|N){10}(A|C|G|T|N)+$/) {
+	    $linearray[$cnt] = 1;
+	} else {
+	    $linearray[$cnt] = 0;
+	}
+	$cnt++;
+	if($cnt > 20000) {
+	    last;
+	}
     }
-    chomp($line);
-    $line =~ s/\^M$//;
-    $line =~ s/[^ACGTN]$//;
-    if($line =~ /^(A|C|G|T|N){10}(A|C|G|T|N)+$/) {
-	$linearray[$cnt] = 1;
-    } else {
-	$linearray[$cnt] = 0;
-    }
-    $cnt++;
-    if($cnt > 20000) {
-	last;
-    }
-}
-close(INFILE1);
-
-my $k;
-my $i;
-my $j;
-my $flag;
-for($k=0; $k<10; $k++) {
-    for($i=1; $i<10; $i++) {
-	$flag = 0;
-	for($j=0; $j<$cnt/20; $j++) {
-	    my $x = $k+$i*$j;
+    close(INFILE1);
+    
+    my $k;
+    my $i;
+    my $j;
+    my $flag;
+    for($k=0; $k<10; $k++) {
+	for($i=1; $i<10; $i++) {
+	    $flag = 0;
+	    for($j=0; $j<$cnt/20; $j++) {
+		my $x = $k+$i*$j;
 #	    print "k=$k, i=$i, j=$j\n";
 #	    print "linearray[$x] = $linearray[$x]\n";
-	    if($linearray[$k+$i*$j] == 0) {
-		$flag = 1;
+		if($linearray[$k+$i*$j] == 0) {
+		    $flag = 1;
+		}
+	    }
+	    if($flag == 0) {
+		$firstNArow = $k;
+		$secondNArow = $k+$i;
+		$k=10;
+		$i=10;
 	    }
 	}
-	if($flag == 0) {
-	    $firstNArow = $k;
-	    $secondNArow = $k+$i;
-	    $k=10;
-	    $i=10;
+	if($k==9 && $flag == 0) {
+	    die "\nError: canont determine which lines have the sequence.\n\n";
 	}
-    }
-    if($k==9 && $flag == 0) {
-	die "\nError: canont determine which lines have the sequence.\n\n";
     }
 }
 #print "firstNArow = $firstNArow\n";
@@ -101,7 +128,7 @@ for(my $i=0; $i<$n; $i++) { # loop over all the input files
 	    my $line_hold = $line;
 	    $line =~ s/\^M$//;
 	    $line =~ s/[^ACGTN]+$//;
-	    if($line =~ /[^ACGTN]/) {
+	    if($line =~ /[^ACGTN]/ || !($line =~ /\S/)) {
 		print STDERR "\nERROR: There's something wrong with line $linecnt in file $ARGV[$i]\nIt should be a line of sequence but it is:\n$line_hold\n\n";
 		exit();
 	    }
