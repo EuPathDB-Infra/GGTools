@@ -8,7 +8,7 @@ if(@ARGV < 1) {
     print "<infile> can be one file or a list of files separated by spaces.\n\n";
     print "Options:\n";
     print "     -firstrow n  : n is the first row that has sequence on it.\n";
-    print "     -secondrow n : n is the second row that has sequence on it.\n";
+    print "     -secondrow n : n is the second row that has sequence on it.\n\n";
     print "PURPOSE: ";
     print "This program reformats files of reads into the appropriate fasta\nformat needed for the RUM pipeline.  If there are multiple files specified,\nthey are merged into one fasta file with consecutive sequence numbers.\n\n";
     print "NOTE: This script is for single-end reads only, for paired-end reads use\nparse2fasta_paried-end.pl\n\n";
