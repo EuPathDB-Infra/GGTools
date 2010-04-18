@@ -7,16 +7,16 @@ $|=1;
 
 if(@ARGV < 7) {
     die "
-Usage: merge_BowtieUnique_and_BlatUnique.pl <BLAT NU infile> <Bowtie NU infile> <BLAT Unique infile <Bowtie Unique infile> | <TU infile> <BowtieUnique outfile> <CNU outfile> <type>
+Usage: merge_BowtieUnique_and_BlatUnique.pl <BLAT NU infile> <Bowtie NU infile> <BLAT Unique infile> <Bowtie Unique infile> <RUM Unique outfile> <RUM NU outfile> <type>
 
-Where:   <GNU infile> is the file of non-unique mappers that is output from
-                      the script make_GU_and_GNU.pl
+Where:   <BLAT NU infile> is the file of non-unique mappers that is output from
+                          the script parse_blat_out.pl
 
-         <TNU infile> is the file of non-unique mappers that is output from
-                      the script make_TU_and_TNU.pl
+         <Bowtie NU infile> is the file of non-unique mappers that is output from
+                            the script merge_GU_and_TU.pl.
 
-         <GU infile> is the file of unique mappers that is output from the
-                     script make_GU_and_GNU.pl
+         <BLAT Unique infile> is the file of unique mappers that is output from the
+                              script make_GU_and_GNU.pl
 
          <TU infile> is the file of unique mappers that is output from the
                      script make_TU_and_TNU.pl
@@ -38,11 +38,21 @@ Where:   <GNU infile> is the file of non-unique mappers that is output from
 }
 
 $min_overlap = $ARGV[1];
-$paired_end = "true";
-$chunk = $ARGV[2];
-if($ARGV[3] eq "-single") {
+
+$type = $ARGV[6];
+$typerecognized = 1;
+if($type eq "single") {
     $paired_end = "false";
+    $typerecognized = 0;
 }
+if($type eq "paired") {
+    $paired_end = "true";
+    $typerecognized = 0;
+}
+if($typerecognized == 1) {
+    die "\nERROR: type '$type' not recognized.  Must be 'single' or 'paired'.\n";
+}
+
 $f0 = $ARGV[0];
 open(INFILE, $f0);
 
@@ -77,7 +87,7 @@ $f2 = $ARGV[3];
 open(INFILE1, $f2);
 $f3 = $ARGV[2];
 open(INFILE2, $f3);
-$f4 = $outdir . "/RUM_Unique." . $chunk;
+$f4 = $ARGV[4];
 open(OUTFILE1, ">$f4");
 $max_fragment_length = 500000;
 $num_lines_at_once = 10000;
@@ -474,7 +484,7 @@ close(OUTFILE1);
 close(OUTFILE2);
 
 # now need to remove the stuff in %remove_from_BlatNU from BlatNU
-$filename = $outdir . "/tempNU." . $chunk;
+$filename = $ARGV[5];
 open(INFILE, $f0);
 open(OUTFILE, ">$filename");
 while($line = <INFILE>) {
@@ -482,6 +492,11 @@ while($line = <INFILE>) {
     if($remove_from_BlatNU{$1}+0==0) {
 	print OUTFILE $line;
     }
+}
+close(INFILE);
+open(INFILE, $f1);  # now append BowtieNU to get the full NU file
+while($line = <INFILE>) {
+    print OUTFILE $line;
 }
 close(INFILE);
 close(OUTFILE);
