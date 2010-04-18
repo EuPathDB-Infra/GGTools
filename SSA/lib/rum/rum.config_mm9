@@ -1,0 +1,9 @@
+indexes/mm9_ucsc_refseq_gene_info.txt
+bin/bowtie
+bin/blat
+bin/mdust
+indexes/mm9
+indexes/mm9_genes_ucsc_refseq
+indexes/mm9.2bit
+scripts
+indexes/11.ooc_mm9

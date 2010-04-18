@@ -1,0 +1,9 @@
+indexes/Pfalciparum.txt
+bin/bowtie
+bin/blat
+bin/mdust
+indexes/pfalciparum
+indexes/pfalciparum_genes
+indexes/pfalciparum.2bit
+scripts
+indexes/11.ooc_pfalciparum
