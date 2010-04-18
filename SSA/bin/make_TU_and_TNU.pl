@@ -626,7 +626,7 @@ while(1 == 1) {
 	$i++;
 	$s[$i] = $s[$i-1] + $ends[$i-1] - $starts[$i-1];
 	if($i > 3000) {
-	    print STDERR "\n\nERROR: Something is wrong, probably with the gene annotation file $ARGV[1].\n\nExiting...\n\n.";
+	    print STDERR "\n\nERROR: Something is wrong, probably with the gene annotation file: $ARGV[1]\n\nExiting...\n\n";
 	    exit(0);
 	}
     }
@@ -639,7 +639,7 @@ while(1 == 1) {
 	$cnt++;
 	$readstart[$cnt] = $starts[$i-1] + 1;
 	if($i > 3000) {
-	    print STDERR "\n\nERROR: Something is wrong, probably with the gene annotation file $ARGV[1].\n\nExiting...\n\n.";
+	    print STDERR "\n\nERROR: Something is wrong, probably with the gene annotation file: $ARGV[1]\n\nExiting...\n\n";
 	    exit(0);
 	}
     }
