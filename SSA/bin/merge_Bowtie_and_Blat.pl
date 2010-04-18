@@ -43,21 +43,23 @@ open(INFILE, $ARGV[0]) or die "\nError: unable to open file '$ARGV[0]' for readi
 $readlength = 0;
 $cnt = 0;
 while($line = <INFILE>) {
-    chomp($line);
-    @a = split(/\t/,$line);
-    $span = $a[2];
-    if(!($span =~ /,/)) {
-	$cnt++;
-	@b = split(/-/,$span);
-	$length = $b[1] - $b[0];
-	if($length > $readlength) {
-	    $readlength = $length;
-	    $cnt = 0;
-	}
-	if($cnt > 50000) { # it checked 50,000 lines without finding anything larger than the last time
-                           # readlength was changed, so it's most certainly found the max.
-	                   # Went through this to avoid the user having to input the readlength.
-	    last;
+    if($line =~ /a/) {
+	chomp($line);
+	@a = split(/\t/,$line);
+	$span = $a[2];
+	if(!($span =~ /,/)) {
+	    $cnt++;
+	    @b = split(/-/,$span);
+	    $length = $b[1] - $b[0] + 1;
+	    if($length > $readlength) {
+		$readlength = $length;
+		$cnt = 0;
+	    }
+	    if($cnt > 50000) { # it checked 50,000 lines without finding anything larger than the last time
+		# readlength was changed, so it's most certainly found the max.
+		# Went through this to avoid the user having to input the readlength.
+		last;
+	    }
 	}
     }
 }
@@ -66,19 +68,21 @@ if($readlength == 0) { # in case Bowtie Unique file is empty - seems unlikely bu
     open(INFILE, $ARGV[1]) or die "\nError: unable to open file '$ARGV[1]' for reading\n\n";
     $cnt = 0;
     while($line = <INFILE>) {
-	chomp($line);
-	@a = split(/\t/,$line);
-	$span = $a[2];
-	if(!($span =~ /,/)) {
-	    $cnt++;
-	    @b = split(/-/,$span);
-	    $length = $b[1] - $b[0];
-	    if($length > $readlength) {
-		$readlength = $length;
-		$cnt = 0;
-	    }
-	    if($cnt > 50000) {
-		last;
+	if($line =~ /a/) {
+	    chomp($line);
+	    @a = split(/\t/,$line);
+	    $span = $a[2];
+	    if(!($span =~ /,/)) {
+		$cnt++;
+		@b = split(/-/,$span);
+		$length = $b[1] - $b[0] + 1;
+		if($length > $readlength) {
+		    $readlength = $length;
+		    $cnt = 0;
+		}
+		if($cnt > 50000) {
+		    last;
+		}
 	    }
 	}
     }
@@ -151,7 +155,7 @@ $FLAG = 1;
 $FLAG2 = 1;
 $line_prev = <INFILE2>;
 chomp($line_prev);
-
+$last_id = 10**14;
 while($FLAG == 1 || $FLAG2 == 1) {
     undef %hash1;
     undef %hash2;
