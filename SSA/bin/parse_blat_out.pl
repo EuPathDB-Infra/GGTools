@@ -1,3 +1,8 @@
+#!/usr/bin/perl
+
+# Written by Gregory R Grant 
+# University of Pennsylvania, 2010
+
 $| = 1;
 # blat run on forward/reverse reads separately, reported in order
 # first make hash 'blathits' which is all alignments of the read that we would accept (indexed by t=0,1 for forward/reverse)

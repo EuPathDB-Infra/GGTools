@@ -1,3 +1,8 @@
+#/usr/bin/perl
+
+# Written by Gregory R. Grant
+# University of Pennsylvania, 2010
+
 if(@ARGV<1 || $ARGV[0] eq "/help/") {
     print "\nUsage: featurequant2geneprofiles.pl <feature_quantification_files> [options]\n\n";
     print "Profiles are output for all genes/exons/introns, by default.  To change this use the options below.\n\n";

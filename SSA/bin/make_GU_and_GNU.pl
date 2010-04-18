@@ -1,4 +1,8 @@
-#/usr/bin/perl
+#!/usr/bin/perl
+
+# Written by Gregory R. Grant
+# University of Pennsylvania, 2010
+
 $|=1;
 
 if(@ARGV < 4) {

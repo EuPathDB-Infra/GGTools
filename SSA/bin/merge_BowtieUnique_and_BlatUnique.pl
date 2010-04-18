@@ -1,9 +1,13 @@
-#/usr/bin/perl
+#!/usr/bin/perl
+
+# Written by Gregory R. Grant
+# University of Pennsylvania, 2010
+
 $|=1;
 
 if(@ARGV < 7) {
     die "
-Usage: merge_GU_and_TU.pl <BLAT NU infile> <TNU infile> <GU infile> <TU infile> <BowtieUnique outfile> <CNU outfile> <type>
+Usage: merge_BowtieUnique_and_BlatUnique.pl <BLAT NU infile> <Bowtie NU infile> <BLAT Unique infile <Bowtie Unique infile> | <TU infile> <BowtieUnique outfile> <CNU outfile> <type>
 
 Where:   <GNU infile> is the file of non-unique mappers that is output from
                       the script make_GU_and_GNU.pl
@@ -62,16 +66,16 @@ open(OUTFILE2, ">>$f0");  # The only things we're going to add to BlatNU.chunk a
                           # are single direction only mappers in BowtieUnique that are also single
                           # direction only mappers in BlatNU, but the two mappings disagree.
                           # Also, do not write these to RUM_Unique.
-$f1 = $outdir . "/BowtieNU." . $chunk;
+$f1 = $ARGV[1];
 open(INFILE, $f1);
 while($line = <INFILE>) {
     $line =~ /^seq.(\d+)/;
     $bowtie_ambiguous_mappers{$1}++;
 }
 close(INFILE);
-$f2 = $outdir . "/BowtieUnique." . $chunk;
+$f2 = $ARGV[3];
 open(INFILE1, $f2);
-$f3 = $outdir . "/BlatUnique." . $chunk;
+$f3 = $ARGV[2];
 open(INFILE2, $f3);
 $f4 = $outdir . "/RUM_Unique." . $chunk;
 open(OUTFILE1, ">$f4");
