@@ -5,7 +5,7 @@
 
 use strict;
 
-if(@ARGV != 1) {
+if(@ARGV != 2) {
     die "
 Usage: sort_bowtie.pl <infile> <outfile> [options]
 
