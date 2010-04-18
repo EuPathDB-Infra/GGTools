@@ -46,9 +46,9 @@ while($line = <INFILE>) {
     chomp($line);
     @a = split(/\t/,$line);
     $span = $a[2];
-    if(!($span =~ /:/)) {
+    if(!($span =~ /,/)) {
 	$cnt++;
-	@b = split(/,/,$span);
+	@b = split(/-/,$span);
 	$length = $b[1] - $b[0];
 	if($length > $readlength) {
 	    $readlength = $length;
@@ -69,9 +69,9 @@ if($readlength == 0) { # in case Bowtie Unique file is empty - seems unlikely bu
 	chomp($line);
 	@a = split(/\t/,$line);
 	$span = $a[2];
-	if(!($span =~ /:/)) {
+	if(!($span =~ /,/)) {
 	    $cnt++;
-	    @b = split(/,/,$span);
+	    @b = split(/-/,$span);
 	    $length = $b[1] - $b[0];
 	    if($length > $readlength) {
 		$readlength = $length;
@@ -83,7 +83,7 @@ if($readlength == 0) { # in case Bowtie Unique file is empty - seems unlikely bu
 	}
     }
 }
-
+print "readlength = $readlength\n";
 if($readlength < 80) {
     $min_overlap = 35;
 } else {
