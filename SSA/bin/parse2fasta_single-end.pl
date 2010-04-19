@@ -98,8 +98,8 @@ if($userparamsgiven == 0) {  # the following figures out how many rows per block
 	}
     }
 }
-print "firstNArow = $firstNArow\n";
-print "secondNArow = $secondNArow\n";
+#print "firstNArow = $firstNArow\n";
+#print "secondNArow = $secondNArow\n";
 
 if($firstNArow == 0 && $secondNArow == 0) {
     print "\nThis does not appear to be a valid file.\n\n";
