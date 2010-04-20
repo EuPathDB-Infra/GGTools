@@ -574,6 +574,7 @@ while(1 == 1) {
     @a = split(/\t/,$target);
     @starts = split(/,/,$a[5]);
     @ends = split(/,/,$a[6]);
+
     $numexons = $a[4];
     $j=@sq-1;
     while(($sq[$j] eq "N") && ($j >= 0)) {
@@ -622,10 +623,11 @@ while(1 == 1) {
     }
     $i=0;
     $s[0] = 0;
+
     while($s[$i] <= $displacement) {
 	$i++;
 	$s[$i] = $s[$i-1] + $ends[$i-1] - $starts[$i-1];
-	if($i > 3000) {
+	if($i > 100000) {
 	    print STDERR "\n\nERROR: Something is wrong, probably with the gene annotation file: $ARGV[1]\n\nExiting...\n\n";
 	    exit(0);
 	}
@@ -638,7 +640,7 @@ while(1 == 1) {
 	$s[$i] = $s[$i-1] + $ends[$i-1] - $starts[$i-1];
 	$cnt++;
 	$readstart[$cnt] = $starts[$i-1] + 1;
-	if($i > 3000) {
+	if($i > 100000) {
 	    print STDERR "\n\nERROR: Something is wrong, probably with the gene annotation file: $ARGV[1]\n\nExiting...\n\n";
 	    exit(0);
 	}
