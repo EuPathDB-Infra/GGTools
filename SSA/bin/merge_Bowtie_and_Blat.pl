@@ -9,21 +9,23 @@ if(@ARGV < 7) {
     die "
 Usage: merge_BowtieUnique_and_BlatUnique.pl <Bowtie Unique infile> <BLAT Unique infile> <Bowtie NU infile> <BLAT NU infile> <RUM Unique outfile> <RUM NU outfile> <type>
 
-Where:   <BLAT NU infile> is the file of non-unique mappers that is output from
-                          the script parse_blat_out.pl
+Where:   
 
-         <Bowtie NU infile> is the file of non-unique mappers that is output from
-                            the script merge_GU_and_TU.pl.
+         <Bowtie Unique infile> is the file of unique mappers that is output from
+                                the script merge_GU_and_TU.pl
 
          <BLAT Unique infile> is the file of unique mappers that is output from the
-                              script make_GU_and_GNU.pl
+                              script parse_blat_out.pl
 
-         <TU infile> is the file of unique mappers that is output from the
-                     script make_TU_and_TNU.pl
+         <Bowtie NU infile> is the file of non-unique mappers that is output from
+                            the script merge_GNU_and_TNU_and_CNU.pl.
 
-         <BowtieUnique outfile> is the name of the file of unique mappers to be output
+         <Blat NU infile> is the file of non-unique mappers that is output from
+                          the script parse_blat_out.pl
 
-         <CNU outfile> is the name of the file of non-unique mappers to be output
+         <RUM_Unique outfile> is the name of the file of unique mappers to be output
+
+         <RUM_NU outfile> is the name of the file of non-unique mappers to be output
 
          <type> is 'single' for single-end reads, or 'paired' for paired-end reads
 
@@ -37,13 +39,13 @@ Where:   <BLAT NU infile> is the file of non-unique mappers that is output from
 ";
 }
 
-# get readlength from bowtie unique/nu, if both empty then get max in blat unique
+# get readlength from bowtie unique/nu, if both empty then get max in blat unique/nu
 
 open(INFILE, $ARGV[0]) or die "\nError: unable to open file '$ARGV[0]' for reading\n\n";
 $readlength = 0;
 $cnt = 0;
 while($line = <INFILE>) {
-    if($line =~ /a/) {
+    if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
 	chomp($line);
 	@a = split(/\t/,$line);
 	$span = $a[2];
@@ -64,29 +66,73 @@ while($line = <INFILE>) {
     }
 }
 close(INFILE);
-if($readlength == 0) { # in case Bowtie Unique file is empty - seems unlikely but just in case...
-    open(INFILE, $ARGV[1]) or die "\nError: unable to open file '$ARGV[1]' for reading\n\n";
-    $cnt = 0;
-    while($line = <INFILE>) {
-	if($line =~ /a/) {
-	    chomp($line);
-	    @a = split(/\t/,$line);
-	    $span = $a[2];
-	    if(!($span =~ /,/)) {
-		$cnt++;
-		@b = split(/-/,$span);
-		$length = $b[1] - $b[0] + 1;
-		if($length > $readlength) {
-		    $readlength = $length;
-		    $cnt = 0;
-		}
-		if($cnt > 50000) {
-		    last;
-		}
+open(INFILE, $ARGV[1]) or die "\nError: unable to open file '$ARGV[1]' for reading\n\n";
+$cnt = 0;
+while($line = <INFILE>) {
+    if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
+	chomp($line);
+	@a = split(/\t/,$line);
+	$span = $a[2];
+	if(!($span =~ /,/)) {
+	    $cnt++;
+	    @b = split(/-/,$span);
+	    $length = $b[1] - $b[0] + 1;
+	    if($length > $readlength) {
+		$readlength = $length;
+		$cnt = 0;
+	    }
+	    if($cnt > 50000) {
+		last;
 	    }
 	}
     }
 }
+close(INFILE);
+open(INFILE, $ARGV[2]) or die "\nError: unable to open file '$ARGV[2]' for reading\n\n";
+$cnt = 0;
+while($line = <INFILE>) {
+    if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
+	chomp($line);
+	@a = split(/\t/,$line);
+	$span = $a[2];
+	if(!($span =~ /,/)) {
+	    $cnt++;
+	    @b = split(/-/,$span);
+	    $length = $b[1] - $b[0] + 1;
+	    if($length > $readlength) {
+		$readlength = $length;
+		$cnt = 0;
+	    }
+	    if($cnt > 50000) {
+		last;
+	    }
+	}
+    }
+}
+close(INFILE);
+open(INFILE, $ARGV[3]) or die "\nError: unable to open file '$ARGV[3]' for reading\n\n";
+$cnt = 0;
+while($line = <INFILE>) {
+    if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
+	chomp($line);
+	@a = split(/\t/,$line);
+	$span = $a[2];
+	if(!($span =~ /,/)) {
+	    $cnt++;
+	    @b = split(/-/,$span);
+	    $length = $b[1] - $b[0] + 1;
+	    if($length > $readlength) {
+		$readlength = $length;
+		$cnt = 0;
+	    }
+	    if($cnt > 50000) {
+		last;
+	    }
+	}
+    }
+}
+close(INFILE);
+
 print "readlength = $readlength\n";
 if($readlength < 80) {
     $min_overlap = 35;
@@ -109,6 +155,20 @@ if($type eq "paired") {
 }
 if($typerecognized == 1) {
     die "\nERROR: type '$type' not recognized.  Must be 'single' or 'paired'.\n";
+}
+
+$max_distance_between_paired_reads = 500000;
+for($i=7; $i<@ARGV; $i++) {
+    $optionrecognized = 0;
+    if($ARGV[$i] eq "-maxpairdist") {
+	$i++;
+	$max_distance_between_paired_reads = $ARGV[$i];
+	$optionrecognized = 1;
+    }
+
+    if($optionrecognized == 0) {
+	die "\nERROR: option '$ARGV[$i-1] $ARGV[$i]' not recognized\n";
+    }
 }
 
 $f0 = $ARGV[3];
@@ -148,7 +208,8 @@ $f3 = $ARGV[1];
 open(INFILE2, $f3) or die "\nError: unable to open file '$f3' for reading\n\n";
 $f4 = $ARGV[4];
 open(OUTFILE1, ">$f4") or die "\nError: unable to open file '$f4' for writing\n\n";
-$max_fragment_length = 500000;
+
+$max_distance_between_paired_reads = 500000;
 $num_lines_at_once = 10000;
 $linecount = 0;
 $FLAG = 1;
@@ -406,7 +467,7 @@ while($FLAG == 1 || $FLAG2 == 1) {
 		$bend = $1;
 		$chrb = $a[1];
 		$bseq = $a[3];
-		if(($chra eq $chrb) && ($aend < $bstart-1) && ($bstart - $aend < $max_fragment_length)) {
+		if(($chra eq $chrb) && ($aend < $bstart-1) && ($bstart - $aend < $max_distance_between_paired_reads)) {
 		    if($hash1{$id}[1] =~ /a\t/) {
 			print OUTFILE1 "$hash1{$id}[1]\n$hash2{$id}[1]\n";
 		    }
@@ -414,7 +475,7 @@ while($FLAG == 1 || $FLAG2 == 1) {
 			print OUTFILE1 "$hash2{$id}[1]\n$hash1{$id}[1]\n";
 		    }
 		}
-		if(($chra eq $chrb) && ($bend < $astart-1) && ($astart - $bend < $max_fragment_length)) {
+		if(($chra eq $chrb) && ($bend < $astart-1) && ($astart - $bend < $max_distance_between_paired_reads)) {
 		    if($hash1{$id}[1] =~ /a\t/) {
 			print OUTFILE1 "$hash1{$id}[1]\n$hash2{$id}[1]\n";
 		    }
@@ -583,7 +644,7 @@ sub joinifpossible () {
     $chrb = $a[1];
     $bseq = $a[3];
     $returnstring = "";
-    if(($chra eq $chrb) && ($aend < $bstart-1) && ($bstart - $aend < $max_fragment_length)) {
+    if(($chra eq $chrb) && ($aend < $bstart-1) && ($bstart - $aend < $max_distance_between_paired_reads)) {
 	if($line1 =~ /a\t/) {
 	    $returnstring = $returnstring . "$line1\n$line2\n";
 	}
@@ -591,7 +652,7 @@ sub joinifpossible () {
 	    $returnstring = $returnstring . "$line2\n$line1\n";
 	}
     }
-    if(($chra eq $chrb) && ($bend < $astart-1) && ($astart - $bend < $max_fragment_length)) {
+    if(($chra eq $chrb) && ($bend < $astart-1) && ($astart - $bend < $max_distance_between_paired_reads)) {
 	if($line1 =~ /a\t/) {
 	    $returnstring = $returnstring . "$line1\n$line2\n";
 	}
