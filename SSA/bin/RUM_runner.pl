@@ -98,6 +98,22 @@ if(@ARGV > 5) {
 	}
     }
 }
+
+$check = `ps -x | grep RUM_runner.pl`;
+@a = split(/\n/,$check);
+$CNT=0;
+for($i=0; $i<@a; $i++) {
+    chomp($a[$i]);
+    $a[$i] =~ s/.*RUM_runner.pl *//;
+    @b = split(/ +/,$a[$i]);
+    if($b[2] eq $output_dir || $b[2] eq $ARGV[2]) {
+	$CNT++;
+	if($CNT > 1) {
+	    die "\nERROR: You seem to already have an instance of RUM_runner.pl running on the\nsame working directory.  This will cause collisions of the temporary files.\n\nExiting...\n\n";
+	}
+    }
+}
+
 open(LOGFILE, ">$output_dir/rum.log");
 print LOGFILE "start: $date\n";
 
