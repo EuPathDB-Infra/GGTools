@@ -7,19 +7,19 @@ $|=1;
 
 if(@ARGV < 7) {
     die "
-Usage: merge_GU_and_TU.pl <GNU infile> <TNU infile> <GU infile> <TU infile> <BowtieUnique outfile> <CNU outfile> <type>
+Usage: merge_GU_and_TU.pl <GU infile> <TU infile> <GNU infile> <TNU infile> <BowtieUnique outfile> <CNU outfile> <type>
 
-Where:   <GNU infile> is the file of non-unique mappers that is output from
-                      the script make_GU_and_GNU.pl
-
-         <TNU infile> is the file of non-unique mappers that is output from
-                      the script make_TU_and_TNU.pl
-
-         <GU infile> is the file of unique mappers that is output from the
+Where:   <GU infile> is the file of unique mappers that is output from the
                      script make_GU_and_GNU.pl
 
          <TU infile> is the file of unique mappers that is output from the
                      script make_TU_and_TNU.pl
+
+         <GNU infile> is the file of non-unique mappers that is output from
+                      the script make_GU_and_GNU.pl
+
+         <TNU infile> is the file of non-unique mappers that is output from
+                      the script make_TU_and_TNU.pl
 
          <BowtieUnique outfile> is the name of the file of unique mappers to be output
 
@@ -37,10 +37,10 @@ Where:   <GNU infile> is the file of non-unique mappers that is output from
 ";
 }
 
-$infile1 = $ARGV[0];
-$infile2 = $ARGV[1];
-$infile3 = $ARGV[2];
-$infile4 = $ARGV[3];
+$infile1 = $ARGV[2];
+$infile2 = $ARGV[3];
+$infile3 = $ARGV[0];
+$infile4 = $ARGV[1];
 $outfile1 = $ARGV[4];
 $outfile2 = $ARGV[5];
 $type = $ARGV[6];
@@ -71,12 +71,104 @@ for($i=7; $i<@ARGV; $i++) {
     }
 }
 
-open(INFILE, $infile1) or die "\nERROR: Cannot open file '$infile1' for reading\n";
-$line = <INFILE>;
+open(INFILE, $infile4) or die "\nERROR: Cannot open file '$infile4' for reading\n";
+$cnt = 0;
+while($line = <INFILE>) {
+    if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
+	chomp($line);
+	@a = split(/\t/,$line);
+	$span = $a[2];
+	if(!($span =~ /,/)) {
+	    $cnt++;
+	    @b = split(/-/,$span);
+	    $length = $b[1] - $b[0] + 1;
+	    if($length > $readlength) {
+		$readlength = $length;
+		$cnt = 0;
+	    }
+	    if($cnt > 50000) { # it checked 50,000 lines without finding anything larger than the last time
+		# readlength was changed, so it's most certainly found the max.
+		# Went through this to avoid the user having to input the readlength.
+		last;
+	    }
+	}
+    }
+}
+$cnt = 0;
+open(INFILE, $infile3) or die "\nERROR: Cannot open file '$infile3' for reading\n";
+while($line = <INFILE>) {
+    if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
+	chomp($line);
+	@a = split(/\t/,$line);
+	$span = $a[2];
+	if(!($span =~ /,/)) {
+	    $cnt++;
+	    @b = split(/-/,$span);
+	    $length = $b[1] - $b[0] + 1;
+	    if($length > $readlength) {
+		$readlength = $length;
+		$cnt = 0;
+	    }
+	    if($cnt > 50000) { # it checked 50,000 lines without finding anything larger than the last time
+		# readlength was changed, so it's most certainly found the max.
+		# Went through this to avoid the user having to input the readlength.
+		last;
+	    }
+	}
+    }
+}
 close(INFILE);
-chomp($line);
-@a = split(/\t/,$line);
-$readlength = length($a[3]);
+$cnt = 0;
+open(INFILE, $infile1) or die "\nERROR: Cannot open file '$infile1' for reading\n";
+while($line = <INFILE>) {
+    if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
+	chomp($line);
+	@a = split(/\t/,$line);
+	$span = $a[2];
+	if(!($span =~ /,/)) {
+	    $cnt++;
+	    @b = split(/-/,$span);
+	    $length = $b[1] - $b[0] + 1;
+	    if($length > $readlength) {
+		$readlength = $length;
+		$cnt = 0;
+	    }
+	    if($cnt > 50000) { # it checked 50,000 lines without finding anything larger than the last time
+		# readlength was changed, so it's most certainly found the max.
+		# Went through this to avoid the user having to input the readlength.
+		last;
+	    }
+	}
+    }
+}
+close(INFILE);
+$cnt = 0;
+open(INFILE, $infile2) or die "\nERROR: Cannot open file '$infile3' for reading\n";
+while($line = <INFILE>) {
+    if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
+	chomp($line);
+	@a = split(/\t/,$line);
+	$span = $a[2];
+	if(!($span =~ /,/)) {
+	    $cnt++;
+	    @b = split(/-/,$span);
+	    $length = $b[1] - $b[0] + 1;
+	    if($length > $readlength) {
+		$readlength = $length;
+		$cnt = 0;
+	    }
+	    if($cnt > 50000) { # it checked 50,000 lines without finding anything larger than the last time
+		# readlength was changed, so it's most certainly found the max.
+		# Went through this to avoid the user having to input the readlength.
+		last;
+	    }
+	}
+    }
+}
+close(INFILE);
+
+print "readlength = $readlength\n";
+
 if($readlength < 80) {
     $min_overlap = 35;
 } else {
