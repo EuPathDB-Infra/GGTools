@@ -33,8 +33,7 @@ if(@ARGV < 5) {
     print "                      mouse, 70 bases is long, in between it's hard to say).\n";
     print "         -chipseq   : Run in chipseq mode, meaning don't map across splice junctions.\n";
     print "         -qsub      : Use qsub to fire the job off to multiple nodes.  This means you're on a cluster that\n";
-    print "                      understands qsub.  The default is to use 'system' which assumes you want to run it on\n";
-    print "                      a single machine.  If not using -qsub, you can still break it into multiple chunks, it\n";
+    print "                      understands qsub.  If not using -qsub, you can still break it into multiple chunks, it\n";
     print "                      will just fire each chunk off to a separate processor.  Don't use more chunks than you\n";
     print "                      have processors though, because that will just slow it down.\n\n";
     print "Running RUM_runner.pl with the one argument 'config' will explain how to make the config file.\n\n";
