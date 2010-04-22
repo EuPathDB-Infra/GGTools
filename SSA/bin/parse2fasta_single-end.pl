@@ -5,6 +5,7 @@
 
 use strict;
 
+my $n = @ARGV;
 if(@ARGV < 1) {
     print "\nUsage: parse2fasta.pl <infile> [options]\n\n";
     print "<infile> can be one file or a list of files separated by spaces.\n\n";
@@ -71,26 +72,63 @@ if($userparamsgiven == 0) {  # the following figures out how many rows per block
 	}
     }
     close(INFILE1);
-    
-    # The following find an arithmetic progression of rows that look like sequence.
+
+    my $num_lines_seq = 0;
+    for(my $i=0; $i<@linearray; $i++) {
+	if($linearray[$i] == 1) {
+	    $num_lines_seq++;
+	}
+    }
+
+    if($num_lines_seq == 0) {
+	die "\nWarning: No lines of sequence found in the file '$ARGV[0]'\n\n";
+    }
+
+    # special case, only one line of sequence in the file:
+    if($num_lines_seq == 1) {
+	print ">seq.1a\n";
+	for(my $i=0; $i<$n; $i++) { # loop over all the input files
+	    open(INFILE, $ARGV[$i]);
+	    while($line = <INFILE>) {
+		chomp($line);
+		$line =~ s/\^M$//;
+		$line =~ s/[^ACGTN]$//;
+		if($line =~ /^(A|C|G|T|N){10}(A|C|G|T|N)+$/) {
+		    print "$line\n";
+		}
+	    }
+	    close(INFILE);
+	}
+	exit(0);
+    }
+
+    # The following finds an arithmetic progression of rows that look like sequence.
     my $k;
     my $i;
     my $j;
     my $flag;
+    my $flag2;
     for($k=0; $k<10; $k++) {
 	for($i=1; $i<10; $i++) {
 	    $flag = 0;
-	    for($j=0; $j<$cnt/20; $j++) {
+	    $flag2 = 0;
+	    for($j=0; $k+$i*$j<@linearray; $j++) {
 		my $x = $k+$i*$j;
 		if($linearray[$k+$i*$j] == 0) {
 		    $flag = 1;
 		}
+		$flag2 = 1;
 	    }
-	    if($flag == 0) {
-		$firstNArow = $k;
-		$secondNArow = $k+$i;
-		$k=10;
-		$i=10;
+	    if($flag2 == 0) {
+		$firstNArow = 0;
+		$secondNArow = 0;
+	    } else {
+		if($flag == 0) {
+		    $firstNArow = $k;
+		    $secondNArow = $k+$i;
+		    $k=10;
+		    $i=10;
+		}
 	    }
 	}
 	if($k==9 && $flag == 0) {
@@ -98,8 +136,9 @@ if($userparamsgiven == 0) {  # the following figures out how many rows per block
 	}
     }
 }
-#print "firstNArow = $firstNArow\n";
-#print "secondNArow = $secondNArow\n";
+
+# print "firstNArow = $firstNArow\n";
+# print "secondNArow = $secondNArow\n";
 
 if($firstNArow == 0 && $secondNArow == 0) {
     print "\nThis does not appear to be a valid file.\n\n";
@@ -111,7 +150,6 @@ my $block = $secondNArow - $firstNArow;
 # The number of rows in each block of rows is $block
 # The number of the row in each block that has the sequence is $firstNArow
 
-my $n = @ARGV;
 my $linecnt = 0;
 for(my $i=0; $i<$n; $i++) { # loop over all the input files
     open(INFILE, $ARGV[$i]);
