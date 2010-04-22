@@ -114,9 +114,18 @@ for($i=0; $i<@a; $i++) {
 }
 
 open(LOGFILE, ">$output_dir/rum.log");
-print LOGFILE "start: $date\n";
-
-print "paired_end = $paired_end\n";
+print LOGFILE "config file: $configfile\n";
+print LOGFILE "readsfile: $readsfile\n";
+print LOGFILE "output_dir: $output_dir\n";
+print LOGFILE "numchunkis: $numchunks\n";
+print LOGFILE "name: $name\n";
+print LOGFILE "paired_end: $paired_end\n";
+print LOGFILE "fast: $fast\n";
+print LOGFILE "limitNU: $limitNU\n";
+print LOGFILE "chipseq: $chipseq\n";
+print LOGFILE "ooc: $ooc\n";
+print LOGFILE "qsub: $qsub\n";
+print LOGFILE "\nstart: $date\n";
 
 if($numchunks =~ /(\d+)s/) {
     $numchunks = $1;
@@ -335,6 +344,7 @@ print LOGFILE "finished creating RUM_Unique/RUM_NU: $date\n";
 print LOGFILE "starting M2C: $date\n";
 $M2C_log = "M2C_$name" . ".log";
 $shellscript = "#!/bin/sh\n";
+$shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl RUM_Unique RUM_NU > $output_dir/mapping_stats.txt\n";
 $shellscript = $shellscript . "echo making bed > $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "echo `date` > $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "perl $scripts_dir/make_bed.pl $output_dir/RUM_Unique $output_dir/RUM_Unique.bed\n";
@@ -389,7 +399,12 @@ sub breakup_fasta () {
     $filesize =~ s/\s.*//;
     $numseqs = $filesize / 2;
     $piecesize = int($numseqs / $numpieces);
-    print LOGFILE "processing in $numchunks pieces of approx $piecesize size each.\n";
+    $piecesize2 = int($numseqs / $numpieces / 2);
+    if($numchunks > 1) {
+	print LOGFILE "processing in $numchunks pieces of approx $piecesize2 reads each\n";
+    } else {
+	print LOGFILE "processing in one piece of approx $piecesize2 reads\n";
+    }
     if($piecesize % 2 == 1) {
 	$piecesize++;
     }
