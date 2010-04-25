@@ -11,7 +11,7 @@ Where: <cov1> and <cov2> are two coverage files.
 
 Options: -open : if the intervals in the coverage files do not contain the right endpoint.
 
-"
+";
 }
 
 $open = "false";
