@@ -1,9 +1,23 @@
+#!/usr/bin/perl
+
+# Written by Gregory R. Grant
+# University of Pennslyvania, 2010
+
 if(@ARGV<3) {
-    print "\n\nUsage: compare2simulated.pl <working_dir> <simulated_readsfile_name> <simulated_bedfile_name> <name>\n";
-    print "\n<name> is some general name to identify this comparision.\n";
-    print "\nThe files <simulated_readsfile_name> and <simulated_bedfile_name> are expected to be in <working_dir>,\n";
-    print "specify them without full path.\n\n";
-    exit();
+    die "
+Usage: compare2simulated.pl <working_dir> <simulated_readsfile_name> <simulated_bedfile_name> <name>
+
+<name> is some general name to identify this comparision.
+
+The files <simulated_readsfile_name> and <simulated_bedfile_name> are
+expected to be in <working_dir>, specify them without full path.
+
+The bed file should have the sequence numbers in the first column.
+
+This script takes the fasta and bed files output from the simulator,
+runs RUM and generates a comparison.
+
+";
 }
 $working_dir = $ARGV[0];
 $simulated_readsfile = $ARGV[1];
