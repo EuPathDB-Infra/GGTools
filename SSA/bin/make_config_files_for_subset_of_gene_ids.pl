@@ -1,8 +1,17 @@
+#!/usr/bin/perl
+
+# Written by Gregory R. Grant
+# University of Pennslyvania, 2010
+
 if(@ARGV < 1) {
-    print STDERR "\nUsage:  make_config_files_for_subset_of_gene_ids.pl <stem> <ids>\n\n";
-    print STDERR "  * <stem> is the suffix that will qualify these config files.\n";
-    print STDERR "  * <ids> is a space separated list of ids or the name of a file of ids.\n\n";
-    exit();
+    die "
+Usage:  make_config_files_for_subset_of_gene_ids.pl <stem> <ids>
+
+  * <stem> is the suffix that will qualify these config files.
+
+  * <ids> is a space separated list of ids or the name of a file of ids.
+
+";
 }
 
 $stem = $ARGV[0];
