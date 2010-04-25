@@ -1,3 +1,17 @@
+#!/usr/bin/perl
+
+# Written by Gregory R. Grant
+# University of Pennslyvania, 2010
+
+if(@ARGV < 2) {
+    die "
+Usage: compare_feature_quantifications_between_two_samples.pl <quant_file1> <quant_file2>
+
+Where <quant_file1> and <quant_file2> are feature quantification files.
+
+";
+}
+
 open(INFILE, "UCSC_mouse_knowngene_id_mapping");
 while($line = <INFILE>) {
     chomp($line);
