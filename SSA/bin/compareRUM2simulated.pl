@@ -3,6 +3,7 @@
 # Written by Gregory R. Grant
 # University of Pennslyvania, 2010
 
+$|=1;
 if(@ARGV<3) {
     die "
 Usage: compare2simulated.pl <working_dir> <simulated_readsfile_name> <simulated_bedfile_name> <name>
@@ -58,5 +59,8 @@ $RUM_cov = "RUM_" . $name . ".cov";
 
 $comparator_output = `perl scripts/compare_covs.pl $working_dir/temp_truth_unique-only.cov $working_dir/$RUM_cov -open`;
 
-print $comparator_output;
-print "\n";
+$filename = "RUM_comparison_" . $name . ".txt";
+open(OUTFILE, $filename);
+print OUTFILE $comparator_output;
+print OUTFILE "\n";
+close(OUTFILE);
