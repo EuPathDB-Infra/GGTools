@@ -344,7 +344,7 @@ print LOGFILE "finished creating RUM_Unique/RUM_NU: $date\n";
 print LOGFILE "starting M2C: $date\n";
 $M2C_log = "M2C_$name" . ".log";
 $shellscript = "#!/bin/sh\n";
-$shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl RUM_Unique RUM_NU > $output_dir/mapping_stats.txt\n";
+$shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl $output_dir/RUM_Unique $output_dir/RUM_NU > $output_dir/mapping_stats.txt\n";
 $shellscript = $shellscript . "echo making bed > $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "echo `date` > $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "perl $scripts_dir/make_bed.pl $output_dir/RUM_Unique $output_dir/RUM_Unique.bed\n";
