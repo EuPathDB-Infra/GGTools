@@ -5,6 +5,7 @@
 
 if(@ARGV<1 || $ARGV[0] eq "help") {
     print "\nusage: normalize.pl <cov_file> [options]\n\n";
+    print "Outputs to standard out.\n\n";
     print "options:\n";
     print "    -normfactor N                : divide coverages by N\n";
     print "    -open                        : cov file coords open (right endpoint not included)\n";
