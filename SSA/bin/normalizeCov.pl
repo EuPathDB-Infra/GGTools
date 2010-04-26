@@ -1,3 +1,8 @@
+#!/usr/bin/perl
+
+# Written by Gregory R. Grant
+# University of Pennsylvania, 2010
+
 if(@ARGV<1 || $ARGV[0] eq "help") {
     print "\nusage: normalize.pl <cov_file> [options]\n\n";
     print "options:\n";
