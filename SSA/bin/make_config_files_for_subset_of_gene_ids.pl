@@ -55,27 +55,35 @@ open(INFILE, "simulator_config_featurequantifications");
 $filename = "simulator_config_featurequantifications_" . $stem;
 open(OUTFILE, ">$filename");
 print OUTFILE "--------------------------------------------------------------------\n";
-while($line = <INFILE>) {
-    if($line =~ /---------------------/) {
-	$line = <INFILE>;
-	chomp($line);
-	$idline = $line;
-	$idline =~ s/\s*(\+|-)\s*$//;
-	@b = split(/::::/,$idline);
-	$flag = 0;
-	for($i=0; $i<@b; $i++) {
-	    $b[$i] =~ s/\(.*\)//;
-	    if($ids{$b[$i]} + 0 > 0) {
-		if($flag == 0) {
-		    print OUTFILE "$line\n";
-		    $flag = 1;
-		    until($line =~ /---------------------/ || $line eq '') {
-			$line = <INFILE>;
-			print OUTFILE $line;
-			if($line =~ /intron/) {
-			    @a = split(/\t/,$line);
-			    $introns{$a[1]}++;
-			}
+$line = <INFILE>;
+until($line  =~ /---------------------/) {
+    $line = <INFILE>;
+}
+while(1 == 1) {
+    $line = <INFILE>;
+    chomp($line);
+    if($line eq '') {
+	last;
+    }
+    $idline = $line;
+    $idline =~ s/\s*(\+|-)\s*$//;
+    @b = split(/::::/,$idline);
+    $flag = 0;
+    for($i=0; $i<@b; $i++) {
+	$b[$i] =~ s/\(.*\)//;
+	if($ids{$b[$i]} + 0 > 0) {
+	    if($flag == 0) {
+		print OUTFILE "$line\n";
+		$flag = 1;
+		until($line =~ /---------------------/ || $line eq '') {
+		    $line = <INFILE>;
+		    if($line eq '') {
+			last;
+		    }
+		    print OUTFILE $line;
+		    if($line =~ /intron/) {
+			@a = split(/\t/,$line);
+			$introns{$a[1]}++;
 		    }
 		}
 	    }
