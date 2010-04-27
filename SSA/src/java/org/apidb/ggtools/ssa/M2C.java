@@ -1,3 +1,6 @@
+package org.apidb.ggtools.ssa;
+
+
 /*
 Conceived and implemented by Gregory Robert Grant, University of Pennsylvania, Philadelphia, PA.
 <ggrant@pcbi.upenn.edu>, <greg@grant.org>
