@@ -1,0 +1,96 @@
+<project name="GGTools" default="Installation" basedir=".">
+
+  <!-- ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooo  Dependencies  oooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+
+  
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooo    Checkout    oooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+
+  <target name="GGTools-ChildCheckout" />
+  
+  
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooo    Update    oooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+
+  <target name="GGTools-ChildUpdate" />
+
+
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooo  Installation  oooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+
+  <target name="GGTools-Installation" depends="GGTools/Array-Installation,
+                                            GGTools/HTS-Installation,
+                                            GGTools/SSA-Installation,
+                                            GGTools/Misc-Installation" >
+
+    <ant target="defaultProjectInstall"/>
+
+  </target>  
+   
+
+  <!-- oooooooooooooooooo  Installation Postprocess  ooooooooooooooooooooo -->
+
+  <target name="GGTools-Installation-postprocess">
+    <echo message="Postprocessing the GGTools installation"/>
+
+    <replace dir="${targetDir}/bin" 
+             propertyFile="${targetDir}/config/replacements.prop" > 
+      <include name="**/*" />
+      <replacefilter token="@perl@" property="perl"/>
+    </replace> 
+
+  </target>
+
+
+  <!-- ooooooooooooooooooooooo  Install Components  ooooooooooooooooooooooo -->
+
+  <target name="GGTools/Array-Installation">
+    <ant target="defaultComponentInstall">
+      <property name="project" value="GGTools"/>
+      <property name="component" value="Array"/>
+    </ant>
+  </target>  
+
+  <target name="GGTools/HTS-Installation">
+    <ant target="defaultComponentInstall">
+      <property name="project" value="GGTools"/>
+      <property name="component" value="HTS"/>
+    </ant>
+  </target>  
+
+  <target name="GGTools/SSA-Installation">
+    <ant target="defaultComponentInstall">
+      <property name="project" value="GGTools"/>
+      <property name="component" value="SSA"/>
+    </ant>
+  </target>  
+
+  <target name="GGTools/Misc-Installation">
+    <ant target="defaultComponentInstall">
+      <property name="project" value="GGTools"/>
+      <property name="component" value="Misc"/>
+    </ant>
+  </target>  
+
+
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooooo  Release  ooooooooooooooooooooooooooooo -->
+  <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
+
+  <target name="GGTools-Release">
+    
+    <ant target="defaultProjectRelease">
+      <property name="tag" value="v1-4-0"/>
+      <property name="cvsroot" value="/files/cbil/cvs/cvsroot"/>
+    </ant>
+  </target>  
+
+
+</project>
+
+
