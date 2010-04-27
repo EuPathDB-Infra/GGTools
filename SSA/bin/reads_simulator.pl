@@ -31,7 +31,7 @@ if(@ARGV < 1) {
     print "Run it with no parameters for the usage\n";
     print "To use those config files with this program use the option -filenamestem\n";
     print "\n";
-    exit();
+    exit(0);
 }
 
 $name = $ARGV[1];
@@ -286,7 +286,7 @@ while($line = <INFILE>) {
 	$N = @a2 + 0;
 	$intron2gene{$a[1]}[$N] = $geneid;
 	$gene2intron{$geneid}[$introncnt] = $a[1];
-	$intron2intensity{$a[1]} = $a[4];
+	$intron2intensity{$a[1]} = $a[2];
 	$introncnt++;
 	$gene2introncnt{$geneid}{$a[1]} = $introncnt;
 	##print SIMFAOUT "introncnt = $introncnt\n";
@@ -303,7 +303,7 @@ while($line = <INFILE>) {
 	$line = <INFILE>;
 	chomp($line);
 	@a = split(/\t/,$line);
-	$gene_intensity[$genecnt] = $a[4];
+	$gene_intensity[$genecnt] = $a[2];
 	$sum_of_gene_intensities = $sum_of_gene_intensities + $gene_intensity[$genecnt];
 	$genes[$genecnt] = $geneid;
 	$genecnt++;
@@ -412,10 +412,10 @@ for($i=0; $i<$genecnt; $i++) {
     $gene_density[$i] = $gene_intensity[$i] / $sum_of_gene_intensities;
     $gene_distribution[$i] = $gene_density[$i];
 }
-#print "gene_distribution[0] = $gene_distribution[0]\n";
+print "gene_distribution[0] = $gene_distribution[0]\n";
 for($i=1; $i<$genecnt; $i++) {
     $gene_distribution[$i] = $gene_distribution[$i] + $gene_distribution[$i-1];
-#    print "gene_distribution[$i] = $gene_distribution[$i]\n";
+    print "gene_distribution[$i] = $gene_distribution[$i]\n";
 }
 
 $introncount_total=0;
@@ -524,6 +524,7 @@ foreach $exon (keys %exon2gene) {
     $length = $end - $start + 1;
     $num_substitutions = random_binomial(1, $length, $substitutionfrequency);
     undef %substitutions_locs;
+    undef @indels_temp;
     $SEQ = $exonseq{$exon};
     for($i=0; $i<$num_substitutions; $i++) {
 	$LOC = int(rand($length)) + 1;
@@ -619,15 +620,15 @@ foreach $exon (keys %exon2gene) {
 		$indels{$exon}[$j][1] = $indellength;
 		$indels{$exon}[$j][2] = $insert;
 		if($indellength > 0) {
-		    print SIMINDELSOUT "$exon\t$LOC\t$indellength\t$insert\n";
 		    $Z = substr($SEQ,$LOC,0,$insert);
 		    $exonseq{$exon} = $SEQ;
+		    print SIMINDELSOUT "$exon\t$LOC\t$indellength\t$insert\n";
 		}
 		if($indellength < 0) {
-		    print SIMINDELSOUT "$exon\t$LOC\t$indellength\t$Z\n";
 		    $l = -1 * $indellength;
 		    $Z = substr($SEQ,$LOC,$l,"");
 		    $exonseq{$exon} = $SEQ;
+		    print SIMINDELSOUT "$exon\t$LOC\t$indellength\t$Z\n";
 		}
 	    }
 	} else {
@@ -702,7 +703,6 @@ while( 1 == 1) {
     }
     $R = rand(1);
     if($R < $intron_freq) {
-	print "intron\n";
 	# pick an intron at random
 	$R = rand(1);
 	$c = 0;
@@ -722,10 +722,8 @@ while( 1 == 1) {
 
 	$SEQ = $seq{$GENE};
 	$seqlength = length($SEQ);
-	print "before padded intron\n";
 	undef %geneWithIntron2indel;
 	$SEQ = getpaddedintron($GENE, $intron_num);
-	print "after padded intron\n";
 	$seqlength = length($SEQ);
 
 	@INDELS = @{$geneWithIntron2indel{$GENE}{$INTRON2}};
@@ -780,7 +778,6 @@ while( 1 == 1) {
 
     }
     else {
-	print "exon\n";
 	$R = rand(1);
 	$c = 0;
 	while($gene_distribution[$c] < $R && $c<(@gene_distribution-1)) {
@@ -792,9 +789,7 @@ while( 1 == 1) {
 	$STARTS = $starts{$GENE};
 	$ENDS = $ends{$GENE};
     }
-    print "before get reads\n";
     $return_vector_ref = getreads($SEQ, \@INDELS, $STARTS, $ENDS, $CNT);
-    print "after get reads\n";
 
     @return_vector = @{$return_vector_ref};
     $fa = $return_vector[0];
@@ -1142,7 +1137,6 @@ sub reversecomplement () {
 
 sub getcoords () {
     ($readstart, $readlength2, $starts, $ends) = @_;
-    print "in getcoords\n";
     $readend = $readstart + $readlength2 - 1;
     $COORDS = "";
     $starts =~ s/,\s*$//;
@@ -1165,7 +1159,6 @@ sub getcoords () {
     #print SIMFAOUT "ends = $ends\n";
     $prefix = 0;
     $exonnum = 0;
-    print "here 1\n";
     while($prefix < $readstart) {
 	$prefix = $prefix + ($E[$exonnum] - $S[$exonnum] + 1);
 	$exonnum++;
@@ -1174,12 +1167,10 @@ sub getcoords () {
     $firstexon = $exonnum - 1; # the read starts in this exon
     $prefix = 0;
     $exonnum = 0;
-    print "here 2\n";
     while($prefix < $readend) {
 	$prefix = $prefix + ($E[$exonnum] - $S[$exonnum] + 1);
 	$exonnum++;
     }
-    print "here 3\n";
     $offset2 = $prefix - ($E[$exonnum-1] - $S[$exonnum-1] + 1);
     $lastexon = $exonnum - 1; # the read ends in this exon
     if($lastexon > @S) {
@@ -1202,7 +1193,6 @@ sub getcoords () {
 	    $COORDS = $COORDS . "-$E[$en]";
 	}
     }
-    print "done with getcoords\n";
     return $COORDS;
 }
 
@@ -1281,7 +1271,6 @@ sub getpaddedintron () {
     }
     $FLAG = 0;
     @aa = @{$geneWithIntron2indel_temp{$geneid}{$INTRON}};
-    print "here x1\n";
     while($FLAG == 0) {
 	$FLAG = 1;
 	for($ii=0; $ii<@aa-1; $ii++) {
@@ -1296,7 +1285,6 @@ sub getpaddedintron () {
 	    }
 	}
     }
-    print "here y1\n";
     for($ii=0; $ii<@aa; $ii++) {
 	$geneWithIntron2indel{$geneid}{$INTRON}[$ii][0] = $aa[$ii][0];
 	$geneWithIntron2indel{$geneid}{$INTRON}[$ii][1] = $aa[$ii][1];
