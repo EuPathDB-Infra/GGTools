@@ -6,7 +6,7 @@ $|=1;
 
 if(@ARGV < 4) {
     die "
-Usage: compare_feature_quantifications_between_two_samples.pl <quant_file1> <quant_file2> <quant_file3> <min_depth> [options]
+Usage: compare_2_vs_1.pl <quant_file1> <quant_file2> <quant_file3> <min_depth> [options]
 
 Where:  <quant_file1> and <quant_file2> are feature quantification files for condition 1
         and <quant_file3> is a feature quantification file for condition 2
@@ -14,8 +14,14 @@ Where:  <quant_file1> and <quant_file2> are feature quantification files for con
         <min_depth> is the minimum average depth-of-coverage that each gene must have
         in at least one of the two conditions in order for the gene to be considered.
 
-This program returns (by default) genes ranked by fold change.  Use the options to 
-output at the exon or intron level.
+This program returns features (genes, exons, introns) ranked by their likelihood
+of being differenially expressed, as determined by the T-statistic.  Features returned
+are ranked by T-stat. This is a pretty thin T-stat given only two reps in one condition
+and one in the other, but that is the minimal necessary amount to get a valid definition
+of the T-stat.  Note an adjustement factor is added to the denominator of the T-stat to
+avoid blowing up near zero.
+
+By default this program returns genes.  Use the options to output at the exon or intron level.
 
 Options: -exons   : rank exons by fold change
          -introns : rank introns by fold change
@@ -41,6 +47,11 @@ for($i=4; $i<@ARGV; $i++) {
     }
     if($ARGV[$i] eq "-introns") {
 	$introns = "true";
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-annot") {
+ 	$annotfile = $ARGV[$i+1];
+	$i++;
 	$optionrecognized = 1;
     }
     if($optionrecognized == 0) {
