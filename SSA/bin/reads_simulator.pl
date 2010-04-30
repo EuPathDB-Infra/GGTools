@@ -8,6 +8,7 @@ if(@ARGV < 1) {
     print "   - bed file is in one-based coords and contains both endpoints of each span.\n";
     print "Also output are: a file of indels, a file of substitutions, and a file of novel splice forms.\n";
     print "\n   options:\n";
+    print "      -numgenes n     : Choose n>=1 genes at random from a master pool of gene models (default n = 100000).\n";
     print "      -error x        : Set the error rate for generating a wrong base\n                        anywhere in the read to 0<=x<=1 (default x = 0.005).\n";
     print "      -indelfreq x    : Set indel rate to 0<=x<1 (default x = 0.0005).\n";
     print "      -nalt n         : Set the number of novel splice forms per gene to n>1 (default n = 2).\n";
@@ -38,21 +39,16 @@ $name = $ARGV[1];
 
 if($name =~ /^(-|_)/) {
     print STDERR "\nError: invalid name '$name' - name cannot start with a dash or an underscore.\n\n";
-    exit();
+    exit(0);
 }
 if($name =~ /[^a-zA-Z0-9_\-\.]/) {
     print STDERR "\nError: name must be only letters, numbers, dashes, underscores and periods.\n\n";
-    exit();
+    exit(0);
 }
 if(!($name =~ /[a-zA-Z0-9_\-\.]/)) {
     print STDERR "\nERROR: invalid name '$name', cannot be empty and must use only letters,\n       numbers, dashes, underscores and periods.\n\n";
-    exit();
+    exit(0);
 }
-
-$simulator_config_geneinfo = "simulator_config_geneinfo";
-$simulator_config_featurequantifications = "simulator_config_featurequantifications";
-$simulator_config_geneseq = "simulator_config_geneseq";
-$simulator_config_intronseq = "simulator_config_intronseq";
 
 $READLENGTH = 100;
 $substitutionfrequency = .001;
@@ -63,12 +59,14 @@ $percent_of_tails_that_are_low_qual = 0;
 $quality_of_low_qual_tail = .8;
 $percent_alt_spliceforms = .2;
 $num_alt_splice_forms_per_gene = 2;
+$NUMGENES = 100000;
+$stem = "";
 
 use Math::Random qw(:all);
 $num_reads = $ARGV[0];
 if(!($num_reads =~ /^\d+$/) || ($num_reads <= 0)) {
     print STDERR "\nError: number of reads must be an integer, not '$ARGV[0]'.\n\n";
-    exit();
+    exit(0);
 }
 $sum_of_gene_intensities = 0;
 $sum_of_intron_intensities = 0;
@@ -89,11 +87,11 @@ for($i=2; $i<@ARGV; $i++) {
 	$option_recognized = 1;
 	if($stem =~ /^(-|_)/) {
 	    print STDERR "\nError: -filenamestem cannot start with a dash or an underscore.\n\n";
-	    exit();
+	    exit(0);
 	}
 	if($stem =~ /[^a-zA-Z0-9._-]/) {
 	    print STDERR "\nError: -filenamestem must be only letters, numbers, dashes, periods and underscores.\n\n";
-	    exit();
+	    exit(0);
 	}
 
 	$simulator_config_geneinfo = $simulator_config_geneinfo . "_$stem";
@@ -107,12 +105,12 @@ for($i=2; $i<@ARGV; $i++) {
 	$option_recognized = 1;
 	if(!($quality_of_low_qual_tail =~ /^\d*\.?\d*$/)) {
 	    print STDERR "\nError: -tqual has to be non-negative and no more than one.\n\n";
-	    exit();
+	    exit(0);
 	}
 	$quality_of_low_qual_tail = $quality_of_low_qual_tail + 0;
 	if($quality_of_low_qual_tail > 1 || $quality_of_low_qual_tail < 0) {
 	    print STDERR "\nError: -tqual has to be non-negative and no more than one.\n\n";
-	    exit();
+	    exit(0);
 	}
     }
     if($ARGV[$i] eq "-tpercent") {
@@ -121,12 +119,12 @@ for($i=2; $i<@ARGV; $i++) {
 	$option_recognized = 1;
 	if(!($percent_of_tails_that_are_low_qual =~ /^\d*\.?\d*$/)) {
 	    print STDERR "\nError: -tpercent has to be non-negative and no more than one.\n\n";
-	    exit();
+	    exit(0);
 	}
 	$percent_of_tails_that_are_low_qual = $percent_of_tails_that_are_low_qual + 0;
 	if($percent_of_tails_that_are_low_qual > 1 || $percent_of_tails_that_are_low_qual < 0) {
 	    print STDERR "\nError: -tpercent has to be non-negative and no more than one.\n\n";
-	    exit();
+	    exit(0);
 	}
     }
     if($ARGV[$i] eq "-tlen") {
@@ -135,11 +133,11 @@ for($i=2; $i<@ARGV; $i++) {
 	$option_recognized = 1;
 	if(!($low_qual_tail_length =~ /^\d+$/)) {
 	    print STDERR "\nError: -teln must be a positive integer.\n\n";
-	    exit();
+	    exit(0);
 	}
 	if($low_qual_tail_length < 1) {
 	    print STDERR "\nError: -teln must be a positive integer.\nIf you want there to be no tail error don't set -tlen\n\n";
-	    exit();
+	    exit(0);
 	}
     }
     if($ARGV[$i] eq "-error") {
@@ -148,12 +146,12 @@ for($i=2; $i<@ARGV; $i++) {
 	$option_recognized = 1;
 	if(!($base_error =~ /^\d*\.?\d*$/)) {
 	    print STDERR "\nError: -error has to be non-negative and less than one\n\n";
-	    exit();
+	    exit(0);
 	}
 	$base_error = $base_error + 0;
 	if($base_error >= 1 || $base_error < 0) {
 	    print STDERR "\nError: -error has to be non-negative and less than one\n\n";
-	    exit();
+	    exit(0);
 	}
     }
     if($ARGV[$i] eq "-nalt") {
@@ -162,11 +160,24 @@ for($i=2; $i<@ARGV; $i++) {
 	$option_recognized = 1;
 	if(!($num_alt_splice_forms_per_gene =~ /^\d+$/)) {
 	    print STDERR "\nError: -nalt has to be a postive integer.\nIf you want there to be no alternate splice forms don't set -nalt, set -palt 0\n\n";
-	    exit();
+	    exit(0);
 	}
 	if($num_alt_splice_forms_per_gene < 1) {
 	    print STDERR "\nError: -nalt has to be a postive integer.\nIf you want there to be no alternate splice forms don't set -nalt, set -palt 0\n\n";
-	    exit();
+	    exit(0);
+	}
+    }
+    if($ARGV[$i] eq "-numgenes") {
+	$i++;
+	$NUMGENES = $ARGV[$i];
+	$option_recognized = 1;
+	if(!($NUMGENES =~ /^\d+$/)) {
+	    print STDERR "\nError: -numgenes has to be a postive integer.\n\n";
+	    exit(0);
+	}
+	if($NUMGENES < 1) {
+	    print STDERR "\nError: -numgenes has to be a postive integer.\n\n";
+	    exit(0);
 	}
     }
     if($ARGV[$i] eq "-palt") {
@@ -175,12 +186,12 @@ for($i=2; $i<@ARGV; $i++) {
 	$option_recognized = 1;
 	if(!($percent_alt_spliceforms =~ /^\d*\.?\d*$/)) {
 	    print STDERR "\nError: -palt has to be non-negative and no more than one.\n\n";
-	    exit();
+	    exit(0);
 	}
 	$percent_alt_spliceforms = $percent_alt_spliceforms + 0;
 	if($percent_alt_spliceforms > 1 || $percent_alt_spliceforms < 0) {
 	    print STDERR "\nError: -palt has to be non-negative and no more than one.\n\n";
-	    exit();
+	    exit(0);
 	}
     }
     if($ARGV[$i] eq "-indelfreq") {
@@ -189,12 +200,12 @@ for($i=2; $i<@ARGV; $i++) {
 	$option_recognized = 1;
 	if(!($indelfrequency =~ /^\d*\.?\d*$/)) {
 	    print STDERR "\nError: -indelfreq has to be strictly between 0 and 1.\n\n";
-	    exit();
+	    exit(0);
 	}
 	$indelfrequency = $indelfrequency + 0;
 	if($indelfrequency >= 1 || $indelfrequency < 0) {
 	    print STDERR "\nError: -indelfreq has to be strictly between 0 and 1.\n\n";
-	    exit();
+	    exit(0);
 	}
     }
     if($ARGV[$i] eq "-subfreq") {
@@ -203,12 +214,12 @@ for($i=2; $i<@ARGV; $i++) {
 	$option_recognized = 1;
 	if(!($substitutionfrequency =~ /^\d*\.?\d*$/)) {
 	    print STDERR "\nError: -subfreq has to be less than one non-negative.\n\n";
-	    exit();
+	    exit(0);
 	}
 	$substitutionfrequency = $substitutionfrequency + 0;
 	if($substitutionfrequency >= 1 || $substitutionfrequency < 0) {
 	    print STDERR "\nError: -subfreq has to be less than one non-negative.\n\n";
-	    exit();
+	    exit(0);
 	}
     }
     if($ARGV[$i] eq "-readlength") {
@@ -217,28 +228,32 @@ for($i=2; $i<@ARGV; $i++) {
 	$option_recognized = 1;
 	if(!($READLENGTH =~ /^\d+$/)) {
 	    print STDERR "\nError: -readlength has to be a postive integer.\n\n";
-	    exit();
+	    exit(0);
 	}
 	$READLENGTH = $READLENGTH + 0;
 	if($READLENGTH < 1) {
 	    print STDERR "\nError: -readlength has to be a postive integer.\n\n";
-	    exit();
+	    exit(0);
 	}
     }
     if($option_recognized == 0) {
 	print STDERR "\nError: option $ARGV[$i] not recognized.\n\n";
-	exit();
+	exit(0);
     }
 }
 
 if($READLENGTH <= $low_qual_tail_length && $percent_of_tails_that_are_low_qual > 0) {
     print STDERR "\nERROR: low quality tail length must be less than the readlength.\n\n";
-    exit();
+    exit(0);
 }
+if(!($stem =~ /\S/)) {
+    # Here construct random set of $NUMGENES genes by calling make_config...pl script on master-list files
 
-#print "low_qual_tail_length = $low_qual_tail_length\n";
-#print "percent_of_tails_that_are_low_qual = $percent_of_tails_that_are_low_qual\n";
-#print "quality_of_low_qual_tail = $quality_of_low_qual_tail\n";
+    $simulator_config_geneinfo = "simulator_config_geneinfo_temp";
+    $simulator_config_featurequantifications = "simulator_config_featurequantifications_temnp";
+    $simulator_config_geneseq = "simulator_config_geneseq_temp";
+    $simulator_config_intronseq = "simulator_config_intronseq_temp";
+}
 
 $bedfilename = "simulated_reads_$name" . ".bed";
 $fafilename = "simulated_reads_$name" . ".fa";
@@ -405,7 +420,7 @@ close(ALTTRANSCRIPTS);
 
 if($sum_of_gene_intensities <= 0) {
     print STDERR "\nERROR: None of the genes have expression level above zero,\ncheck your feature quantification config file.\n\n";
-    exit();
+    exit(0);
 }
 
 for($i=0; $i<$genecnt; $i++) {
