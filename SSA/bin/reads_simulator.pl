@@ -94,10 +94,10 @@ for($i=2; $i<@ARGV; $i++) {
 	    exit(0);
 	}
 
-	$simulator_config_geneinfo = $simulator_config_geneinfo . "_$stem";
-	$simulator_config_featurequantifications = $simulator_config_featurequantifications . "_$stem";
-	$simulator_config_geneseq = $simulator_config_geneseq . "_$stem";
-	$simulator_config_intronseq = $simulator_config_intronseq . "_$stem";
+	$simulator_config_geneinfo = "simulator_config_geneinfo_$stem";
+	$simulator_config_featurequantifications = "simulator_config_featurequantifications_$stem";
+	$simulator_config_geneseq = "simulator_config_geneseq_$stem";
+	$simulator_config_intronseq = "simulator_config_intronseq_$stem";
     }
     if($ARGV[$i] eq "-tqual") {
 	$i++;
@@ -247,26 +247,58 @@ if($READLENGTH <= $low_qual_tail_length && $percent_of_tails_that_are_low_qual >
     exit(0);
 }
 if(!($stem =~ /\S/)) {
-    # Here construct random set of $NUMGENES genes by calling make_config...pl script on master-list files
+    # Here construct random set of $NUMGENES genes and call make_config...pl script on master-list files
+
+    $total_num_genes = `wc -l simulator_config_geneinfo`;
+    $total_num_genes =~ /\s*(\d+)/;
+    $total_num_genes = $1;
+    open(OUTFILE, ">genes_temp") or die "\nError: cannot open file 'genes_temp' for writing\n\n";
+    for($i=0; $i<$NUMGENES; $i++) {
+	$R = int(rand($total_num_genes))+1;
+	while($Ghash{$R}+0>0) {
+	    $R = int(rand($total_num_genes));
+	}
+	$Ghash{$R}++;
+	print OUTFILE "GENE.$R\n";
+    }
+    close(OUTFILE);
+    $x = `perl make_config_files_for_subset_of_gene_ids.pl temp genes_temp`;
 
     $simulator_config_geneinfo = "simulator_config_geneinfo_temp";
-    $simulator_config_featurequantifications = "simulator_config_featurequantifications_temnp";
+    $simulator_config_featurequantifications = "simulator_config_featurequantifications_temp";
     $simulator_config_geneseq = "simulator_config_geneseq_temp";
     $simulator_config_intronseq = "simulator_config_intronseq_temp";
 }
 
+$logfilename = "simulated_reads_$name" . ".log";
 $bedfilename = "simulated_reads_$name" . ".bed";
 $fafilename = "simulated_reads_$name" . ".fa";
 $substitutionsfilename = "simulated_reads_substitutions_$name" . ".txt";
 $indelsfilename = "simulated_reads_indels_$name" . ".txt";
 
-open(SIMBEDOUT, ">$bedfilename");
-open(SIMFAOUT, ">$fafilename");
-open(SIMSUBSOUT, ">$substitutionsfilename");
-open(SIMINDELSOUT, ">$indelsfilename");
+open(SIMLOGOUT, ">$logfilename") or die "\nError: cannot open file '$logfilename' for writing\n\n";
+open(SIMBEDOUT, ">$bedfilename") or die "\nError: cannot open file '$bedfilename' for writing\n\n";
+open(SIMFAOUT, ">$fafilename") or die "\nError: cannot open file '$fafilename' for writing\n\n";
+open(SIMSUBSOUT, ">$substitutionsfilename") or die "\nError: cannot open file '$substitutionsfilename' for writing\n\n";
+open(SIMINDELSOUT, ">$indelsfilename") or die "\nError: cannot open file '$indelsfilename' for writing\n\n";
 
-open(INFILE, $simulator_config_geneinfo);
+$time = time();
+print SIMLOGOUT "Simulator run: '$name' - started at $time\n";
+print SIMLOGOUT "readlength: $readlength\n";
+print SIMLOGOUT "indel frequency: $indelfrequency\n";
+print SIMLOGOUT "base error: $base_error\n";
+print SIMLOGOUT "low quality tail length: $low_qual_tail_length\n";
+print SIMLOGOUT "percent of tails that are low quality: $percent_of_tails_that_are_low_qual\n";
+print SIMLOGOUT "quality of low qulaity tails: $quality_of_low_qual_tail\n";
+print SIMLOGOUT "percent of alt splice forms: $percent_alt_spliceforms\n";
+print SIMLOGOUT "number of alt splice forms per gene: $num_alt_splice_forms_per_gene\n";
+if($stem =~ /\S/) {
+    print SIMLOGOUT "stem: $stem\n";
+} else {
+    print SIMLOGOUT "num genes: $NUMGENES\n";
+}
 
+open(INFILE, $simulator_config_geneinfo) or die "\nError: cannot open file '$simulator_config_geneinfo' for reading\n\n";
 while($line = <INFILE>) {
     chomp($line);
     @a = split(/\t/,$line);
@@ -283,7 +315,7 @@ while($line = <INFILE>) {
 }
 close(INFILE);
 
-open(INFILE, $simulator_config_featurequantifications);
+open(INFILE, $simulator_config_featurequantifications) or die "\nError: cannot open file '$simulator_config_featurequantifications' for reading\n\n";
 
 while($line = <INFILE>) {
     chomp($line);
@@ -304,13 +336,12 @@ while($line = <INFILE>) {
 	$intron2intensity{$a[1]} = $a[2];
 	$introncnt++;
 	$gene2introncnt{$geneid}{$a[1]} = $introncnt;
-	##print SIMFAOUT "introncnt = $introncnt\n";
-	#print SIMFAOUT "intron = $a[1]\n";
     }
     if($line =~ /--------/) {
 	$line = <INFILE>;
 	chomp($line);
 	$line =~ s/\(.*//;
+	$line =~ s/\s*(\+|-)$//;
 	$geneid = $line;
 	$exoncnt=0;
 	$introncnt=0;
@@ -329,6 +360,7 @@ $genecnt--;
 $numgenes = $genecnt;
 print "$numgenes genes total\n";
 print "sum_of_gene_intensities = $sum_of_gene_intensities\n";
+print SIMLOGOUT "sum of gene intensities: $sum_of_gene_intensities\n";
 
 # making alternate (unknown) splice forms
 for($i=0; $i<$numgenes; $i++) {
@@ -398,7 +430,7 @@ for($i=0; $i<$numgenes; $i++) {
 $genecnt = @genes;
 
 $alttranscriptsfilename = "transcripts_$name" . ".txt";
-open(ALTTRANSCRIPTS, ">$alttranscriptsfilename");
+open(ALTTRANSCRIPTS, ">$alttranscriptsfilename") or die "\nError: cannot open file '$alttranscriptsfilename' for writing.\n\n";
 for($i=0; $i<@genes; $i++) {
     $geneid = $genes[$i];
     @a = @{$gene2exon{$geneid}};
@@ -420,6 +452,7 @@ close(ALTTRANSCRIPTS);
 
 if($sum_of_gene_intensities <= 0) {
     print STDERR "\nERROR: None of the genes have expression level above zero,\ncheck your feature quantification config file.\n\n";
+    print SIMLOGOUT "\nERROR: None of the genes have expression level above zero,\ncheck your feature quantification config file.\n\n";
     exit(0);
 }
 
@@ -427,11 +460,13 @@ for($i=0; $i<$genecnt; $i++) {
     $gene_density[$i] = $gene_intensity[$i] / $sum_of_gene_intensities;
     $gene_distribution[$i] = $gene_density[$i];
 }
-print "gene_distribution[0] = $gene_distribution[0]\n";
-for($i=1; $i<$genecnt; $i++) {
-    $gene_distribution[$i] = $gene_distribution[$i] + $gene_distribution[$i-1];
-    print "gene_distribution[$i] = $gene_distribution[$i]\n";
-}
+# START DEBUG
+# print "gene_distribution[0] = $gene_distribution[0]\n";
+# for($i=1; $i<$genecnt; $i++) {
+#    $gene_distribution[$i] = $gene_distribution[$i] + $gene_distribution[$i-1];
+#    print "gene_distribution[$i] = $gene_distribution[$i]\n";
+# }
+# END DEBUG
 
 $introncount_total=0;
 $sum_of_intron_intensities = 0;
@@ -443,6 +478,7 @@ foreach $intron (keys %intron2gene) {
 }
 
 print "sum_of_intron_intensities = $sum_of_intron_intensities\n";
+print SIMLOGOUT "sum of intron counts = $sum_of_intron_intensities\n";
 # The following formula is based on the fact that introns are not treated as isolated but are padded with
 # the rest of the exons.
 $intron_freq = (2 * $sum_of_intron_intensities) / ($sum_of_gene_intensities + $sum_of_intron_intensities);
@@ -450,6 +486,8 @@ $iftemp = $sum_of_intron_intensities / ($sum_of_gene_intensities + $sum_of_intro
 
 print "intron frequency: $iftemp\n";
 print "padded intron freq = $intron_freq\n";
+print SIMLOGOUT "intron frequency: $iftemp\n";
+print SIMLOGOUT "padded intron frequency: $intron_freq\n";
 
 for($i=0; $i<$introncount_total; $i++) {
     $intron_density[$i] = $intron_intensity[$i] / $sum_of_intron_intensities;
@@ -463,8 +501,7 @@ for($i=1; $i<$introncount_total; $i++) {
 #    print "intron_distribution[$i] = $intron_distribution[$i]\t$introns[$i]\t$intron_intensity[$i]\n";
 #}
 
-
-open(INFILE, $simulator_config_geneseq);
+open(INFILE, $simulator_config_geneseq) or die "\nError: cannot open file '$simulator_config_geneseq' for reading.\n\n";
 
  # this file has seqs on one line and minus strand seqs revserse complemented
  # header line looks like this: >NM_175370:chr1:58714964-58752833_-
@@ -498,7 +535,7 @@ while($line = <INFILE>) {
 }
 close(INFILE);
 
-open(INFILE, $simulator_config_intronseq);
+open(INFILE, $simulator_config_intronseq) or die "\nError: cannot open file '$simulator_config_intronseq' for reading.\n\n";
 
 print "\nReading intron sequences\n";
 $flag = 0;
@@ -742,7 +779,7 @@ while( 1 == 1) {
 	$seqlength = length($SEQ);
 
 	@INDELS = @{$geneWithIntron2indel{$GENE}{$INTRON2}};
-# the following fixes the starts/ends so they reflects the retained intron:
+# the following fixes the starts/ends so they reflect the retained intron:
 	$STARTS2 = $starts{$GENE};
 	$STARTS2 =~ s/,\s*$//;
 	$STARTS2 =~ s/^\s*,//;
@@ -863,7 +900,6 @@ sub getreads () {
 	$repeat = rand($seqlength / $cutpoint);
 	$flip = int(rand(2));
 	if($flip == 0) {
-	    #print SIMFAOUT "flip = $flip\n";
 	    $end = $cutpoint;
 	    if($cutpoint >= $fragmentlength) {
 		$start = $cutpoint - $fragmentlength + 1;
@@ -1032,34 +1068,35 @@ sub getreads () {
 	    }
 	}
 	else {
-	    print "-------\nstr = $str (something is wrong)\n";
-	    print "readlength = $readlength\n";
-	    print "coords1 = $coords1\n";
-	    print "coords2 = $coords2\n";
-	    print "mergedcoords = $mergedcoords\n";
-	    print "3:GENE = $GENE\n";
-	    print "SEQ = $SEQ\n";
-	    print "$fa";
-	    print "STARTS = $STARTS\n";
-	    print "ENDS = $ENDS\n";
+	    print STDERR "-------\nsomething is wrong - check the log file\n";
+	    print SIMLOGOUT "-------\nstr = $str (something is wrong)\n";
+	    print SIMLOGOUT "readlength = $readlength\n";
+	    print SIMLOGOUT "coords1 = $coords1\n";
+	    print SIMLOGOUT "coords2 = $coords2\n";
+	    print SIMLOGOUT "mergedcoords = $mergedcoords\n";
+	    print SIMLOGOUT "3:GENE = $GENE\n";
+	    print SIMLOGOUT "SEQ = $SEQ\n";
+	    print SIMLOGOUT "$fa";
+	    print SIMLOGOUT "STARTS = $STARTS\n";
+	    print SIMLOGOUT "ENDS = $ENDS\n";
 	    for($ind=0; $ind<@INDELS; $ind++) {
-		print "INDELS[$ind][0] = $INDELS[$ind][0]\n";
-		print "INDELS[$ind][1] = $INDELS[$ind][1]\n";
+		print SIMLOGOUT "INDELS[$ind][0] = $INDELS[$ind][0]\n";
+		print SIMLOGOUT "INDELS[$ind][1] = $INDELS[$ind][1]\n";
 	    }
-	    print "start = $start\n";
-	    print "fragment end = $end\n";
-	    print "start_forward = $start_forward\n";
-	    print "end_forward = $end_forward\n";
-	    print "start_reverse = $start_reverse\n";
-	    print "end_reverse = $end_reverse\n";
-	    print "fragment_start = $fragment_start\n";
-	    print "fragment_length = $fragment_length\n";
-	    print "fragmentlength = $fragmentlength\n";
-	    print "cutpoint = $cutpoint\n";
-	    print "seqlength = $seqlength\n";
-	    print "flip = $flip\n";
-	    print "checker_forward = $checker_forward\n";
-	    print "checker_reverse = $checker_reverse\n";
+	    print SIMLOGOUT "start = $start\n";
+	    print SIMLOGOUT "fragment end = $end\n";
+	    print SIMLOGOUT "start_forward = $start_forward\n";
+	    print SIMLOGOUT "end_forward = $end_forward\n";
+	    print SIMLOGOUT "start_reverse = $start_reverse\n";
+	    print SIMLOGOUT "end_reverse = $end_reverse\n";
+	    print SIMLOGOUT "fragment_start = $fragment_start\n";
+	    print SIMLOGOUT "fragment_length = $fragment_length\n";
+	    print SIMLOGOUT "fragmentlength = $fragmentlength\n";
+	    print SIMLOGOUT "cutpoint = $cutpoint\n";
+	    print SIMLOGOUT "seqlength = $seqlength\n";
+	    print SIMLOGOUT "flip = $flip\n";
+	    print SIMLOGOUT "checker_forward = $checker_forward\n";
+	    print SIMLOGOUT "checker_reverse = $checker_reverse\n";
 	}
     }
     $return_vector[0] = $fa;
@@ -1083,6 +1120,7 @@ sub merge () {
     if(!($aspans_end =~ /\S/) || !($bspans_start =~ /\S/)) {
 	print "aspans = $aspans\n";
 	print "bspans = $bspans\n";
+	print SIMLOGOUT "Something is wrong:\naspans = $aspans\nbspans=$bspans\n\n";
     }
 
     @a = split(/, /, $aspans);
@@ -1168,10 +1206,6 @@ sub getcoords () {
 	$cumlength = $cumlength + $l;
 	$str = $str . "$cumlength, ";
     }
-    #print SIMFAOUT "INSIDE GET COORDS:\n";
-    #print SIMFAOUT "cumlength: $str\n";
-    #print SIMFAOUT "starts = $starts\n";
-    #print SIMFAOUT "ends = $ends\n";
     $prefix = 0;
     $exonnum = 0;
     while($prefix < $readstart) {
