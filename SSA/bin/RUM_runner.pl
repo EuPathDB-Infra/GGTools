@@ -24,7 +24,17 @@ if(@ARGV == 1 && @ARGV[0] eq "config") {
     exit(0);
 }
 if(@ARGV < 5) {
-    print "\nUsage: <configfile> <readsfile> <output dir> <num chunks> <name> [options]\n\n";
+    print "\nUsage: RUM_runner.pl <configfile> <reads file(s)> <output dir> <num chunks> <name> [options]\n\n";
+    print "<reads file(s)>:  For unpaired data, the single file of reads.\n";
+    print "                  For paired data either: \n";
+    print "                        - The files of forward and reverse reads, separated by three commas ',,,'.\n";
+    print "                        - One file formatted using parse2fasta.pl.\n";
+    print "                  Files can be either fasta or fastq.\n\n";
+    print "      <num chunks> is the number of pieces to break the job into.  Use one chunk unless you are on a cluster, or\n";
+    print "                   have multiple processors with lots of RAM.\n\n";
+    print "      <name> is a string that will identify this run - use only alphanumeric and underscores, no whitespace\n";
+    print "             or other characters.\n\n";
+
     print "Options: -single    : Data is single-end (default is paired-end).\n";
     print "         -fast      : Run with blat params that run about 3 times faster but a tad less sensitive\n";
     print "         -noooc     : Run without blat ooc file\n";
@@ -41,7 +51,7 @@ if(@ARGV < 5) {
     print "it is recommended to run in chunks on a cluster, or a machine with multiple processors.  Running with under\n";
     print "five million reads per chunk is usually best, and getting it under a million reads per chunk will speed things\n";
     print "considerably.\n\n";
-    print "You can put an 's' after the number of chunks if they have already been broken\ninto chunks, so as to avoid repeating this time-consuming step.\n\nname is a string that will identify this run.\n  - Use only alphanumeric and underscores, no whitespace or other characters.\n\n";
+    print "You can put an 's' after the number of chunks if they have already been broken\ninto chunks, so as to avoid repeating this time-consuming step.\n\n";
     exit(0);
 }
 
@@ -113,27 +123,6 @@ for($i=0; $i<@a; $i++) {
     }
 }
 
-open(LOGFILE, ">$output_dir/rum.log");
-print LOGFILE "config file: $configfile\n";
-print LOGFILE "readsfile: $readsfile\n";
-print LOGFILE "output_dir: $output_dir\n";
-print LOGFILE "numchunkis: $numchunks\n";
-print LOGFILE "name: $name\n";
-print LOGFILE "paired_end: $paired_end\n";
-print LOGFILE "fast: $fast\n";
-print LOGFILE "limitNU: $limitNU\n";
-print LOGFILE "chipseq: $chipseq\n";
-print LOGFILE "ooc: $ooc\n";
-print LOGFILE "qsub: $qsub\n";
-print LOGFILE "\nstart: $date\n";
-
-if($numchunks =~ /(\d+)s/) {
-    $numchunks = $1;
-    $fasta_already_fragmented = "true";
-} else {
-    $fasta_already_fragmented = "false";
-}
-
 open(INFILE, $configfile);
 $gene_annot_file = <INFILE>;
 chomp($gene_annot_file);
@@ -155,6 +144,51 @@ chomp($scripts_dir);
 $oocfile = <INFILE>;
 chomp($oocfile);
 close(INFILE);
+
+if(($readsfile =~ /,,,/) && $paired_end eq "false") {
+    die "\nError: You've given two files separated by three commas, this means we are expecting paired end\ndata but you set -single.\n\n";
+}
+if(!($readsfile =~ /,,,/) && !(-e $readsfile)) {
+    die "\nError: The reads file '$readsfile' does not seem to exist\n\n";
+}
+if(($readsfile =~ /,,,/) && ($paired_end eq "true")) {
+    @a = split(/,,,/, $readsfile);
+    if(@a > 2) {
+	die "\nError: You've given more than two files separated by three commas, should be at most two files.\n\n";
+    }    
+    if(!(-e $a[0])) {
+	die "\nError: The reads file '$a[0]' does not seem to exist\n\n";
+    }
+    if(!(-e $a[1])) {
+	die "\nError: The reads file '$a[1]' does not seem to exist\n\n";
+    }
+    print STDERR "Reformatting reads file...\n";
+    `perl $scripts_dir/parse2fasta.pl $a[0] $a[1] > $output_dir/reads.fa`;
+    $readsfile = "$output_dir/reads.fa";
+}
+
+
+open(LOGFILE, ">$output_dir/rum.log");
+print LOGFILE "config file: $configfile\n";
+print LOGFILE "readsfile: $readsfile\n";
+print LOGFILE "output_dir: $output_dir\n";
+print LOGFILE "numchunkis: $numchunks\n";
+print LOGFILE "name: $name\n";
+print LOGFILE "paired_end: $paired_end\n";
+print LOGFILE "fast: $fast\n";
+print LOGFILE "limitNU: $limitNU\n";
+print LOGFILE "chipseq: $chipseq\n";
+print LOGFILE "ooc: $ooc\n";
+print LOGFILE "qsub: $qsub\n";
+print LOGFILE "\nstart: $date\n";
+
+if($numchunks =~ /(\d+)s/) {
+    $numchunks = $1;
+    $fasta_already_fragmented = "true";
+} else {
+    $fasta_already_fragmented = "false";
+}
+
 $head = `head -2 $readsfile | tail -1`;
 chomp($head);
 @a = split(//,$head);
@@ -168,6 +202,22 @@ $num2 = $3;
 $type2 = $4;
 $num3 = $5;
 $type3 = $6;
+
+if($paired_end eq 'false') {
+    if($type1 ne "a") {
+	print STDERR "Reformatting reads file...\n";
+	`perl scripts/parse2fasta.pl $readsfile > $output_dir/reads.fa`;
+	$readsfile = "$output_dir/reads.fa";
+	$head = `head -6 $readsfile`;
+	$head =~ /seq.(\d+)(.).*seq.(\d+)(.).*seq.(\d+)(.)/s;
+	$num1 = $1;
+	$type1 = $2;
+	$num2 = $3;
+	$type2 = $4;
+	$num3 = $5;
+	$type3 = $6;
+    }
+}
 
 if($type1 ne "a") {
     print STDERR "ERROR: the fasta def lines are misformatted.  The first one should end in an 'a'.\n";
@@ -350,7 +400,9 @@ $shellscript = $shellscript . "echo `date` > $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "perl $scripts_dir/make_bed.pl $output_dir/RUM_Unique $output_dir/RUM_Unique.bed\n";
 $shellscript = $shellscript . "echo starting M2C > $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "echo `date` > $output_dir/$M2C_log\n";
-$shellscript = $shellscript . "java -Xmx2000m M2C $output_dir/RUM_Unique.bed $output_dir/RUM_$name -ucsc -name \"$name\" -chunks 4\n";
+$covfilename = $name . ".cov";
+$logfilename = $name . ".log";
+$shellscript = $shellscript . "java -Xmx2000m M2C $output_dir/RUM_Unique.bed $output_dir/RUM_$covfilename $output_dir/RUM_$logfilename -ucsc -name \"$name\" -chunks 4\n";
 $shellscript = $shellscript . "echo starting to quantify features > $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "perl $scripts_dir/quantify_one_sample.pl $output_dir/RUM_$name";
