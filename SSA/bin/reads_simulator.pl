@@ -68,8 +68,8 @@ if(!($num_reads =~ /^\d+$/) || ($num_reads <= 0)) {
     print STDERR "\nError: number of reads must be an integer, not '$ARGV[0]'.\n\n";
     exit(0);
 }
-$sum_of_gene_intensities = 0;
-$sum_of_intron_intensities = 0;
+$sum_of_gene_counts = 0;
+$sum_of_intron_counts = 0;
 $genecnt=0;
 $exoncount_total=0;
 $introncount_total=0;
@@ -193,6 +193,9 @@ for($i=2; $i<@ARGV; $i++) {
 	    print STDERR "\nError: -palt has to be non-negative and no more than one.\n\n";
 	    exit(0);
 	}
+	if($percent_alt_spliceforms == 0) {
+	    $num_alt_splice_forms_per_gene = 0;
+	}
     }
     if($ARGV[$i] eq "-indelfreq") {
 	$i++;
@@ -282,9 +285,11 @@ open(SIMFAOUT, ">$fafilename") or die "\nError: cannot open file '$fafilename' f
 open(SIMSUBSOUT, ">$substitutionsfilename") or die "\nError: cannot open file '$substitutionsfilename' for writing\n\n";
 open(SIMINDELSOUT, ">$indelsfilename") or die "\nError: cannot open file '$indelsfilename' for writing\n\n";
 
-$time = time();
-print SIMLOGOUT "Simulator run: '$name' - started at $time\n";
-print SIMLOGOUT "readlength: $readlength\n";
+$date = `date`;
+chomp($date);
+print SIMLOGOUT "Simulator run: '$name'\n";
+print SIMLOGOUT "started: $date\n";
+print SIMLOGOUT "readlength: $READLENGTH\n";
 print SIMLOGOUT "indel frequency: $indelfrequency\n";
 print SIMLOGOUT "base error: $base_error\n";
 print SIMLOGOUT "low quality tail length: $low_qual_tail_length\n";
@@ -295,8 +300,11 @@ print SIMLOGOUT "number of alt splice forms per gene: $num_alt_splice_forms_per_
 if($stem =~ /\S/) {
     print SIMLOGOUT "stem: $stem\n";
 } else {
-    print SIMLOGOUT "num genes: $NUMGENES\n";
+    $f = format_large_int($NUMGENES);
+    print SIMLOGOUT "num genes: $f\n";
 }
+close(SIMLOGOUT);
+open(SIMLOGOUT, ">>$logfilename");
 
 open(INFILE, $simulator_config_geneinfo) or die "\nError: cannot open file '$simulator_config_geneinfo' for reading\n\n";
 while($line = <INFILE>) {
@@ -325,6 +333,7 @@ while($line = <INFILE>) {
 	$N = @a2 + 0;
 	$exon2gene{$a[1]}[$N] = $geneid;
 	$gene2exon{$geneid}[$exoncnt] = $a[1];
+	$exon2count{$a[1]} = $a[2];
 	$exoncnt++;
     }
     if($line =~ /(intron)/) {
@@ -333,7 +342,7 @@ while($line = <INFILE>) {
 	$N = @a2 + 0;
 	$intron2gene{$a[1]}[$N] = $geneid;
 	$gene2intron{$geneid}[$introncnt] = $a[1];
-	$intron2intensity{$a[1]} = $a[2];
+	$intron2count{$a[1]} = $a[2];
 	$introncnt++;
 	$gene2introncnt{$geneid}{$a[1]} = $introncnt;
     }
@@ -349,8 +358,8 @@ while($line = <INFILE>) {
 	$line = <INFILE>;
 	chomp($line);
 	@a = split(/\t/,$line);
-	$gene_intensity[$genecnt] = $a[2];
-	$sum_of_gene_intensities = $sum_of_gene_intensities + $gene_intensity[$genecnt];
+	$gene_count[$genecnt] = $a[2];
+	$sum_of_gene_counts = $sum_of_gene_counts + $gene_count[$genecnt];
 	$genes[$genecnt] = $geneid;
 	$genecnt++;
     }
@@ -358,9 +367,13 @@ while($line = <INFILE>) {
 close(INFILE);
 $genecnt--;
 $numgenes = $genecnt;
-print "$numgenes genes total\n";
-print "sum_of_gene_intensities = $sum_of_gene_intensities\n";
-print SIMLOGOUT "sum of gene intensities: $sum_of_gene_intensities\n";
+$f = format_large_int(int($numgenes));
+print "$f genes total\n";
+$f = format_large_int(int($sum_of_gene_counts));
+print "sum_of_gene_counts = $f\n";
+print SIMLOGOUT "sum of gene counts: $f\n";
+close(SIMLOGOUT);
+open(SIMLOGOUT, ">>$logfilename");
 
 # making alternate (unknown) splice forms
 for($i=0; $i<$numgenes; $i++) {
@@ -369,15 +382,15 @@ for($i=0; $i<$numgenes; $i++) {
     $geneid = $genes[$i];
     @a = @{$gene2exon{$geneid}};
     $exoncnt = @a;
-    $original_gene_intensity = $gene_intensity[$i];
-    # the following adjusts the original intensity because now it will be split between
+    $original_gene_count = $gene_count[$i];
+    # the following adjusts the original count because now it will be split between
     # the normal and alt spice form
-    $gene_intensity[$i] = $original_gene_intensity * (1-$percent_alt_spliceforms);
+    $gene_count[$i] = $original_gene_count * (1-$percent_alt_spliceforms);
     $genes2[$i] = $geneid;
     for($j=0; $j<$num_alt_splice_forms_per_gene; $j++) {
 	$geneid_x = $geneid . "_$j";
 	$genes2[$genecnt+$j*$numgenes] = $geneid_x;
-	$gene_intensity[$genecnt+$j*$numgenes] = $original_gene_intensity * $percent_alt_spliceforms/$num_alt_splice_forms_per_gene;
+	$gene_count[$genecnt+$j*$numgenes] = $original_gene_count * $percent_alt_spliceforms/$num_alt_splice_forms_per_gene;
 	$exoncnt_x = 0;
 	$str = $starts{$geneid};
 	$str =~ s/^\s*,\s*//;
@@ -450,47 +463,78 @@ for($i=0; $i<@genes; $i++) {
 }
 close(ALTTRANSCRIPTS);
 
-if($sum_of_gene_intensities <= 0) {
+if($sum_of_gene_counts <= 0) {
     print STDERR "\nERROR: None of the genes have expression level above zero,\ncheck your feature quantification config file.\n\n";
     print SIMLOGOUT "\nERROR: None of the genes have expression level above zero,\ncheck your feature quantification config file.\n\n";
     exit(0);
 }
 
 for($i=0; $i<$genecnt; $i++) {
-    $gene_density[$i] = $gene_intensity[$i] / $sum_of_gene_intensities;
+    $gene_density[$i] = $gene_count[$i] / $sum_of_gene_counts;
     $gene_distribution[$i] = $gene_density[$i];
 }
+
 # START DEBUG
-# print "gene_distribution[0] = $gene_distribution[0]\n";
-# for($i=1; $i<$genecnt; $i++) {
-#    $gene_distribution[$i] = $gene_distribution[$i] + $gene_distribution[$i-1];
-#    print "gene_distribution[$i] = $gene_distribution[$i]\n";
-# }
+$debug_file = "debug_" . $name;
+open(DEBUG, ">$debug_file");
+ print DEBUG "gene_distribution[0] = $gene_distribution[0]\n";
+ for($i=1; $i<$genecnt; $i++) {
+    $gene_distribution[$i] = $gene_distribution[$i] + $gene_distribution[$i-1];
+    print DEBUG "gene_distribution[$i] = $gene_distribution[$i]\n";
+ }
+close(DEBUG);
+
+# gene_distribution[0] = 0.00187578675910727
+# gene_distribution[1] = 0.117339022869102
+# gene_distribution[2] = 0.992555680544236
+# gene_distribution[3] = 0.992555680544236
+#    gene	chr1:95202541-95213886	3922	4.4316	0.4269	885
+#    gene	chr15:35670847-35859855	241417	39.0452	3.7615	6183
+#    gene	chr2:90977518-91023975	1829952	323.5989	31.1751	5655
+#    gene	chr2:151287781-151295349	0	0	0	508
+#    gene	chr2:162843255-162849277	15565	46.8825	4.5166	332
+
 # END DEBUG
 
 $introncount_total=0;
-$sum_of_intron_intensities = 0;
+$sum_of_intron_counts = 0;
 foreach $intron (keys %intron2gene) {
     $introns[$introncount_total] = $intron;
-    $intron_intensity[$introncount_total] = $intron2intensity{$intron};
-    $sum_of_intron_intensities = $sum_of_intron_intensities + $intron_intensity[$introncount_total];
+    $intron_count[$introncount_total] = $intron2count{$intron};
+    $sum_of_intron_counts = $sum_of_intron_counts + $intron_count[$introncount_total];
     $introncount_total++;
 }
 
-print "sum_of_intron_intensities = $sum_of_intron_intensities\n";
-print SIMLOGOUT "sum of intron counts = $sum_of_intron_intensities\n";
+$exoncount_total=0;
+$sum_of_exon_counts = 0;
+foreach $exon (keys %exon2gene) {
+    $exons[$exoncount_total] = $exon;
+    $exon_count[$exoncount_total] = $exon2count{$exon};
+    $sum_of_exon_counts = $sum_of_exon_counts + $exon_count[$exoncount_total];
+    $exoncount_total++;
+}
+
+$f = format_large_int(int($sum_of_intron_counts));
+print "sum of intron counts = $f\n";
+print SIMLOGOUT "sum of intron counts = $f\n";
+$f = format_large_int(int($sum_of_exon_counts));
+print "sum of exon counts = $f\n";
+print SIMLOGOUT "sum of intron counts = $f\n";
 # The following formula is based on the fact that introns are not treated as isolated but are padded with
 # the rest of the exons.
-$intron_freq = (2 * $sum_of_intron_intensities) / ($sum_of_gene_intensities + $sum_of_intron_intensities);
-$iftemp = $sum_of_intron_intensities / ($sum_of_gene_intensities + $sum_of_intron_intensities);
+print "sum_of_exon_counts = $sum_of_exon_counts\n";
+$intron_freq = (2 * $sum_of_intron_counts) / ($sum_of_exon_counts + 2 * $sum_of_intron_counts);
+$iftemp = $sum_of_intron_counts / ($sum_of_exon_counts + $sum_of_intron_counts);
 
 print "intron frequency: $iftemp\n";
 print "padded intron freq = $intron_freq\n";
 print SIMLOGOUT "intron frequency: $iftemp\n";
 print SIMLOGOUT "padded intron frequency: $intron_freq\n";
+close(SIMLOGOUT);
+open(SIMLOGOUT, ">>$logfilename");
 
 for($i=0; $i<$introncount_total; $i++) {
-    $intron_density[$i] = $intron_intensity[$i] / $sum_of_intron_intensities;
+    $intron_density[$i] = $intron_count[$i] / $sum_of_intron_counts;
     $intron_distribution[$i] = $intron_density[$i];
 }
 for($i=1; $i<$introncount_total; $i++) {
@@ -498,7 +542,7 @@ for($i=1; $i<$introncount_total; $i++) {
 }
 
 #for($i=0; $i<$introncount_total; $i++) {
-#    print "intron_distribution[$i] = $intron_distribution[$i]\t$introns[$i]\t$intron_intensity[$i]\n";
+#    print "intron_distribution[$i] = $intron_distribution[$i]\t$introns[$i]\t$intron_count[$i]\n";
 #}
 
 open(INFILE, $simulator_config_geneseq) or die "\nError: cannot open file '$simulator_config_geneseq' for reading.\n\n";
@@ -866,6 +910,9 @@ while( 1 == 1) {
 	if($CNT > $num_reads) {
 	    close(SIMBEDOUT);
 	    close(SIMFAOUT);
+	    $date = `date`;
+	    print SIMLOGOUT "finished at $date\n";
+	    close(SIMLOGOUT);
 	    exit(0);
 	}
     }
@@ -1097,6 +1144,8 @@ sub getreads () {
 	    print SIMLOGOUT "flip = $flip\n";
 	    print SIMLOGOUT "checker_forward = $checker_forward\n";
 	    print SIMLOGOUT "checker_reverse = $checker_reverse\n";
+	    close(SIMLOGOUT);
+	    open(SIMLOGOUT, ">>$logfilename");
 	}
     }
     $return_vector[0] = $fa;
@@ -1385,4 +1434,21 @@ sub add_error_to_tail () {
 	}
     }
     return $read;
+}
+
+sub format_large_int () {
+    ($int) = @_;
+    @a = split(//,"$int");
+    $j=0;
+    $newint = "";
+    $n = @a;
+    for($i=$n-1;$i>=0;$i--) {
+	$j++;
+	$newint = $a[$i] . $newint;
+	if($j % 3 == 0) {
+	    $newint = "," . $newint;
+	}
+    }
+    $newint =~ s/^,//;
+    return $newint;
 }
