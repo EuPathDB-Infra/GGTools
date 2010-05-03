@@ -15,15 +15,17 @@ if(@ARGV<1 || $ARGV[0] eq "/help/") {
     print "     -names=\"name1,,,name2,,, ... ,,,nameN\" : create a header line with these names.\n";
     print "     -simple   : if in -exon or -intron mode, then print out as two column table without qualifiers.\n";
     print "     -printheader   : print a header line.\n";
+    print "     -sort n   : sort column n.  For n>0, n sorts decreasing, -n sorts increasing.\n";
     print "\n";
     exit();
 }
 
 for($i=0; $i<@ARGV; $i++) {
-    if(!($ARGV[$i] =~ /^-/)) {
+    if(-e $ARGV[$i]) {
 	$numfiles = $i + 1;
     }
 }
+
 if($numfiles < 1) {
     print "ERROR: no valid files given.\n";
     exit();
@@ -36,11 +38,34 @@ $featuresonly = "false";
 $all = "true";
 $printheader = "false";
 $simple = "false";
+$sort = "false";
+$sort_decreasing = "false";
+$locations = "false";
 for($i=$numfiles; $i<@ARGV; $i++) {
     $optionrecognized = 0;
     if($ARGV[$i] eq "-genes") {
 	$genesonly = "true";
 	$all = "false";
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-sort") {
+	$sort = "true";
+	$i++;
+	if($ARGV[$i] =~ /[^-\d]/) {
+	    die "\nError: the parameter to -sort must be a non-zero integer\n\n.";
+	} else {
+	    $sortcol = $ARGV[$i];
+	    if($sortcol == 0) {
+		die "\nError: the parameter to -sort must be a non-zero integer\n\n.";
+	    }
+	    if($sortcol > 0) {
+		$sort_decreasing = "true";
+	    } else {
+		$sort_decreasing = "false";
+		$sortcol = $sortcol * -1;
+	    }
+	    $sortcol--;
+	}
 	$optionrecognized = 1;
     }
     if($ARGV[$i] eq "-exons") {
@@ -56,6 +81,10 @@ for($i=$numfiles; $i<@ARGV; $i++) {
     if($ARGV[$i] eq "-features") {
 	$featuresonly = "true";
 	$all = "false";
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-locations") {
+	$locations = "true";
 	$optionrecognized = 1;
     }
     if($ARGV[$i] eq "-simple") {
@@ -98,43 +127,53 @@ for($i=0; $i<$numfiles; $i++) {
 	    $ALL[$CNT][$i][0] = $geneid;
 	}
 	if($line =~ /gene/) {
-	    if($genesonly eq "true" || $all eq "true") {
-		@a = split(/\t/,$line);
+	    @a = split(/\t/,$line);
+	    if($genesonly eq "true") {
 		$profile{$geneid}[$i] = $a[4];
-		$genelocation{$geneid}[$i] = $a[1];
+		$genelocation{$geneid} = $a[1];
+	    } 
+	    if($all eq "true") {
+		$a[0] =~ s/^\s+//;
+		$a[0] =~ s/\s+$//;
+		$ALL[$CNT][$i][1] = $a[1];
+		$ALL[$CNT][$i][2] = $a[4];
+		$CNT++;
 	    }
-	    $a[0] =~ s/^\s+//;
-	    $a[0] =~ s/\s+$//;
-	    $ALL[$CNT][$i][1] = $a[1];
-	    $ALL[$CNT][$i][2] = $a[4];
-	    $CNT++;
 	}
 	if($line =~ /exon/) {
-	    if($exonsonly eq "true" || $all eq "true" || $featuresonly eq "true") {
-		@a = split(/\t/,$line);
+	    @a = split(/\t/,$line);
+	    if($exonsonly eq "true" || $featuresonly eq "true") {
 		$exon{$a[1]}[$i] = $a[4];
+		$exonlocation{$geneid} = $a[1];
+	    } 
+	    if($all eq "true") {
+		$a[0] =~ s/^\s+//;
+		$a[0] =~ s/\s+$//;
+		$ALL[$CNT][$i][0] = $a[0];
+		$ALL[$CNT][$i][1] = $a[1];
+		$ALL[$CNT][$i][2] = $a[4];
+		$CNT++;
 	    }
-	    $a[0] =~ s/^\s+//;
-	    $a[0] =~ s/\s+$//;
-	    $ALL[$CNT][$i][0] = $a[0];
-	    $ALL[$CNT][$i][1] = $a[1];
-	    $ALL[$CNT][$i][2] = $a[4];
-	    $CNT++;
 	}
 	if($line =~ /intron/) {
-	    if($intronsonly eq "true" || $all eq "true" || $featuresonly eq "true") {
-		@a = split(/\t/,$line);
+	    @a = split(/\t/,$line);
+	    if($intronsonly eq "true" || $featuresonly eq "true") {
 		$intron{$a[1]}[$i] = $a[4];
+		$intronlocation{$geneid} = $a[1];
 	    }
-	    $a[0] =~ s/^\s+//;
-	    $a[0] =~ s/\s+$//;
-	    $ALL[$CNT][$i][0] = $a[0];
-	    $ALL[$CNT][$i][1] = $a[1];
-	    $ALL[$CNT][$i][2] = $a[4];
-	    $CNT++;
+	    if($all eq "true") {
+		$a[0] =~ s/^\s+//;
+		$a[0] =~ s/\s+$//;
+		$ALL[$CNT][$i][0] = $a[0];
+		$ALL[$CNT][$i][1] = $a[1];
+		$ALL[$CNT][$i][2] = $a[4];
+		$CNT++;
+	    }
 	}
     }
 }
+
+print "here 1\n";
 
 if($printheader eq "true") {
     if($simple eq "false") {
@@ -163,46 +202,127 @@ if($all eq "true") {
 }
 
 if($genesonly eq "true") {
-    foreach $geneid (keys %genelocation) {
-	print "$geneid";
-	if($locations eq "true") {
-	    print "\t$genelocation{$geneid}";
+    if($sort eq "true" && $sort_decreasing eq "true") {
+	foreach $geneid (sort {$profile{$b}[$sortcol]<=>$profile{$a}[$sortcol]} keys %genelocation) {
+	    print "$geneid";
+	    if($locations eq "true") {
+		print "\t$genelocation{$geneid}";
+	    }
+	    for($i=0; $i<$numfiles; $i++) {
+		print "\t$profile{$geneid}[$i]";
+	    }
+	    print "\n";
 	}
-	for($i=0; $i<$numfiles; $i++) {
-	    print "\t$profile{$geneid}[$i]";
+    }
+    if($sort eq "true" && $sort_decreasing eq "false") {
+	foreach $geneid (sort {$profile{$a}[$sortcol]<=>$profile{$b}[$sortcol]} keys %genelocation) {
+	    print "$geneid";
+	    if($locations eq "true") {
+		print "\t$genelocation{$geneid}";
+	    }
+	    for($i=0; $i<$numfiles; $i++) {
+		print "\t$profile{$geneid}[$i]";
+	    }
+	    print "\n";
 	}
-	print "\n";
+    }
+    if($sort eq "false") {
+	foreach $geneid (sort {$genelocation{$a} cmp $genelocation{$b}} keys %genelocation) {
+	    print "$geneid";
+	    if($locations eq "true") {
+		print "\t$genelocation{$geneid}";
+	    }
+	    for($i=0; $i<$numfiles; $i++) {
+		print "\t$profile{$geneid}[$i]";
+	    }
+	    print "\n";
+	}
     }
 }
 
 if($exonsonly eq "true" || $featuresonly eq "true") {
-    foreach $exonid (sort {$exon{$a}<=>$exon{$b}} keys %exon) {
-	if($simple eq "false") {
-	    print "$exonid\tEXON";
-	} else {
-	    print "$exonid";
+    if($sort eq "true" && $sort_decreasing eq "true") {
+	foreach $exonid (sort {$exon{$b}[$sortcol]<=>$exon{$a}[$sortcol]} keys %exon) {
+	    if($simple eq "false") {
+		print "$exonid\tEXON";
+	    } else {
+		print "$exonid";
+	    }
+	    for($i=0; $i<$numfiles; $i++) {
+		print "\t$exon{$exonid}[$i]";
+	    }
+	    print "\n";
 	}
-	for($i=0; $i<$numfiles; $i++) {
-	    print "\t$exon{$exonid}[$i]";
+    }
+    if($sort eq "true" && $sort_decreasing eq "false") {
+	foreach $exonid (sort {$exon{$a}[$sortcol]<=>$exon{$b}[$sortcol]} keys %exon) {
+	    if($simple eq "false") {
+		print "$exonid\tEXON";
+	    } else {
+		print "$exonid";
+	    }
+	    for($i=0; $i<$numfiles; $i++) {
+		print "\t$exon{$exonid}[$i]";
+	    }
+	    print "\n";
 	}
-	print "\n";
+    }
+    if($sort eq "false") {
+	foreach $exonid (sort {$exonlocation{$a} cmp $exonlocation{$b}} keys %exon) {
+	    if($simple eq "false") {
+		print "$exonid\tEXON";
+	    } else {
+		print "$exonid";
+	    }
+	    for($i=0; $i<$numfiles; $i++) {
+		print "\t$exon{$exonid}[$i]";
+	    }
+	    print "\n";
+	}
     }
 }
 
 if($intronsonly eq "true" || $featuresonly eq "true") {
-    foreach $intronid (sort {$intron{$a}<=>$intron{$b}} keys %intron) {
-	if($simple eq "false") {
-	    print "$intronid\tINTRON";
-	} else {
-	    print "$intronid";
+    if($sort eq "true" && $sort_decreasing eq "true") {
+	foreach $intronid (sort {$intron{$b}[$sortcol]<=>$intron{$a}[$sortcol]} keys %intron) {
+	    if($simple eq "false") {
+		print "$intronid\tINTRON";
+	    } else {
+		print "$intronid";
+	    }
+	    for($i=0; $i<$numfiles; $i++) {
+		print "\t$intron{$intronid}[$i]";
+	    }
+	    print "\n";
 	}
-	for($i=0; $i<$numfiles; $i++) {
-	    print "\t$intron{$intronid}[$i]";
+    }
+    if($sort eq "true" && $sort_decreasing eq "false") {
+	foreach $intronid (sort {$intron{$a}[$sortcol]<=>$intron{$b}[$sortcol]} keys %intron) {
+	    if($simple eq "false") {
+		print "$intronid\tINTRON";
+	    } else {
+		print "$intronid";
+	    }
+	    for($i=0; $i<$numfiles; $i++) {
+		print "\t$intron{$intronid}[$i]";
+	    }
+	    print "\n";
 	}
-	print "\n";
+    }
+    if($sort eq "false") {
+	foreach $intronid (sort {$intronlocation{$a} cmp $intronlocation{$b}} keys %intron) {
+	    if($simple eq "false") {
+		print "$intronid\tINTRON";
+	    } else {
+		print "$intronid";
+	    }
+	    for($i=0; $i<$numfiles; $i++) {
+		print "\t$intron{$intronid}[$i]";
+	    }
+	    print "\n";
+	}
     }
 }
-
 
 # --------------------------------------------------------------------
 # PFD0028w        +
