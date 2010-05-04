@@ -1,3 +1,5 @@
+package org.apidb.ggtools.array;
+
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.lang.Math;
