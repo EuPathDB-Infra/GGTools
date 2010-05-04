@@ -23,6 +23,7 @@ chr13   57531714-57531787, 57537471-57537504
 
 The first argument is input file, the second is the output file, if no second
 argument is given then output goes to standard out.
+
 ";
 }
 $seqnum = "false";
