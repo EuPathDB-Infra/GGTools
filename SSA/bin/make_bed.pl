@@ -7,28 +7,56 @@
 # seq.13392702    chr3    40576630-40576665, 40583257-40583328
 
 if(!($ARGV[0] =~ /\S/)) {
-    print STDERR "\nUsage: perl make_bed.pl infile [outfile]\n\nThis makes a bed file with one span per line (strand col = + for all rows), from a file\nthat has rows of tab delimited entries that look like this:\n\nseq.13551265    chr13   57531714-57531787, 57537471-57537504\n\nor this\n\nchr13   57531714-57531787, 57537471-57537504\n\nthe first argument is input file, the second is the output file, if no\nsecond argument then will output to std out.\n";
+    die "
+Usage: perl make_bed.pl infile [outfile] [options]
+
+Options: -seqnum  : output also the sequence number at the beginning of every line
+
+This script makes a bed file with one span per line (strand col = + for all rows),
+from a file that has rows of tab delimited entries that start like this:
+
+seq.13551265    chr13   57531714-57531787, 57537471-57537504
+
+or like this:
+
+chr13   57531714-57531787, 57537471-57537504
+
+The first argument is input file, the second is the output file, if no second
+argument is given then output goes to standard out.
+";
+}
+$seqnum = "false";
+for($i=1; $i<@ARGV; $i++) {
+    if($ARGV[$i] eq '-seqnum') {
+	$seqnum = "true";
+    }
 }
 open(INFILE, $ARGV[0]);
 $outmode = "screen";
-if($ARGV[1] =~ /\S/) {
+if($ARGV[1] =~ /\S/ && !($ARGV[1] =~ /^-/)) {
     open(OUTFILE, ">$ARGV[1]");
     $outmode = "file";
 }
 
 while($line = <INFILE>) {
     chomp($line);
-    $line =~ s/seq.\d+.?\t//;
+    $line =~ s/(seq.\d+.?)\t//;
+    $seqname = $1;
     @a = split(/\t/,$line);
     @b = split(/, /,$a[1]);
     $N = @b;
     for($i=0; $i<$N; $i++) {
         @c = split(/-/,$b[$i]);
+	if($seqnum eq "false") {
+	    $str = "$a[0]\t$c[0]\t$c[1]\t+\n";
+	} else {
+	    $str = "$seqname\t$a[0]\t$c[0]\t$c[1]\t+\n";
+	}
         if($outmode eq "file") {
-            print OUTFILE "$a[0]\t$c[0]\t$c[1]\t+\n";
+            print OUTFILE $str;
         }
         else {
-            print "$a[0]\t$c[0]\t$c[1]\t+\n";
+            print $str;
         }
     }
 }
