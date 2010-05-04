@@ -24,7 +24,6 @@
   <!-- oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo -->
 
   <target name="GGTools-Installation" depends="GGTools/Array-Installation,
-                                            GGTools/HTS-Installation,
                                             GGTools/SSA-Installation,
                                             GGTools/Misc-Installation" >
 
@@ -53,13 +52,6 @@
     <ant target="defaultComponentInstall">
       <property name="project" value="GGTools"/>
       <property name="component" value="Array"/>
-    </ant>
-  </target>  
-
-  <target name="GGTools/HTS-Installation">
-    <ant target="defaultComponentInstall">
-      <property name="project" value="GGTools"/>
-      <property name="component" value="HTS"/>
     </ant>
   </target>  
 
