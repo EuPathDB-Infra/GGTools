@@ -2,17 +2,18 @@
 
 if(@ARGV < 4 && $ARGV != 2) {
     die "
-Usage: search_bed_for_read_crossing_loc.pl <bed file> <<spansfile>|<chr> <loc1> <loc2>>
+Usage: search_for_read_crossing_loc.pl <data file> <<spansfile>|<chr> <start> <end>>
 
-Either give one span on the command line as <chr> <loc1> <loc2>, or give
+Either give one span on the command line as <chr> <start> <end>, or give
 the name of a file of spans.
 
-Returns all lines of the bed file with span that overlaps the span
-given by the command line parameters '<chr>:<loc1>-<loc2>'
+Returns all lines of the data file whose span overlaps the span
+given by the command line parameters '<chr>:<start>-<end>'.
+Endpoints are considered included in all the spans.
 
-File must have chr, start and stop as three consecutive fields.
-They do not have to be the first three fields as long as they are 
-the first that follow the pattern: '\\t([^\\t]+)\\t(\\d+)\\t(\\d+)\\t'
+Lines in the data file must have chr, start and end as three consecutive fields
+separted by tabs. They do not have to be the first three fields as long as they
+are the first that follow the pattern: '\\t([^\\t]+)\\t(\\d+)\\t(\\d+)\\t'
 
 ";
 }
