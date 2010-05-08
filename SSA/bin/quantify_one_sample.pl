@@ -2,10 +2,10 @@ $|=1;
 if(@ARGV < 2) {
     print "\n----------------------------------------------------------------------------------------------------------\n";
     print "Usage: quantify_one_sample.pl <cov file> <gene annotation file> [options]\n\n";
-    print "Options:  -zero if .cov file is zero-based (default: one-based)\n";
-    print "          -open if .cov file is half-open (i.e. does not contain right endpoint of span) (default: not half open)\n";
-    print "          -annot_one if annot file is one-based (default: zero-based)\n";
-    print "          -annot_closed if annot file is half-closed (i.e. does contain right endpoint of span) (default: half-open)\n";
+    print "Options:  -zero : .cov file is zero-based (default: one-based)\n";
+    print "          -open : .cov file is half-open (i.e. does not contain right endpoint of span) (default: not half open)\n";
+    print "          -annot_one : annot file is one-based (default: zero-based)\n";
+    print "          -annot_closed : annot file is half-closed (i.e. does contain right endpoint of span) (default: half-open)\n";
     print "Note: UCSC browser custom tracks are required to be zero-based half-open.\n\n";
     print "Expecting gene annotation file with following eight columns:\n";
     print "> chr   strand   start    end   num_exons   exon_starts   exon_ends   gene_ids (ucsc and refseq).\n";
