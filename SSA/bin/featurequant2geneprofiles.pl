@@ -14,8 +14,10 @@ if(@ARGV<1 || $ARGV[0] eq "/help/") {
     print "     -features : output values for exons and introns only\n";
     print "     -names=\"name1,,,name2,,, ... ,,,nameN\" : create a header line with these names.\n";
     print "     -simple   : if in -exon or -intron mode, then print out as two column table without qualifiers.\n";
-    print "     -printheader   : print a header line.\n";
+    print "     -printheader : print a header line.\n";
     print "     -sort n   : sort column n.  For n>0, n sorts decreasing, -n sorts increasing.\n";
+    print "     -locations   : output also the location of the feature.\n";
+    print "     -cnt      : report the avereage depth, unnormalized for number of bases mapped.\n";
     print "\n";
     exit();
 }
@@ -41,8 +43,13 @@ $simple = "false";
 $sort = "false";
 $sort_decreasing = "false";
 $locations = "false";
+$reportcnt = "false";
 for($i=$numfiles; $i<@ARGV; $i++) {
     $optionrecognized = 0;
+    if($ARGV[$i] eq "-cnt") {
+	$reportcnt = "true";
+	$optionrecognized = 1;
+    }
     if($ARGV[$i] eq "-genes") {
 	$genesonly = "true";
 	$all = "false";
@@ -129,21 +136,33 @@ for($i=0; $i<$numfiles; $i++) {
 	if($line =~ /gene/) {
 	    @a = split(/\t/,$line);
 	    if($genesonly eq "true") {
-		$profile{$geneid}[$i] = $a[4];
+		if($reportcnt eq "false") {
+		    $profile{$geneid}[$i] = $a[4];
+		} else {
+		    $profile{$geneid}[$i] = $a[3];
+		}
 		$genelocation{$geneid} = $a[1];
 	    } 
 	    if($all eq "true") {
 		$a[0] =~ s/^\s+//;
 		$a[0] =~ s/\s+$//;
 		$ALL[$CNT][$i][1] = $a[1];
-		$ALL[$CNT][$i][2] = $a[4];
+		if($reportcnt eq "false") {
+		    $ALL[$CNT][$i][2] = $a[4];
+		} else {
+		    $ALL[$CNT][$i][2] = $a[3];
+		}
 		$CNT++;
 	    }
 	}
 	if($line =~ /exon/) {
 	    @a = split(/\t/,$line);
 	    if($exonsonly eq "true" || $featuresonly eq "true") {
-		$exon{$a[1]}[$i] = $a[4];
+		if($reportcnt eq "false") {
+		    $exon{$a[1]}[$i] = $a[4];
+		} else {
+		    $exon{$a[1]}[$i] = $a[3];
+		}
 		$exonlocation{$geneid} = $a[1];
 	    } 
 	    if($all eq "true") {
@@ -151,14 +170,22 @@ for($i=0; $i<$numfiles; $i++) {
 		$a[0] =~ s/\s+$//;
 		$ALL[$CNT][$i][0] = $a[0];
 		$ALL[$CNT][$i][1] = $a[1];
-		$ALL[$CNT][$i][2] = $a[4];
+		if($reportcnt eq "false") {
+		    $ALL[$CNT][$i][2] = $a[4];
+		} else {
+		    $ALL[$CNT][$i][2] = $a[3];
+		}
 		$CNT++;
 	    }
 	}
 	if($line =~ /intron/) {
 	    @a = split(/\t/,$line);
 	    if($intronsonly eq "true" || $featuresonly eq "true") {
-		$intron{$a[1]}[$i] = $a[4];
+		if($reportcnt eq "false") {
+		    $intron{$a[1]}[$i] = $a[4];
+		} else {
+		    $intron{$a[1]}[$i] = $a[3];
+		}
 		$intronlocation{$geneid} = $a[1];
 	    }
 	    if($all eq "true") {
@@ -166,7 +193,11 @@ for($i=0; $i<$numfiles; $i++) {
 		$a[0] =~ s/\s+$//;
 		$ALL[$CNT][$i][0] = $a[0];
 		$ALL[$CNT][$i][1] = $a[1];
-		$ALL[$CNT][$i][2] = $a[4];
+		if($reportcnt eq "false") {
+		    $ALL[$CNT][$i][2] = $a[4];
+		} else {
+		    $ALL[$CNT][$i][2] = $a[3];
+		}
 		$CNT++;
 	    }
 	}
@@ -180,6 +211,9 @@ if($printheader eq "true") {
 	print "\t";
     }
     print "name";
+    if($locations eq "true") {
+	print "\tlocation";
+    }
     for($i=0; $i<$numfiles; $i++) {
 	if($names[$i] =~ /\S/) {
 	    print "\t$names[$i]";
