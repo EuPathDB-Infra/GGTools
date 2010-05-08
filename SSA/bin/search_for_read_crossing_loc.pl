@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-if(@ARGV < 4 && $ARGV != 2) {
+if(@ARGV < 4 && @ARGV != 2) {
     die "
 Usage: search_for_read_crossing_loc.pl <data file> <<spansfile>|<chr> <start> <end>>
 
