@@ -42,6 +42,7 @@ if(@ARGV < 5) {
     print "                      reads and a large genome then this will probably be necessary (45 bases is short for\n";
     print "                      mouse, 70 bases is long, in between it's hard to say).\n";
     print "         -chipseq   : Run in chipseq mode, meaning don't map across splice junctions.\n";
+    print "         -minidentity x : run blat with minIdentity=x (default x=93)\n";
     print "         -qsub      : Use qsub to fire the job off to multiple nodes.  This means you're on a cluster that\n";
     print "                      understands qsub.  If not using -qsub, you can still break it into multiple chunks, it\n";
     print "                      will just fire each chunk off to a separate processor.  Don't use more chunks than you\n";
@@ -74,6 +75,7 @@ $chipseq = "false";
 $limitNU = "false";
 $ooc = "true";
 $qsub = "false";
+$minidentity=93;
 if(@ARGV > 5) {
     for($i=5; $i<@ARGV; $i++) {
 	$optionrecognized = 0;
@@ -99,6 +101,15 @@ if(@ARGV > 5) {
 	}
 	if($ARGV[$i] eq "-qsub") {
 	    $qsub = "true";
+	    $optionrecognized = 1;
+	}
+	if($ARGV[$i] eq "-minidentity") {
+
+	    $minidentity = $ARGV[$i+1];
+	    $i++;
+	    if(!($minidentity =~ /^\d+$/ && $minidentity <= 100)) {
+		die "\nERROR: minidentity must be an integer between zero and 100.\nYou have given '$minidentity'.\n\n";
+	    }
 	    $optionrecognized = 1;
 	}
 	if($optionrecognized == 0) {
@@ -194,28 +205,23 @@ chomp($head);
 @a = split(//,$head);
 $readlength = @a;
 
-$head = `head -6 $readsfile`;
-$head =~ /seq.(\d+)(.).*seq.(\d+)(.).*seq.(\d+)(.)/s;
+$head = `head -4 $readsfile`;
+$head =~ /seq.(\d+)(.).*seq.(\d+)(.)/s;
 $num1 = $1;
 $type1 = $2;
 $num2 = $3;
 $type2 = $4;
-$num3 = $5;
-$type3 = $6;
-
 if($paired_end eq 'false') {
     if($type1 ne "a") {
 	print STDERR "Reformatting reads file...\n";
 	`perl scripts/parse2fasta.pl $readsfile > $output_dir/reads.fa`;
 	$readsfile = "$output_dir/reads.fa";
-	$head = `head -6 $readsfile`;
-	$head =~ /seq.(\d+)(.).*seq.(\d+)(.).*seq.(\d+)(.)/s;
+	$head = `head -4 $readsfile`;
+	$head =~ /seq.(\d+)(.).*seq.(\d+)(.)/s;
 	$num1 = $1;
 	$type1 = $2;
 	$num2 = $3;
 	$type2 = $4;
-	$num3 = $5;
-	$type3 = $6;
     }
 }
 
@@ -224,11 +230,11 @@ if($type1 ne "a") {
     print LOGFILE "Error: fasta file misformatted... The first line should end in an 'a'.\n";
     exit();
 }
-if($num1 ne "1") {
-    print STDERR "ERROR: the fasta def lines are misformatted.  The first one should be '1a'.\n";
-    print LOGFILE "Error: fasta file misformatted... The first line should be '1a'.\n";
-    exit();
-}
+#if($num1 ne "1") {
+#    print STDERR "ERROR: the fasta def lines are misformatted.  The first one should be '1a'.\n";
+#    print LOGFILE "Error: fasta file misformatted... The first line should be '1a'.\n";
+#    exit();
+#}
 if($num2 ne "2" && $paired_end eq "false") {
     print STDERR "ERROR: the fasta def lines are misformatted.  The second one should be '2a' or '1b'\n";
     print STDERR "       depending on whether it is paired end or not.  ";
@@ -315,6 +321,7 @@ for($i=1; $i<=$numchunks; $i++) {
     $pipeline_file = $pipeline_template;
     $pipeline_file =~ s!OUTDIR!$output_dir!gs;
     $pipeline_file =~ s!CHUNK!$i!gs;
+    $pipeline_file =~ s!MINIDENTITY!$minidentity!gs;
     $pipeline_file =~ s!BOWTIEEXE!$bowtie_exe!gs;
     $pipeline_file =~ s!GENOMEBOWTIE!$genome_bowtie!gs;
     $pipeline_file =~ s!BOWTIEEXE!$bowtie_exe!gs;
