@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-if(@ARGV < 4 && @ARGV != 2) {
+if(@ARGV < 4 && $ARGV != 2) {
     die "
 Usage: search_for_read_crossing_loc.pl <data file> <<spansfile>|<chr> <start> <end>>
 
@@ -13,7 +13,7 @@ Endpoints are considered included in all the spans.
 
 Lines in the data file must have chr, start and end as three consecutive fields
 separted by tabs. They do not have to be the first three fields as long as they
-are the first that follow the pattern: '\\t([^\\t]+)\\t(\\d+)\\t(\\d+)\\t'
+are the first that follow the pattern: '([^\\t]+)\\t(\\d+)\\t(\\d+)\\t'
 
 ";
 }
@@ -26,7 +26,7 @@ if(!(-e $ARGV[1])) {
     while($line = <INFILE>) {
 	chomp($line);
 	@a = split(/\t/,$line);
-	$line =~ /\t([^\t]+)\t(\d+)\t(\d+)\t/;
+	$line =~ /([^\t]+)\t(\d+)\t(\d+)\t/;
 	$CHR = $1;
 	$START = $2;
 	$END = $3;
@@ -51,7 +51,7 @@ if(!(-e $ARGV[1])) {
     while($line = <INFILE>) {
 	chomp($line);
 	@a = split(/\t/,$line);
-	$line =~ /\t([^\t]+)\t(\d+)\t(\d+)\t/;
+	$line =~ /([^\t]+)\t(\d+)\t(\d+)\t/;
 	$CHR = $1;
 	$START = $2;
 	$END = $3;
