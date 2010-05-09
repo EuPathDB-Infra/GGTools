@@ -213,7 +213,7 @@ if($NCV10 > 0) {
     $ave_CV10 = 1;
 }
 
-print "ave diff: $ave_diff\n";
+#print "ave diff: $ave_diff\n";
 print "ave ratio to truth >= 1: $ave_CV1\n";
 print "ave ratio to truth >= 5: $ave_CV5\n";
 print "ave ratio to truth >= 10: $ave_CV10\n";
@@ -227,8 +227,8 @@ $f = format_large_int($numpositions2);
 print "support2 = $f\n";
 $f = format_large_int($intersection);
 print "intersection = $f\n";
-print "ave depth 1: $ave_depth1\n";
-print "ave depth 2: $ave_depth2\n";
+#print "ave depth 1: $ave_depth1\n";
+#print "ave depth 2: $ave_depth2\n";
 
 sub absvalue () {
     ($x,$y) = @_;
