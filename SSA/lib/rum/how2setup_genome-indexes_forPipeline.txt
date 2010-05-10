@@ -1,0 +1,95 @@
+How to create indexes for the RUM pipeline:
+------------------------------------------
+
+Go to UCSC, choose the organism and build.
+Go to Table Browser:
+
+group: all tables
+table: chromInfo
+output format: selected fields from primary and related tables
+output file: chromosome_sizes.txt
+hit "get output" and choose the 'chrom' and 'size' fields.
+
+remove the header line (if any) and add columns so rows look like this:
+
+chr1    0       249250621       +
+chr2    0       181748087	+
+....
+
+in other words, add a column with '0' between the chr and size cols, and add a col with '+' at the end
+
+* The next steps get fasta file with the complete genome sequence.
+
+Submit the file from the previous step to the genome browser as a custom track, then go to table browser
+and set as follows:
+
+group: custom tracks
+track: User Track
+region: genome
+output format: sequence
+output file: NAME_genome.txt
+file type returned: gzip
+
+where "NAME" should be replaced by something that identifies your name/build, eg mm9
+
+Hit get output, and request all upper case
+
+gunzip the file and run:
+
+> perl modify_fasta_header_for_genome_seq_database.pl NAME_genome.txt > NAME_genome.fa
+
+Now need to make files of gene info and sequence:
+ - you can use any of the annotation tracks as long as they have the ten fields you are asked to select below:
+ - the following illustrates using two tracks "UCSC Known" and "RefSeq".  
+
+Set the table browser as follows:
+
+group: Genes and Gene Prediction Tracks
+track: UCSC Genes 
+table: knownGene
+region: genome
+output format: selected fields from primary and related tables
+output file: ucscknown.txt (keep the name of this file simple)
+
+Hit "get output"
+
+Select the following fields from the first table:
+name
+chrom
+strand
+txStart
+txEnd
+cdsStart
+cdsEnd
+exonCount
+exonStarts
+exonEnds
+
+hit "get output".
+
+Now do the same thing but get RefSeq genes, save to file called: refseq.txt
+  - Set 'table' to be "refGene".
+
+make a file called "gene_info_files" with two lines:
+
+ucscknown.txt
+refseq.txt
+
+Now run:
+
+> perl create_gene_indexes.pl NAME
+  - this is a master script that runs seven other scripts...
+
+Now build bowtie indexes:
+
+> bowtie-build NAME_genes.fa NAME_genes
+> bowtie-build NAME_genome.fa NAME_genome
+
+Now build the blat indexes:
+
+faToTwoBit NAME_genome_sequence.fa NAME_genome_sequence.2bit
+
+and make the ooc file:
+
+blat NAME_genome_sequence.2bit /dev/null /dev/null -tileSize=11 -makeOoc=11.ooc_NAME -repMatch=1024
+
