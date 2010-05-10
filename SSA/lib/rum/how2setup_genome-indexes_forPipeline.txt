@@ -77,12 +77,12 @@ refseq.txt
 
 Now run:
 
-> perl create_gene_indexes.pl NAME
+> perl create_gene_indexes.pl NAME_refseq_ucscknown NAME_genome.fa 
   - this is a master script that runs seven other scripts...
 
 Now build bowtie indexes:
 
-> bowtie-build NAME_genes.fa NAME_genes
+> bowtie-build NAME_refseq_ucscknown_genes.fa NAME_genes
 > bowtie-build NAME_genome.fa NAME_genome
 
 Now build the blat indexes:
