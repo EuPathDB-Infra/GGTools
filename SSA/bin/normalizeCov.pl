@@ -6,12 +6,14 @@
 if(@ARGV<1 || $ARGV[0] eq "help") {
     print "\nusage: normalize.pl <cov_file> [options]\n\n";
     print "Outputs to standard out.\n\n";
+    print "This script divides each coverage by a factor, which by default is M/10^9 where M is the total\n";
+    print "number of bases of reads mapped.\n\n";
     print "options:\n";
     print "    -normfactor N                : divide coverages by N\n";
     print "    -open                        : cov file coords open (right endpoint not included)\n";
     print "    -zerohalfopen2onehalfclosed  : cov file coords zero based half open, output one based half closed\n";
     print "    -convert2singlebase          : output one row per base (for which cov > 0)\n";
-    print "    -scale N                     : divide number bases mapped by N to get normfactor (default is one billion)\n";
+    print "    -scale N                     : divide number bases mapped by N to get normfactor (default is N=10^9)\n";
     print "\n";
     exit();
 }
