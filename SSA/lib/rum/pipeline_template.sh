@@ -1,21 +1,15 @@
 #!/bin/sh
 echo "starting..." > OUTDIR/rum_log.CHUNK
 echo `date` >> OUTDIR/rum_log.CHUNK
-BOWTIEEXE -a --best --strata -f GENOMEBOWTIE READSFILE.CHUNK -v 3 --suppress 6,7,8 -p 3 > OUTDIR/X.CHUNK
+BOWTIEEXE -a --best --strata -f GENOMEBOWTIE READSFILE.CHUNK -v 3 --suppress 6,7,8 -p 1 > OUTDIR/X.CHUNK
 echo "finished first bowtie run" >> OUTDIR/rum_log.CHUNK
-echo `date` >> OUTDIR/rum_log.CHUNK
-perl SCRIPTSDIR/sort_bowtie.pl OUTDIR/X.CHUNK OUTDIR/X_sorted.CHUNK
-mv OUTDIR/X_sorted.CHUNK OUTDIR/X.CHUNK
-echo "finished sorting bowtie run" >> OUTDIR/rum_log.CHUNK
 echo `date` >> OUTDIR/rum_log.CHUNK
 perl SCRIPTSDIR/make_GU_and_GNU.pl OUTDIR/X.CHUNK OUTDIR/GU.CHUNK OUTDIR/GNU.CHUNK PAIREDEND
 echo "finished parsing genome bowtie run" >> OUTDIR/rum_log.CHUNK
 echo `date` >> OUTDIR/rum_log.CHUNK
 
-BOWTIEEXE -a --best --strata -f TRANSCRIPTOMEBOWTIE READSFILE.CHUNK -v 3 --suppress 6,7,8 -p 3 > OUTDIR/Y.CHUNK
-perl SCRIPTSDIR/sort_bowtie.pl OUTDIR/Y.CHUNK OUTDIR/Y_sorted.CHUNK
-mv OUTDIR/Y_sorted.CHUNK OUTDIR/Y.CHUNK
-echo "finished sorting bowtie run" >> OUTDIR/rum_log.CHUNK
+BOWTIEEXE -a --best --strata -f TRANSCRIPTOMEBOWTIE READSFILE.CHUNK -v 3 --suppress 6,7,8 -p 1 > OUTDIR/Y.CHUNK
+echo "finished second bowtie run" >> OUTDIR/rum_log.CHUNK
 echo `date` >> OUTDIR/rum_log.CHUNK
 perl SCRIPTSDIR/make_TU_and_TNU.pl OUTDIR/Y.CHUNK GENEANNOTFILE OUTDIR/TU.CHUNK OUTDIR/TNU.CHUNK PAIREDEND
 echo "finished parsing transcriptome bowtie run" >> OUTDIR/rum_log.CHUNK
@@ -31,7 +25,7 @@ perl SCRIPTSDIR/make_unmapped_file.pl READSFILE.CHUNK OUTDIR/BowtieUnique.CHUNK 
 echo "finished making R" >> OUTDIR/rum_log.CHUNK
 echo `date` >> OUTDIR/rum_log.CHUNK
 
-BLATEXE GENOMEBLAT OUTDIR/R.CHUNK -ooc=OOCFILE OUTDIR/R.CHUNK.blat -minScore=MINSCORE -minIdentity=93 SPEED
+BLATEXE GENOMEBLAT OUTDIR/R.CHUNK -ooc=OOCFILE OUTDIR/R.CHUNK.blat -minScore=MINSCORE -minIdentity=MINIDENTITY SPEED
 echo "finished first BLAT run" >> OUTDIR/rum_log.CHUNK
 echo `date` >> OUTDIR/rum_log.CHUNK
 MDUSTEXE OUTDIR/R.CHUNK > OUTDIR/R.mdust.CHUNK
