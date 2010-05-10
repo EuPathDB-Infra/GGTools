@@ -183,7 +183,7 @@ open(LOGFILE, ">$output_dir/rum.log");
 print LOGFILE "config file: $configfile\n";
 print LOGFILE "readsfile: $readsfile\n";
 print LOGFILE "output_dir: $output_dir\n";
-print LOGFILE "numchunkis: $numchunks\n";
+print LOGFILE "numchunks: $numchunks\n";
 print LOGFILE "name: $name\n";
 print LOGFILE "paired_end: $paired_end\n";
 print LOGFILE "fast: $fast\n";
@@ -191,6 +191,7 @@ print LOGFILE "limitNU: $limitNU\n";
 print LOGFILE "chipseq: $chipseq\n";
 print LOGFILE "ooc: $ooc\n";
 print LOGFILE "qsub: $qsub\n";
+print LOGFILE "blat minidentity: $minidentity\n";
 print LOGFILE "\nstart: $date\n";
 
 if($numchunks =~ /(\d+)s/) {
