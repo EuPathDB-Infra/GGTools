@@ -5,19 +5,21 @@
 
 if(@ARGV < 1) {
     die "
-Usage: create_gene_indexes.pl <name>
+Usage: create_gene_indexes.pl <name> <genome fasta>
 
 This script is part of the pipeline of scripts used to create RUM indexes.
 For more information see the library file: 'how2setup_genome-indexes_forPipeline.txt'.
 
+Genome fasta file must be formatted as described in:
+'how2setup_genome-indexes_forPipeline.txt'.
+
 ";
 }
-
 
 $NAME = $ARGV[0];
 
 $N1 = $NAME . "_gene_info_orig.txt";
-$N2 = $NAME . "_genome.fa";
+$N2 = $ARGV[1];
 $N3 = $NAME . "_genes.fa";
 $N4 = $NAME . "_gene_info.txt";
 
