@@ -21,6 +21,7 @@ if(@ARGV < 1) {
     print "      -tlen n         : Set the length of the low quality tail to n bases (default n = 10).\n";
     print "      -tpercent x     : Set the percent of tails that are low quality to 0<=x<=1\n                        (default x = 0).\n";
     print "      -tqual x        : Set quality of the low quality tail to 0<=x<=1 (default x = 0.8).\n";
+    print "      -cntstart n     : Start the read counter at n (default n = 1).\n";
     print "\n";
     print "This program depends on four files:\n";
     print "  1) simulator_config_geneinfo\n";
@@ -61,6 +62,7 @@ $percent_alt_spliceforms = .2;
 $num_alt_splice_forms_per_gene = 2;
 $NUMGENES = 100000;
 $stem = "";
+$cntstart = 1;
 
 use Math::Random qw(:all);
 $num_reads = $ARGV[0];
@@ -177,6 +179,19 @@ for($i=2; $i<@ARGV; $i++) {
 	}
 	if($NUMGENES < 1) {
 	    print STDERR "\nError: -numgenes has to be a postive integer.\n\n";
+	    exit(0);
+	}
+    }
+    if($ARGV[$i] eq "-cntstart") {
+	$i++;
+	$cntstart = $ARGV[$i];
+	$option_recognized = 1;
+	if(!($cntstart =~ /^\d+$/)) {
+	    print STDERR "\nError: -cntstart has to be a postive integer.\n\n";
+	    exit(0);
+	}
+	if($cntstart < 1) {
+	    print STDERR "\nError: -cntstart has to be a postive integer.\n\n";
 	    exit(0);
 	}
     }
@@ -792,7 +807,7 @@ foreach $geneid (keys %gene2exon) {
 }
 
 print "\nGenerating reads\n";
-$CNT=1;
+$CNT=$cntstart;
 while( 1 == 1) {
     if($CNT % 50000 == 0) {
 	print "$CNT reads done\n";
