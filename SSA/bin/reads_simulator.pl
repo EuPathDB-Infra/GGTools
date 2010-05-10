@@ -22,8 +22,11 @@ if(@ARGV < 1) {
     print "      -tpercent x     : Set the percent of tails that are low quality to 0<=x<=1\n                        (default x = 0).\n";
     print "      -tqual x        : Set quality of the low quality tail to 0<=x<=1 (default x = 0.8).\n";
     print "      -cntstart n     : Start the read counter at n (default n = 1).\n";
-    print "      -outdir x       : x is a path to a directory to write to.  Default is the current director.\n";
+    print "      -outdir x       : x is a path to a directory to write to.  Default is the current directory.\n";
     print "      -mastercfgdir x : x is a path to a directory where the master config files are.  Default is the current director.\n";
+    print "      -customcfgdir x : If you are using -filenamestem option, then x is a path to a directory where the\n";
+    print "                        custom config files are.  Default is the directory specified by -outdir, which.\n";
+    print "                        itself defaults to the current directory.\n";
     print "\n";
     print "This program depends on four files:\n";
     print "  1) simulator_config_geneinfo\n";
@@ -69,6 +72,7 @@ $stem = "";
 $cntstart = 1;
 $outdir = "./";
 $mastercfgdir = "./";
+$customcfgdir = "";
 
 use Math::Random qw(:all);
 $num_reads = $ARGV[0];
@@ -223,6 +227,17 @@ for($i=2; $i<@ARGV; $i++) {
 	    exit(0);
 	}
     }
+    if($ARGV[$i] eq "-customcfgdir") {
+	$i++;
+	$customcfgdir = $ARGV[$i];
+	$customcfgdir =~ s!/$!!;
+	$customcfgdir = $customcfgdir . "/";
+	$option_recognized = 1;
+	if(!(-e $customcfgdir)) {
+	    print STDERR "\nError: cannot open the directory '$customcfgdir' specified by the -customcfgdir option.\n\n";
+	    exit(0);
+	}
+    }
     if($ARGV[$i] eq "-palt") {
 	$i++;
 	$percent_alt_spliceforms = $ARGV[$i];
@@ -288,19 +303,31 @@ for($i=2; $i<@ARGV; $i++) {
     }
 }
 
-$simulator_config_geneinfo = $outdir . $simulator_config_geneinfo;
-$simulator_config_featurequantifications = $outdir . $simulator_config_featurequantifications;
-$simulator_config_geneseq = $outdir . $simulator_config_geneseq;
-$simulator_config_intronseq = $outdir . $simulator_config_intronseq;
+if($customcfgdir =~ /\S/ && !($stem =~ /\S/)) {
+    die "\nError: if you specify -customcfgdir you must also specify -stem.\n\n";
+}
+if($customcfgdir =~ /\S/) {
+    $simulator_config_geneinfo = $customcfgdir . $simulator_config_geneinfo;
+    $simulator_config_featurequantifications = $customcfgdir . $simulator_config_featurequantifications;
+    $simulator_config_geneseq = $customcfgdir . $simulator_config_geneseq;
+    $simulator_config_intronseq = $customcfgdir . $simulator_config_intronseq;
+} else {
+    $simulator_config_geneinfo = $outdir . $simulator_config_geneinfo;
+    $simulator_config_featurequantifications = $outdir . $simulator_config_featurequantifications;
+    $simulator_config_geneseq = $outdir . $simulator_config_geneseq;
+    $simulator_config_intronseq = $outdir . $simulator_config_intronseq;
+}
 
 if($READLENGTH <= $low_qual_tail_length && $percent_of_tails_that_are_low_qual > 0) {
     print STDERR "\nERROR: low quality tail length must be less than the readlength.\n\n";
     exit(0);
 }
 if(!($stem =~ /\S/)) {
-    # Here construct random set of $NUMGENES genes and call make_config...pl script on master-list files
-
-    $total_num_genes = `wc -l $simulator_config_geneinfo`;
+    # Here construct random set of $NUMGENES genes and call the 'make_config_files_for_subset_of_gene_ids'
+    # script on the master-list files
+    $F = $mastercfgdir . 'simulator_config_geneinfo';
+    print "F=$F\n";
+    $total_num_genes = `wc -l $F`;
     $total_num_genes =~ /\s*(\d+)/;
     $total_num_genes = $1;
     $genes_temp_filename = $outdir . "genes_temp";
@@ -314,6 +341,8 @@ if(!($stem =~ /\S/)) {
 	print OUTFILE "GENE.$R\n";
     }
     close(OUTFILE);
+    print "mastercfgdir = $mastercfgdir\n";
+    print "outdir = $outdir\n";
     $x = `perl make_config_files_for_subset_of_gene_ids.pl temp $genes_temp_filename $mastercfgdir $outdir`;
 
     $simulator_config_geneinfo = $outdir . "simulator_config_geneinfo_temp";
@@ -338,6 +367,8 @@ $date = `date`;
 chomp($date);
 print SIMLOGOUT "Simulator run: '$name'\n";
 print SIMLOGOUT "started: $date\n";
+$f = format_large_int($num_reads);
+print SIMLOGOUT "num reads: $f\n";
 print SIMLOGOUT "readlength: $READLENGTH\n";
 print SIMLOGOUT "indel frequency: $indelfrequency\n";
 print SIMLOGOUT "base error: $base_error\n";
@@ -350,7 +381,7 @@ if($stem =~ /\S/) {
     print SIMLOGOUT "stem: $stem\n";
 } else {
     $f = format_large_int($NUMGENES);
-    print SIMLOGOUT "num genes: $f\n";
+    print SIMLOGOUT "num genes used to simulate with: $f\n";
 }
 close(SIMLOGOUT);
 open(SIMLOGOUT, ">>$logfilename");
@@ -842,10 +873,8 @@ foreach $geneid (keys %gene2exon) {
 
 print "\nGenerating reads\n";
 $CNT=$cntstart;
+$CNT2 = 1;
 while( 1 == 1) {
-    if($CNT % 50000 == 0) {
-	print "$CNT reads done\n";
-    }
     $R = rand(1);
     if($R < $intron_freq) {
 	# pick an intron at random
@@ -956,7 +985,11 @@ while( 1 == 1) {
 	print SIMBEDOUT $bed;
 	
 	$CNT++;
-	if($CNT > $num_reads) {
+	$CNT2++;
+	if($CNT2 % 50000 == 0) {
+	    print "$CNT2 reads done\n";
+	}
+	if($CNT2 > $num_reads) {
 	    close(SIMBEDOUT);
 	    close(SIMFAOUT);
 	    $date = `date`;
