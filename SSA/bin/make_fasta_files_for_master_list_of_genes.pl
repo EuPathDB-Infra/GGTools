@@ -5,11 +5,14 @@
 
 if(@ARGV<4) {
     die "
-Usage: make_fasta_file_for_master_list_of_genes.pl <genome fasta> <exons> <genes> <final gene info file name>
+Usage: make_fasta_file_for_master_list_of_genes.pl <genome fasta> <exons> <gene info input file> <gene info output file>
 
 This script is part of the pipeline of scripts used to create RUM indexes.
 You should probably not be running it alone.  See the library file:
 'how2setup_genome-indexes_forPipeline.txt'.
+
+Note: this script will remove from the gene input file anything on a chromosome
+for which there is no sequence in the <genome fasta> file.
 
 ";
 }
@@ -43,11 +46,11 @@ close(INFILE);
 $str = "cat $ARGV[2]";
 $flag = 0;
 foreach $key (keys %chr_hash2) {
-    $str = $str .  " | grep -v $key";
-    if($chr1_hash{$key}+0==0) {
+    if($chr_hash1{$key}+0==0) {
 	if($flag == 0) {
 	    print STDERR "no sequence for:\n$key\n";
 	    $flag = 1;
+	    $str = $str .  " | grep -v $key";
 	} else {
 	    print STDERR "$key\n";
 	}
@@ -56,6 +59,7 @@ foreach $key (keys %chr_hash2) {
 if($flag == 1) {
     print STDERR "Removing the genes on the chromosomes for which there was no genome sequence.\n";
     $str = $str . " > $final_gene_info_file";
+    print STDERR "str:\n$str\n";
     `$str`;
 }
 
