@@ -22,6 +22,8 @@ if(@ARGV < 1) {
     print "      -tpercent x     : Set the percent of tails that are low quality to 0<=x<=1\n                        (default x = 0).\n";
     print "      -tqual x        : Set quality of the low quality tail to 0<=x<=1 (default x = 0.8).\n";
     print "      -cntstart n     : Start the read counter at n (default n = 1).\n";
+    print "      -outdir x       : x is a path to a directory to write to.  Default is the current director.\n";
+    print "      -mastercfgdir x : x is a path to a directory where the master config files are.  Default is the current director.\n";
     print "\n";
     print "This program depends on four files:\n";
     print "  1) simulator_config_geneinfo\n";
@@ -31,7 +33,9 @@ if(@ARGV < 1) {
     print "To create such files for a subset of genes use the script:\n";
     print "   - make_config_files_for_subset_of_gene_ids.pl\n";
     print "Run it with no parameters for the usage\n";
-    print "To use those config files with this program use the option -filenamestem\n";
+    print "To use those config files with this program put them in the same directory as the script, or\n";
+    print "in the directory specified by -outdir (not -mastercfgdir which specifies the master config files)\n";
+    print "and use the option -filenamestem\n";
     print "\n";
     exit(0);
 }
@@ -63,6 +67,8 @@ $num_alt_splice_forms_per_gene = 2;
 $NUMGENES = 100000;
 $stem = "";
 $cntstart = 1;
+$outdir = "./";
+$mastercfgdir = "./";
 
 use Math::Random qw(:all);
 $num_reads = $ARGV[0];
@@ -195,6 +201,28 @@ for($i=2; $i<@ARGV; $i++) {
 	    exit(0);
 	}
     }
+    if($ARGV[$i] eq "-outdir") {
+	$i++;
+	$outdir = $ARGV[$i];
+	$outdir =~ s!/$!!;
+	$outdir = $outdir . "/";
+	$option_recognized = 1;
+	if(!(-e $outdir)) {
+	    print STDERR "\nError: cannot open the directory '$outdir' specified by the -outdir option.\n\n";
+	    exit(0);
+	}
+    }
+    if($ARGV[$i] eq "-mastercfgdir") {
+	$i++;
+	$mastercfgdir = $ARGV[$i];
+	$mastercfgdir =~ s!/$!!;
+	$mastercfgdir = $mastercfgdir . "/";
+	$option_recognized = 1;
+	if(!(-e $mastercfgdir)) {
+	    print STDERR "\nError: cannot open the directory '$mastercfgdir' specified by the -mastercfgdir option.\n\n";
+	    exit(0);
+	}
+    }
     if($ARGV[$i] eq "-palt") {
 	$i++;
 	$percent_alt_spliceforms = $ARGV[$i];
@@ -260,6 +288,11 @@ for($i=2; $i<@ARGV; $i++) {
     }
 }
 
+$simulator_config_geneinfo = $outdir . $simulator_config_geneinfo;
+$simulator_config_featurequantifications = $outdir . $simulator_config_featurequantifications;
+$simulator_config_geneseq = $outdir . $simulator_config_geneseq;
+$simulator_config_intronseq = $outdir . $simulator_config_intronseq;
+
 if($READLENGTH <= $low_qual_tail_length && $percent_of_tails_that_are_low_qual > 0) {
     print STDERR "\nERROR: low quality tail length must be less than the readlength.\n\n";
     exit(0);
@@ -267,10 +300,11 @@ if($READLENGTH <= $low_qual_tail_length && $percent_of_tails_that_are_low_qual >
 if(!($stem =~ /\S/)) {
     # Here construct random set of $NUMGENES genes and call make_config...pl script on master-list files
 
-    $total_num_genes = `wc -l simulator_config_geneinfo`;
+    $total_num_genes = `wc -l $simulator_config_geneinfo`;
     $total_num_genes =~ /\s*(\d+)/;
     $total_num_genes = $1;
-    open(OUTFILE, ">genes_temp") or die "\nError: cannot open file 'genes_temp' for writing\n\n";
+    $genes_temp_filename = $outdir . "genes_temp";
+    open(OUTFILE, ">$genes_temp_filename") or die "\nError: cannot open file '$genes_temp_filename' for writing\n\n";
     for($i=0; $i<$NUMGENES; $i++) {
 	$R = int(rand($total_num_genes))+1;
 	while($Ghash{$R}+0>0) {
@@ -280,19 +314,19 @@ if(!($stem =~ /\S/)) {
 	print OUTFILE "GENE.$R\n";
     }
     close(OUTFILE);
-    $x = `perl make_config_files_for_subset_of_gene_ids.pl temp genes_temp`;
+    $x = `perl make_config_files_for_subset_of_gene_ids.pl temp $genes_temp_filename $mastercfgdir $outdir`;
 
-    $simulator_config_geneinfo = "simulator_config_geneinfo_temp";
-    $simulator_config_featurequantifications = "simulator_config_featurequantifications_temp";
-    $simulator_config_geneseq = "simulator_config_geneseq_temp";
-    $simulator_config_intronseq = "simulator_config_intronseq_temp";
+    $simulator_config_geneinfo = $outdir . "simulator_config_geneinfo_temp";
+    $simulator_config_featurequantifications = $outdir . "simulator_config_featurequantifications_temp";
+    $simulator_config_geneseq = $outdir . "simulator_config_geneseq_temp";
+    $simulator_config_intronseq = $outdir . "simulator_config_intronseq_temp";
 }
 
-$logfilename = "simulated_reads_$name" . ".log";
-$bedfilename = "simulated_reads_$name" . ".bed";
-$fafilename = "simulated_reads_$name" . ".fa";
-$substitutionsfilename = "simulated_reads_substitutions_$name" . ".txt";
-$indelsfilename = "simulated_reads_indels_$name" . ".txt";
+$logfilename = $outdir . "simulated_reads_$name" . ".log";
+$bedfilename = $outdir . "simulated_reads_$name" . ".bed";
+$fafilename = $outdir . "simulated_reads_$name" . ".fa";
+$substitutionsfilename = $outdir . "simulated_reads_substitutions_$name" . ".txt";
+$indelsfilename = $outdir . "simulated_reads_indels_$name" . ".txt";
 
 open(SIMLOGOUT, ">$logfilename") or die "\nError: cannot open file '$logfilename' for writing\n\n";
 open(SIMBEDOUT, ">$bedfilename") or die "\nError: cannot open file '$bedfilename' for writing\n\n";
