@@ -18,7 +18,7 @@ if(@ARGV < 1) {
     print "PURPOSE: ";
     print "This program reformats files of reads into the appropriate fasta\nformat needed for the RUM pipeline.\n\n";
     print "INPUT: ";
-    print "Files can be fastq files, or fasta files, or more genreally the input\nfiles should have blocks of N rows for each read, where the read is on the\nsame row of each block.  N can be any positive integer and does not need to\nbe specified.\n\n";
+    print "Files can be fastq files, or fasta files, or more genreally the input\nfiles can have blocks of N rows for each read, where the read is on the\nsame row of each block.  N can be any positive integer and does not need to\nbe specified.  The files can also have sequence as part of every line, the\nscript should figure it out, if it can't it will let you know.\n\n";
     print "OUTPUT: ";
     print "Output is written to standard out, you should redirect it to a file.\n\n";
 
@@ -90,6 +90,7 @@ if($userparamsgiven == 0) {  # the following figures out how many rows per block
     }
 
     if($num_lines_seq == 0) {
+	&try_to_see_if_part_of_each_line_is_seq();
 	die "\nWarning: No lines of sequence found in the file '$ARGV[0]'\n\n";
     }
 
@@ -224,3 +225,83 @@ if($linecnt % $block != 0) {
 }
 
 
+sub try_to_see_if_part_of_each_line_is_seq () {
+    if($paired eq "false") {
+	open(INFILE, $ARGV[0]);
+	my $line = <INFILE>;
+	chomp($line);
+	my @a = split(/[^ACGTN]+/,$line);
+	my $maxlen = 0;
+	for(my $i=0; $i<@a; $i++) {
+	    my $len = length($a[$i]);
+	    if($len > $maxlen) {
+		$maxlen = $len;
+	    }
+	}
+	
+	my $cnt = 0;
+	while($line = <INFILE>) {
+	    chomp($line);
+	    $cnt++;
+	    my @a = split(/[^ACGTN]+/,$line);
+	    my $flag = 0;
+	    for(my $i=0; $i<@a; $i++) {
+		my $len = length($a[$i]);
+		if($len == $maxlen) {
+		    print ">seq.$cnt";
+		    print "a\n$a[$i]\n";
+		    $flag = 1;
+		}
+	    }
+	    if($flag == 0) {
+		die "\nSorry, can't figure this file out, maybe it's corrupt or you might have to write a custom parser.\m\n";
+	    }
+	}
+    } else {
+	open(INFILE1, $ARGV[0]);
+	open(INFILE2, $ARGV[1]);
+	my $line1 = <INFILE1>;
+	chomp($line1);
+	my @a = split(/[^ACGTN]+/,$line1);
+	my $maxlen = 0;
+	for(my $i=0; $i<@a; $i++) {
+	    my $len = length($a[$i]);
+	    if($len > $maxlen) {
+		$maxlen = $len;
+	    }
+	}
+	
+	my $cnt = 0;
+	while($line1 = <INFILE1>) {
+	    chomp($line1);
+	    my $line2 = <INFILE2>;
+	    chomp($line2);
+	    $cnt++;
+	    my @a = split(/[^ACGTN]+/,$line1);
+	    my @b = split(/[^ACGTN]+/,$line2);
+	    my $flag1 = 0;
+	    for(my $i=0; $i<@a; $i++) {
+		my $len = length($a[$i]);
+		if($len == $maxlen) {
+		    print ">seq.$cnt";
+		    print "a\n$a[$i]\n";
+		    $flag1 = 1;
+		}
+	    }
+	    my $flag2 = 0;
+	    for(my $i=0; $i<@a; $i++) {
+		my $len = length($a[$i]);
+		if($len == $maxlen) {
+		    print ">seq.$cnt";
+		    print "b\n$b[$i]\n";
+		    $flag2 = 1;
+		}
+	    }
+	    if($flag1 == 0 || $flag2 == 0) {
+		die "\nSorry, can't figure these files out, maybe they're corrupt\nor you might have to write a custom parser.\m\n";
+	    }
+	}
+    }
+    my $str = "true";
+    return $str;
+}
