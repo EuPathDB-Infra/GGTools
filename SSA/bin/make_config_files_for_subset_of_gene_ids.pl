@@ -35,13 +35,15 @@ else {
 }
 
 $configdir = $ARGV[2];
-if(-e $configdir) {
-    die "Error: directory with config files '$configdir' does not seem to exist.\n\n";
+if($configdir ne "./") {
+    if(!(-d $configdir)) {
+	die "Error: directory with config files '$configdir' does not seem to exist.\n\n";
+    }
 }
 $configdir =~ s!/$!!;
 $configdir = $configdir . "/";
 $outdir = $ARGV[3];
-if(-e $outdir) {
+if(!(-d $outdir)) {
     die "Error: output directory '$outdir' does not seem to exist.\n\n";
 }
 $outdir =~ s!/$!!;
