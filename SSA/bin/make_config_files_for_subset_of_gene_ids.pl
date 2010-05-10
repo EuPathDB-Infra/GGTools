@@ -3,13 +3,17 @@
 # Written by Gregory R. Grant
 # University of Pennslyvania, 2010
 
-if(@ARGV < 1) {
+if(@ARGV < 4) {
     die "
-Usage:  make_config_files_for_subset_of_gene_ids.pl <stem> <ids>
+Usage:  make_config_files_for_subset_of_gene_ids.pl <stem> <ids> <configdir> <outdir>
 
   * <stem> is the suffix that will qualify these config files.
 
   * <ids> is a space separated list of ids or the name of a file of ids.
+
+  * <configdir> is the directory where the master config files are.
+
+  * <outdir> is the directory where the output files are to be written.
 
 ";
 }
@@ -30,8 +34,23 @@ else {
     }
 }
 
-open(INFILE, "simulator_config_geneinfo");
-$filename = "simulator_config_geneinfo_" . $stem;
+$configdir = $ARGV[2];
+if(-e $configdir) {
+    die "Error: directory with config files '$configdir' does not seem to exist.\n\n";
+}
+$configdir =~ s!/$!!;
+$configdir = $configdir . "/";
+$outdir = $ARGV[3];
+if(-e $outdir) {
+    die "Error: output directory '$outdir' does not seem to exist.\n\n";
+}
+$outdir =~ s!/$!!;
+$outdir = $outdir . "/";
+
+$simulator_config_geneinfo_file = $configdir . "simulator_config_geneinfo";
+
+open(INFILE, $simulator_config_geneinfo_file);
+$filename = $outdir . "simulator_config_geneinfo_" . $stem;
 open(OUTFILE, ">$filename");
 while($line = <INFILE>) {
     chomp($line);
@@ -51,8 +70,10 @@ while($line = <INFILE>) {
 close(INFILE);
 close(OUTFILE);
 
-open(INFILE, "simulator_config_featurequantifications");
-$filename = "simulator_config_featurequantifications_" . $stem;
+$simulator_config_featurequantifications_file = $configdir . "simulator_config_featurequantifications";
+
+open(INFILE, $simulator_config_featurequantifications_file);
+$filename = $outdir . "simulator_config_featurequantifications_" . $stem;
 open(OUTFILE, ">$filename");
 print OUTFILE "--------------------------------------------------------------------\n";
 $line = <INFILE>;
@@ -93,8 +114,10 @@ while(1 == 1) {
 close(INFILE);
 close(OUTFILE);
 
-open(INFILE, "simulator_config_intronseq");
-$filename = "simulator_config_intronseq_" . $stem;
+$simulator_config_intronseq_file = $configdir . "simulator_config_intronseq";
+
+open(INFILE, $simulator_config_intronseq_file);
+$filename = $outdir . "simulator_config_intronseq_" . $stem;
 open(OUTFILE, ">$filename");
 $line = <INFILE>;
 chomp($line);
@@ -135,8 +158,10 @@ while($flag == 0) {
 close(INFILE);
 close(OUTFILE);
 
-open(INFILE, "simulator_config_geneseq");
-$filename = "simulator_config_geneseq_" . $stem;
+$simulator_config_geneseq_file = $configdir . "simulator_config_geneseq";
+
+open(INFILE, $simulator_config_geneseq_file);
+$filename = $outdir . "simulator_config_geneseq_" . $stem;
 open(OUTFILE, ">$filename");
 $line = <INFILE>;
 chomp($line);
