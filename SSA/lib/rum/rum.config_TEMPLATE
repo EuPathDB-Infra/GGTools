@@ -16,3 +16,5 @@
    e.g.: scripts
 9) 11.ooc file location, can be relative path to where the RUM_runner.pl script is, or absolute path
    e.g: indexes/11.ooc_mm9
+10) The genome fasta file with sequences each on a single line, can be relative path or absolute path
+   e.g. indexes/mm9_genome_sequence_single-line-seqs.fa

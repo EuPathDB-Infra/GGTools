@@ -7,3 +7,4 @@ indexes/hg19_genes_ucsc_refseq
 indexes/hg19_genome_sequence.2bit
 scripts
 indexes/11.ooc_hg19
+indexes/hg19_genome_sequence_one-line-seqs.fa

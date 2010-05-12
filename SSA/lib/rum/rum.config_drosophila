@@ -1,0 +1,10 @@
+indexes/drosophila_gene_info.txt
+bin/bowtie
+bin/blat
+bin/mdust
+indexes/drosophila
+indexes/drosophila_genes
+indexes/drosophila_genome_sequence.2bit
+scripts
+indexes/11.ooc_drosophila
+indexes/drosophila_genome_sequence_one-line-seqs.fa

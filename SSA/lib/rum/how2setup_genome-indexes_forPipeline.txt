@@ -93,3 +93,6 @@ and make the ooc file:
 
 blat NAME_genome_sequence.2bit /dev/null /dev/null -tileSize=11 -makeOoc=11.ooc_NAME -repMatch=1024
 
+and transform the genome fa file to have seq all on one line:
+
+perl modify_fa_to_have_seq_on_one_line.pl NAME_genome.fa > NAME_genome_sequence_single-line-seqs.fa

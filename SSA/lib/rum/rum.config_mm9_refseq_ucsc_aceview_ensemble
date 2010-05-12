@@ -1,9 +1,10 @@
-indexes/geneindexes/mm9/refseq_ucsc_aceview_ensemble/mm9_gene_info.txt
+indexes/geneindexes/mm9/refseq_ucsc_aceview_ensemble/mm9_refseq-ucsc-aceview-ensemble_gene_info.txt
 bin/bowtie
 bin/blat
 bin/mdust
 indexes/mm9
-indexes/geneindexes/mm9/refseq_ucsc_aceview_ensemble/mm9_genes
+indexes/geneindexes/mm9/refseq_ucsc_aceview_ensemble/mm9_genes_refseq-ucsc-aceview-ensemble
 indexes/mm9.2bit
 scripts
 indexes/11.ooc_mm9
+indexes/mm9_genome_sequence_one-line-seqs.fa

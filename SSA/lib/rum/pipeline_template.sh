@@ -34,8 +34,11 @@ echo `date` >> OUTDIR/rum_log.CHUNK
 perl SCRIPTSDIR/parse_blat_out.pl OUTDIR/R.CHUNK OUTDIR/R.CHUNK.blat OUTDIR/R.mdust.CHUNK OUTDIR/BlatUnique.CHUNK OUTDIR/BlatNU.CHUNK READLENGTH
 echo "finished parsing first BLAT run" >> OUTDIR/rum_log.CHUNK
 echo `date` >> OUTDIR/rum_log.CHUNK
-perl SCRIPTSDIR/merge_Bowtie_and_Blat.pl OUTDIR/BowtieUnique.CHUNK OUTDIR/BlatUnique.CHUNK OUTDIR/BowtieNU.CHUNK OUTDIR/BlatNU.CHUNK OUTDIR/RUM_Unique.CHUNK OUTDIR/RUM_NU.CHUNK PAIREDEND
+perl SCRIPTSDIR/merge_Bowtie_and_Blat.pl OUTDIR/BowtieUnique.CHUNK OUTDIR/BlatUnique.CHUNK OUTDIR/BowtieNU.CHUNK OUTDIR/BlatNU.CHUNK OUTDIR/RUM_Unique_temp.CHUNK OUTDIR/RUM_NU_temp.CHUNK PAIREDEND
 echo "finished merging Bowtie and Blat" >> OUTDIR/rum_log.CHUNK
+echo `date` >> OUTDIR/rum_log.CHUNK
+perl SCRIPTSDIR/RUM_finalcleanup.pl OUTDIR/RUM_Unique_temp.CHUNK OUTDIR/RUM_NU_temp.CHUNK OUTDIR/RUM_Unique.CHUNK OUTDIR/RUM_NU.CHUNK GENOMEFA -faok
+echo "finished cleaning up final results" >> OUTDIR/rum_log.CHUNK
 echo `date` >> OUTDIR/rum_log.CHUNK
 
 echo "pipeline complete" >> OUTDIR/rum_log.CHUNK
