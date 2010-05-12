@@ -1,27 +1,32 @@
 $date = `date`;
 
 if(@ARGV == 1 && @ARGV[0] eq "config") {
-    print "\n\nThe folliwing describes the configuration file:\n";
-    print "Note: All entries can be absolute path, or relative path to where the RUM_runner.pl script is.\n\n";
-    print "1) gene annotation file\n";
-    print "   e.g.: indexes/mm9_ucsc_refseq_gene_info.txt\n";
-    print "2) bowtie executable, can be relative path to where the RUM_runner.pl script is, or absolute path\n";
-    print "   e.g.: /bin/bowtie\n";
-    print "3) blat executable, can be relative path to where the RUM_runner.pl script is, or absolute path\n";
-    print "   e.g.: /bin/blat\n";
-    print "3) mdust executable, can be relative path to where the RUM_runner.pl script is, or absolute path\n";
-    print "   e.g.: /bin/mdust\n";
-    print "4) bowtie genome index (stem), can be relative path to where the RUM_runner.pl script is, or absolute path\n";
-    print "   e.g.: indexes/mm9\n";
-    print "5) bowtie transcriptome index (stem), can be relative path to where the RUM_runner.pl script is, or absolute path\n";
-    print "   e.g.: indexes/mm9_genes_ucsc_refseq\n";
-    print "6) blat genome index, can be relative path to where the RUM_runner.pl script is, or absolute path\n";
-    print "   e.g.: indexes/mm9.2bit\n";
-    print "7) perl scripts directory, can be relative path to where the RUM_runner.pl script is, or absolute path\n";
-    print "   e.g.: scripts\n";
-    print "8) 11.ooc file location, can be relative path to where the RUM_runner.pl script is, or absolute path\nIf you don't have one, put anything here and run with the -noooc option.\n";
-    print "   e.g: indexes/11.ooc_mm9\n\n";
-    exit(0);
+    die "
+The folliwing describes the configuration file:
+Note: All entries can be absolute path, or relative path to where the RUM_runner.pl script is.
+
+1) gene annotation file, can be relative path to where the RUM_runner.pl script is, or absolute path
+   e.g.: indexes/mm9_ucsc_refseq_gene_info.txt
+2) bowtie executable, can be relative path to where the RUM_runner.pl script is, or absolute path
+   e.g.: bowtie/bowtie
+3) blat executable, can be relative path to where the RUM_runner.pl script is, or absolute path
+   e.g.: blat/blat
+4) mdust executable, can be relative path to where the RUM_runner.pl script is, or absolute path
+   e.g.: mdust/mdust
+5) bowtie genome index, can be relative path to where the RUM_runner.pl script is, or absolute path
+   e.g.: indexes/mm9
+6) bowtie gene index, can be relative path to where the RUM_runner.pl script is, or absolute path
+   e.g.: indexes/mm9_genes_ucsc_refseq
+7) blat genome index, can be relative path to where the RUM_runner.pl script is, or absolute path
+   e.g.: indexes/mm9.2bit
+8) perl scripts directory, can be relative path to where the RUM_runner.pl script is, or absolute path
+   e.g.: scripts
+9) 11.ooc file location, can be relative path to where the RUM_runner.pl script is, or absolute path
+   e.g: indexes/11.ooc_mm9
+10) The genome fasta file with sequences each on a single line, can be relative path or absolute path
+   e.g. indexes/mm9_genome_sequence_single-line-seqs.fa
+
+";
 }
 if(@ARGV < 5) {
     print "\nUsage: RUM_runner.pl <configfile> <reads file(s)> <output dir> <num chunks> <name> [options]\n\n";
@@ -154,6 +159,8 @@ $scripts_dir =~ s!/$!!;
 chomp($scripts_dir);
 $oocfile = <INFILE>;
 chomp($oocfile);
+$genomefa = <INFILE>;
+chomp($genomefa);
 close(INFILE);
 
 if(($readsfile =~ /,,,/) && $paired_end eq "false") {
@@ -336,6 +343,7 @@ for($i=1; $i<=$numchunks; $i++) {
     $pipeline_file =~ s!MDUSTEXE!$mdust_exe!gs;
     $pipeline_file =~ s!GENOMEBLAT!$genome_blat!gs;
     $pipeline_file =~ s!MINSCORE!$min_score!gs;
+    $pipeline_file =~ s!GENOMEFA!$genomefa!gs;
     $pipeline_file =~ s!READLENGTH!$readlength!gs;
     if($limitNU eq "true") {
 	$pipeline_file =~ s! -a ! -k 100 !gs;	
