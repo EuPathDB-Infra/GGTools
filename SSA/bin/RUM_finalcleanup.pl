@@ -5,9 +5,9 @@
 
 $|=1;
 
-if(@ARGV < 3) {
+if(@ARGV < 5) {
     die "
-Usage: finalcleanup.pl <rum_unique> <rum_nu> <genome seq> [options]
+Usage: finalcleanup.pl <rum_unique> <rum_nu> <cleaned rum_unique outfile> <cleaned rum_nu outfile> <genome seq> [options]
 
 Options:
    -faok  : the fasta file already has sequence all on one line
@@ -21,7 +21,7 @@ report the location of the mismatches in the output.
 
 }
 $faok = "false";
-for($i=3; $i<@ARGV; $i++) {
+for($i=5; $i<@ARGV; $i++) {
     $optionrecognized = 0;
     if($ARGV[$i] eq "-faok") {
 	$faok = "true";
@@ -36,10 +36,10 @@ if($faok eq "false") {
     print STDERR "Modifying genome fa file\n";
     $r = int(rand(1000));
     $f = "temp_" . $r . ".fa";
-    `perl modify_fa_to_have_seq_on_one_line.pl $ARGV[2] > $f`;
+    `perl modify_fa_to_have_seq_on_one_line.pl $ARGV[4] > $f`;
     open(GENOMESEQ, $f);
 } else {
-    open(GENOMESEQ, $ARGV[2]);
+    open(GENOMESEQ, $ARGV[4]);
 }
 
 $FLAG = 0;
@@ -52,53 +52,66 @@ while($FLAG == 0) {
 	if($line eq '') {
 	    $FLAG = 1;
 	    $sizeflag = 1;
-	}
-	chomp($line);
-	$line =~ />(.*):1-(\d+)_strand=./;
-	$chr = $1;
-	print STDERR "chr=$chr\n";
-	$ref_seq = <GENOMESEQ>;
-	chomp($ref_seq);
-	$CHR2SEQ{$chr} = $ref_seq;
-	$totalsize = $totalsize + length($ref_seq);
-	if($totalsize > 1000000000) {  # don't store more than 1 gb of sequence in memory at once...
-	    $sizeflag = 1;
+	} else {
+	    chomp($line);
+	    $line =~ />(.*):1-(\d+)_strand=./;
+	    $chr = $1;
+	    print STDERR "chr=$chr\n";
+	    $ref_seq = <GENOMESEQ>;
+	    chomp($ref_seq);
+	    $CHR2SEQ{$chr} = $ref_seq;
+	    $totalsize = $totalsize + length($ref_seq);
+	    if($totalsize > 1000000000) {  # don't store more than 1 gb of sequence in memory at once...
+		$sizeflag = 1;
+	    }
 	}
     }
-
-    open(INFILE, $ARGV[0]);
-    while($line = <INFILE>) {
-	chomp($line);
-	@a = split(/\t/,$line);
-	$chr = $a[1];
-	if(defined $CHR2SEQ{$a[1]}) {
-	    @b = split(/, /, $a[2]);
-	    $SEQ = "";
-	    for($i=0; $i<@b; $i++) {
-		@c = split(/-/,$b[$i]);
-		$len = $c[1] - $c[0] + 1;
-		$start = $c[0] - 1;
-		$SEQ = $SEQ . substr($CHR2SEQ{$a[1]}, $start, $len);
-	    }
-	    $a[3] =~ s/://g;
-	    &trimleft($SEQ, $a[3], $a[2]) =~ /(.*)\t(.*)/;
-	    $spans = $1;
-	    $seq = $2;
-	    $length1 = length($seq);
-	    $length2 = length($SEQ);
-	    for($i=0; $i<$length2 - $length1; $i++) {
-		$SEQ =~ s/^.//;
-	    }
-	    $seq =~ s/://g;
-	    &trimright($SEQ, $seq, $spans) =~ /(.*)\t(.*)/;
-	    $spans = $1;
-	    $seq = $2;
-	    $seq = addJunctionsToSeq($seq, $spans);
-	    print "$a[0]\t$chr\t$spans\t$seq\n";
-	}
-    }
+    &clean($ARGV[0], $ARGV[2]);
+    &clean($ARGV[1], $ARGV[3]);
 }
 close(GENOMESEQ);
+
+sub clean () {
+    ($infilename, $outfilename) = @_;
+    open(INFILE, $infilename);
+    open(OUTFILE, ">$outfilename");
+    while($line = <INFILE>) {
+	if($line =~ /\+/) {   # insertions will break things, have to fix this, for now not just cleaning these lines
+	    print OUTFILE $line;
+	} else {
+	    chomp($line);
+	    @a = split(/\t/,$line);
+	    $chr = $a[1];
+	    if(defined $CHR2SEQ{$a[1]}) {
+		@b = split(/, /, $a[2]);
+		$SEQ = "";
+		for($i=0; $i<@b; $i++) {
+		    @c = split(/-/,$b[$i]);
+		    $len = $c[1] - $c[0] + 1;
+		    $start = $c[0] - 1;
+		    $SEQ = $SEQ . substr($CHR2SEQ{$a[1]}, $start, $len);
+		}
+		$a[3] =~ s/://g;
+		&trimleft($SEQ, $a[3], $a[2]) =~ /(.*)\t(.*)/;
+		$spans = $1;
+		$seq = $2;
+		$length1 = length($seq);
+		$length2 = length($SEQ);
+		for($i=0; $i<$length2 - $length1; $i++) {
+		    $SEQ =~ s/^.//;
+		}
+		$seq =~ s/://g;
+		&trimright($SEQ, $seq, $spans) =~ /(.*)\t(.*)/;
+		$spans = $1;
+		$seq = $2;
+		$seq = addJunctionsToSeq($seq, $spans);
+		print OUTFILE "$a[0]\t$chr\t$spans\t$seq\n";
+	    }
+	}
+    }
+    close(INFILE);
+    close(OUTFILE);
+}
 
 sub removefirst () {
     ($n_1, $spans_1, $seq_1) = @_;
