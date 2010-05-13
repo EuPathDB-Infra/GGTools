@@ -11,17 +11,17 @@ Where:  <cov file> is a coverage file
         <regions file> is a file of regions to excise, each row should look like chr:start-end
 
 Options: 
-        -buffer n:  excise also anything within n bases of the regions, default = 0
+        -pad n:  excise also anything within n bases of the regions, default = 0
 
 ";
 }
 
-$buffer = 0;
+$pad = 0;
 for($i=2; $i<@ARGV; $i++) {
     $optionrecognized = 0;
-    if($ARGV[$i] eq "-buffer") {
+    if($ARGV[$i] eq "-pad") {
 	$i++;
-	$buffer = $ARGV[$i];
+	$pad = $ARGV[$i];
 	$optionrecognized = 1;
     }
 
@@ -48,7 +48,7 @@ while($line = <COVFILE>) {
     @a = split(/\t/,$line);
     $flag = 0;
     for($i=0; $i<$cnt; $i++) {
-	if($a[1] <= ($end[$i]+$buffer) && $a[2] >= ($start[$i]-$buffer) && $a[0] eq $chr[$i]) {
+	if($a[1] <= ($end[$i]+$pad) && $a[2] >= ($start[$i]-$pad) && $a[0] eq $chr[$i]) {
 	    $flag = 1;
 	}
     }
