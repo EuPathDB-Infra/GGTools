@@ -18,47 +18,65 @@ Note: All entries can be absolute path, or relative path to where the RUM_runner
 6) bowtie gene index, can be relative path to where the RUM_runner.pl script is, or absolute path
    e.g.: indexes/mm9_genes_ucsc_refseq
 7) blat genome index, can be relative path to where the RUM_runner.pl script is, or absolute path
-   e.g.: indexes/mm9.2bit
+   e.g. indexes/mm9_genome_sequence_single-line-seqs.fa
 8) perl scripts directory, can be relative path to where the RUM_runner.pl script is, or absolute path
    e.g.: scripts
 9) 11.ooc file location, can be relative path to where the RUM_runner.pl script is, or absolute path
    e.g: indexes/11.ooc_mm9
-10) The genome fasta file with sequences each on a single line, can be relative path or absolute path
-   e.g. indexes/mm9_genome_sequence_single-line-seqs.fa
 
 ";
 }
 if(@ARGV < 5) {
-    print "\nUsage: RUM_runner.pl <configfile> <reads file(s)> <output dir> <num chunks> <name> [options]\n\n";
-    print "<reads file(s)>:  For unpaired data, the single file of reads.\n";
-    print "                  For paired data either: \n";
-    print "                        - The files of forward and reverse reads, separated by three commas ',,,'.\n";
-    print "                        - One file formatted using parse2fasta.pl.\n";
-    print "                  Files can be either fasta or fastq.\n\n";
-    print "      <num chunks> is the number of pieces to break the job into.  Use one chunk unless you are on a cluster, or\n";
-    print "                   have multiple processors with lots of RAM.\n\n";
-    print "      <name> is a string that will identify this run - use only alphanumeric and underscores, no whitespace\n";
-    print "             or other characters.\n\n";
+    die "
 
-    print "Options: -single    : Data is single-end (default is paired-end).\n";
-    print "         -fast      : Run with blat params that run about 3 times faster but a tad less sensitive\n";
-    print "         -noooc     : Run without blat ooc file\n";
-    print "         -limitNU   : Limits the number of ambiguoust mappers to a max of 100 locations.  If you have short\n";
-    print "                      reads and a large genome then this will probably be necessary (45 bases is short for\n";
-    print "                      mouse, 70 bases is long, in between it's hard to say).\n";
-    print "         -chipseq   : Run in chipseq mode, meaning don't map across splice junctions.\n";
-    print "         -minidentity x : run blat with minIdentity=x (default x=93)\n";
-    print "         -qsub      : Use qsub to fire the job off to multiple nodes.  This means you're on a cluster that\n";
-    print "                      understands qsub.  If not using -qsub, you can still break it into multiple chunks, it\n";
-    print "                      will just fire each chunk off to a separate processor.  Don't use more chunks than you\n";
-    print "                      have processors though, because that will just slow it down.\n\n";
-    print "Running RUM_runner.pl with the one argument 'config' will explain how to make the config file.\n\n";
-    print "This program writes very large intermediate files.  If you have a large genome such as mouse or human then\n";
-    print "it is recommended to run in chunks on a cluster, or a machine with multiple processors.  Running with under\n";
-    print "five million reads per chunk is usually best, and getting it under a million reads per chunk will speed things\n";
-    print "considerably.\n\n";
-    print "You can put an 's' after the number of chunks if they have already been broken\ninto chunks, so as to avoid repeating this time-consuming step.\n\n";
-    exit(0);
+Usage: RUM_runner.pl <configfile> <reads file(s)> <output dir> <num chunks>
+                     <name> [options]
+
+<reads file(s)>:  For unpaired data, the single file of reads.
+                  For paired data either: 
+                        - The files of forward and reverse reads, separated
+                          by three commas ',,,'.
+                        - One file formatted using parse2fasta.pl.
+                  Files can be either fasta or fastq.
+
+      <num chunks> is the number of pieces to break the job into.  Use one
+                   chunk unless you are on a cluster, or have multiple
+                   processors with lots of RAM.
+
+      <name> is a string that will identify this run - use only alphanumeric
+             and underscores, no whitespace or other characters.
+
+Options: -single    : Data is single-end (default is paired-end).
+         -fast      : Run with blat params that run about 3 times faster but
+                      a tad less sensitive
+         -noooc     : Run without blat ooc file
+         -limitNU   : Limits the number of ambiguoust mappers to a max of 100
+                      locations.  If you have short reads and a large genome
+                      then this will probably be necessary (45 bases is short
+                      for mouse, 70 bases is long, between it's hard to say).
+         -chipseq   : Run in chipseq mode, meaning don't map across splice
+                      junctions.
+         -minidentity x : run blat with minIdentity=x (default x=93)
+         -qsub      : Use qsub to fire the job off to multiple nodes.  This
+                      means you're on a cluster that understands qsub.  If not
+                      using -qsub, you can still break it into multiple chunks,
+                      it will just fire each chunk off to a separate processor.
+                      Don't use more chunks than you have processors though,
+                      because that will just slow it down.
+
+Running RUM_runner.pl with the one argument 'config' will explain how to make
+the config file.
+
+This program writes very large intermediate files.  If you have a large genome
+such as mouse or human then it is recommended to run in chunks on a cluster, or
+a machine with multiple processors.  Running with under five million reads per
+chunk is usually best, and getting it under a million reads per chunk will speed
+things considerably.
+
+You can put an 's' after the number of chunks if they have already been broken
+into chunks, so as to avoid repeating this time-consuming step.
+
+";
 }
 
 $configfile = $ARGV[0];
@@ -159,8 +177,7 @@ $scripts_dir =~ s!/$!!;
 chomp($scripts_dir);
 $oocfile = <INFILE>;
 chomp($oocfile);
-$genomefa = <INFILE>;
-chomp($genomefa);
+$genomefa = $genome_blat;
 close(INFILE);
 
 if(($readsfile =~ /,,,/) && $paired_end eq "false") {
