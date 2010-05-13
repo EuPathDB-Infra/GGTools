@@ -9,7 +9,7 @@ if(@ARGV < 1) {
     print "Also output are: a file of indels, a file of substitutions, and a file of novel splice forms.\n";
     print "\n   options:\n";
     print "      -numgenes n     : Choose n>=1 genes at random from a master pool of gene models (default n = 100000).\n";
-    print "      -error x        : Set the error rate for generating a wrong base\n                        anywhere in the read to 0<=x<=1 (default x = 0.005).\n";
+    print "      -error x        : Set the error rate that any given base is sequenced wrong to 0<=x<=1 (default x = 0.005).\n";
     print "      -indelfreq x    : Set indel rate to 0<=x<1 (default x = 0.0005).\n";
     print "      -nalt n         : Set the number of novel splice forms per gene to n>1 (default n = 2).\n";
     print "      -palt x         : Set the percentage of signal coming from novel splice\n                        forms to 0<=x<=1 (default x = 0.2).\n";
@@ -23,7 +23,7 @@ if(@ARGV < 1) {
     print "      -tqual x        : Set quality of the low quality tail to 0<=x<=1 (default x = 0.8).\n";
     print "      -cntstart n     : Start the read counter at n (default n = 1).\n";
     print "      -outdir x       : x is a path to a directory to write to.  Default is the current directory.\n";
-    print "      -mastercfgdir x : x is a path to a directory where the master config files are.  Default is the current director.\n";
+    print "      -mastercfgdir x : x is a path to a directory where the master config files are.  Default is the\n                        current directory.\n";
     print "      -customcfgdir x : If you are using -filenamestem option, then x is a path to a directory where the\n";
     print "                        custom config files are.  Default is the directory specified by -outdir, which.\n";
     print "                        itself defaults to the current directory.\n";
