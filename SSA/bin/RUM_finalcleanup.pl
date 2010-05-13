@@ -9,6 +9,9 @@ if(@ARGV < 5) {
     die "
 Usage: finalcleanup.pl <rum_unique> <rum_nu> <cleaned rum_unique outfile> <cleaned rum_nu outfile> <genome seq> [options]
 
+Note: this script rewrites the fasta file to a temp file that has sequence all on one line.
+If the file already in that format, use the -faok option.
+
 Options:
    -faok  : the fasta file already has sequence all on one line
 
