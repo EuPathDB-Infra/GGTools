@@ -139,7 +139,7 @@ foreach $CHR (keys %allchrs) {
 	    $cov = $4;
 	    if($chr eq $CHR) {
 		for($i=$start; $i<=$end-$adjust; $i++) {
-		    if(defined $cov1{$i}) {
+		    if(exists $cov1{$i}) {
 			$absval = absvalue($cov1{$i}, $cov);
 			$diff = $diff + $absval;
 			if($cov1{$i} >= 1) {
@@ -166,6 +166,7 @@ foreach $CHR (keys %allchrs) {
 	    }
 	}
     }
+
     close(INFILE2);
     foreach $pos (keys %cov1) {
 	$diff = $diff + $cov1{$pos};
@@ -214,9 +215,9 @@ if($NCV10 > 0) {
 }
 
 #print "ave diff: $ave_diff\n";
-print "ave ratio to truth >= 1: $ave_CV1\n";
-print "ave ratio to truth >= 5: $ave_CV5\n";
-print "ave ratio to truth >= 10: $ave_CV10\n";
+print "ave ratio cov2 to cov1 for all locations where cov1 >= 1: $ave_CV1\n";
+print "ave ratio cov2 to cov1 for all locations where cov1 >= 5: $ave_CV5\n";
+print "ave ratio cov2 to cov1 for all locations where cov1 >= 10: $ave_CV10\n";
 $ave_depth1 = $total1 / $numpositions1;
 $ave_depth2 = $total2 / $numpositions2;
 $f = format_large_int($numpositions);
