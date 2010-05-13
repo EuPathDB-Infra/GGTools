@@ -4,7 +4,6 @@ bin/blat
 bin/mdust
 indexes/mm9
 indexes/geneindexes/mm9/refseq_ucsc_aceview_ensemble/mm9_genes_refseq-ucsc-aceview-ensemble
-indexes/mm9.2bit
+indexes/mm9_genome_sequence_one-line-seqs.fa
 scripts
 indexes/11.ooc_mm9
-indexes/mm9_genome_sequence_one-line-seqs.fa

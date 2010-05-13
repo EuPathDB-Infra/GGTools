@@ -11,10 +11,8 @@
 6) bowtie gene index, can be relative path to where the RUM_runner.pl script is, or absolute path
    e.g.: indexes/mm9_genes_ucsc_refseq
 7) blat genome index, can be relative path to where the RUM_runner.pl script is, or absolute path
-   e.g.: indexes/mm9.2bit
+   e.g. indexes/mm9_genome_sequence_single-line-seqs.fa
 8) perl scripts directory, can be relative path to where the RUM_runner.pl script is, or absolute path
    e.g.: scripts
 9) 11.ooc file location, can be relative path to where the RUM_runner.pl script is, or absolute path
    e.g: indexes/11.ooc_mm9
-10) The genome fasta file with sequences each on a single line, can be relative path or absolute path
-   e.g. indexes/mm9_genome_sequence_single-line-seqs.fa
