@@ -157,6 +157,16 @@ for($i=0; $i<@a; $i++) {
     }
 }
 
+for($i=1; $i<=$numchunks; $i++) {
+    $logfile = "$output_dir/rum_log.$i";
+    if (-e $logfile) {
+	$x = `cat $logfile`;
+	if(!($x =~ /pipeline complete/s)) {
+	    unlink($logfile);
+	}
+    }
+}
+
 open(INFILE, $configfile);
 $gene_annot_file = <INFILE>;
 chomp($gene_annot_file);
