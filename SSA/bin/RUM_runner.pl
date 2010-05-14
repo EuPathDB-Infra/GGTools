@@ -142,7 +142,7 @@ if(@ARGV > 5) {
     }
 }
 
-$check = `ps -x | grep RUM_runner.pl`;
+$check = `ps x | grep RUM_runner.pl`;
 @a = split(/\n/,$check);
 $CNT=0;
 for($i=0; $i<@a; $i++) {
@@ -391,7 +391,7 @@ for($i=1; $i<=$numchunks; $i++) {
 	`qsub -l mem_free=6G -pe DJ 4 $output_dir/$outfile`;
     }
     else {
-	system("/bin/bash $output_dir/$outfile");
+	system("/bin/bash $output_dir/$outfile &");
     }
 }
 $doneflag = 0;
