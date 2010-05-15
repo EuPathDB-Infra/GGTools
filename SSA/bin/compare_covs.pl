@@ -42,9 +42,16 @@ $numpositions2 = 0;
 $intersection = 0;
 
 open(INFILE, $ARGV[0]);
+$end_prev = "-1";
 while($line = <INFILE>) {
     chomp($line);
     if($line =~ /^(\S+)\t(\d+)\t(\d+)\t(\d+)/) {
+	$start_new = $2;
+	if(($start_new + $adjust) == $end_prev) {
+	    die "\nError: It seems you have overlapping spans, perhaps you need the -open option?\n\n";
+	} else {
+	    $end_prev = $3;
+	}
 	$chr = $1;
 	$total1 = $total1 + ($3 - $2 + 1 - $adjust) * $4;
 	$chrs{$chr}++;
@@ -139,7 +146,7 @@ foreach $CHR (keys %allchrs) {
 	    $cov = $4;
 	    if($chr eq $CHR) {
 		for($i=$start; $i<=$end-$adjust; $i++) {
-		    if(exists $cov1{$i}) {
+		    if(defined $cov1{$i}) {
 			$absval = absvalue($cov1{$i}, $cov);
 			$diff = $diff + $absval;
 			if($cov1{$i} >= 1) {
@@ -166,7 +173,6 @@ foreach $CHR (keys %allchrs) {
 	    }
 	}
     }
-
     close(INFILE2);
     foreach $pos (keys %cov1) {
 	$diff = $diff + $cov1{$pos};
@@ -215,9 +221,9 @@ if($NCV10 > 0) {
 }
 
 #print "ave diff: $ave_diff\n";
-print "ave ratio cov2 to cov1 for all locations where cov1 >= 1: $ave_CV1\n";
-print "ave ratio cov2 to cov1 for all locations where cov1 >= 5: $ave_CV5\n";
-print "ave ratio cov2 to cov1 for all locations where cov1 >= 10: $ave_CV10\n";
+print "ave ratio to truth >= 1: $ave_CV1\n";
+print "ave ratio to truth >= 5: $ave_CV5\n";
+print "ave ratio to truth >= 10: $ave_CV10\n";
 $ave_depth1 = $total1 / $numpositions1;
 $ave_depth2 = $total2 / $numpositions2;
 $f = format_large_int($numpositions);
