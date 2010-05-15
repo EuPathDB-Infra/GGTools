@@ -157,7 +157,7 @@ if(@ARGV > 5) {
     }
 }
 
-if($kill == "true") {
+if($kill eq "true") {
     $outdir = $output_dir;
     $str = `ps x | grep $outdir`;
     @candidates = split(/\n/,$str);
