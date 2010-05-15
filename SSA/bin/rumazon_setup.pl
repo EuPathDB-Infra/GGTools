@@ -7,9 +7,10 @@ if(@ARGV < 1 || $ARGV[0] =~ /help/ || $ARGV[0] eq "?") {
     die "
 Usage: rumazon_setup.pl -go
 
-Takes no parameters, this script sets up the rum pipeline on 
-an amazon cloud instance.  You will be queried for the right
-organism to install.
+This script sets up the rum pipeline on an amazon
+cloud instance.  Run with -go in order to do the
+full install.  Takes no other parameters.  You
+will be queried for the right organism to install.
 
 ";
 }
