@@ -168,7 +168,6 @@ if($kill eq "true") {
 	    `kill $pid`;
 	}
     }
-    print "here\n";
     for($i=0; $i<@candidates; $i++) {
 	if($candidates[$i] =~ /^(\d+)\s.*(\s|\/)$outdir(\s|\/)/) {
 	    $pid = $1;
