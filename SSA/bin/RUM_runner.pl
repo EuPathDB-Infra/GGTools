@@ -50,6 +50,7 @@ Options: -single    : Data is single-end (default is paired-end).
          -fast      : Run with blat params that run about 3 times faster but
                       a tad less sensitive
          -noooc     : Run without blat ooc file
+         -ooc       : Run with blat ooc file
          -limitNU   : Limits the number of ambiguoust mappers to a max of 100
                       locations.  If you have short reads and a large genome
                       then this will probably be necessary (45 bases is short
@@ -63,6 +64,10 @@ Options: -single    : Data is single-end (default is paired-end).
                       it will just fire each chunk off to a separate processor.
                       Don't use more chunks than you have processors though,
                       because that will just slow it down.
+         -kill      : To kill a job, run with all the same parameters but add
+                      -kill.  Note: it is not sufficient to just terminate
+                      RUM_runner.pl, that will leave other phantom processes.
+                      Use -kill instead.
 
 Running RUM_runner.pl with the one argument 'config' will explain how to make
 the config file.
@@ -97,8 +102,10 @@ $fast = "false";
 $chipseq = "false";
 $limitNU = "false";
 $ooc = "true";
+$ooc_yes = "false";
 $qsub = "false";
 $minidentity=93;
+$kill = "false";
 if(@ARGV > 5) {
     for($i=5; $i<@ARGV; $i++) {
 	$optionrecognized = 0;
@@ -108,6 +115,10 @@ if(@ARGV > 5) {
 	}
 	if($ARGV[$i] eq "-fast") {
 	    $fast = "true";
+	    $optionrecognized = 1;
+	}
+	if($ARGV[$i] eq "-kill") {
+	    $kill = "true";
 	    $optionrecognized = 1;
 	}
 	if($ARGV[$i] eq "-chipseq") {
@@ -120,6 +131,10 @@ if(@ARGV > 5) {
 	}
 	if($ARGV[$i] eq "-noooc") {
 	    $ooc = "false";
+	    $optionrecognized = 1;
+	}
+	if($ARGV[$i] eq "-ooc") {
+	    $ooc_yes = "true";
 	    $optionrecognized = 1;
 	}
 	if($ARGV[$i] eq "-qsub") {
@@ -142,6 +157,28 @@ if(@ARGV > 5) {
     }
 }
 
+if($kill == "true") {
+    $outdir = $output_dir;
+    $str = `ps x | grep $outdir`;
+    @candidates = split(/\n/,$str);
+    for($i=0; $i<@candidates; $i++) {
+	if($candidates[$i] =~ /^(\d+)\s.*(\s|\/)$outdir\/pipeline.\d+.sh/) {
+	    $pid = $1;
+	    print "killing $pid\n";
+	    `kill $pid`;
+	}
+    }
+    print "here\n";
+    for($i=0; $i<@candidates; $i++) {
+	if($candidates[$i] =~ /^(\d+)\s.*(\s|\/)$outdir(\s|\/)/) {
+	    $pid = $1;
+	    print "killing $pid\n";
+	    `kill $pid`;
+	}
+    }
+    exit();
+}
+
 $check = `ps x | grep RUM_runner.pl`;
 @a = split(/\n/,$check);
 $CNT=0;
@@ -160,10 +197,7 @@ for($i=0; $i<@a; $i++) {
 for($i=1; $i<=$numchunks; $i++) {
     $logfile = "$output_dir/rum_log.$i";
     if (-e $logfile) {
-	$x = `cat $logfile`;
-	if(!($x =~ /pipeline complete/s)) {
-	    unlink($logfile);
-	}
+	unlink($logfile);
     }
 }
 
@@ -223,9 +257,13 @@ print LOGFILE "paired_end: $paired_end\n";
 print LOGFILE "fast: $fast\n";
 print LOGFILE "limitNU: $limitNU\n";
 print LOGFILE "chipseq: $chipseq\n";
-print LOGFILE "ooc: $ooc\n";
 print LOGFILE "qsub: $qsub\n";
 print LOGFILE "blat minidentity: $minidentity\n";
+$ooc_log = "true";
+if($ooc_yes eq "false" && ($ooc eq "false" || $fast eq "false")) {
+    $ooc_log = "false";
+}
+print LOGFILE "ooc: $ooc_log\n";
 print LOGFILE "\nstart: $date\n";
 
 if($numchunks =~ /(\d+)s/) {
@@ -375,10 +413,11 @@ for($i=1; $i<=$numchunks; $i++) {
     if($limitNU eq "true") {
 	$pipeline_file =~ s! -a ! -k 100 !gs;	
     }
-    if($ooc eq "false" || $fast eq "false") {
+    $ooc_log = "true";
+    if($ooc_yes eq "false" && ($ooc eq "false" || $fast eq "false")) {
 	$pipeline_file =~ s!-ooc=OOCFILE!!gs;
     }
-    if($ooc eq "true") {
+    if($ooc eq "true" || $ooc_yes eq "true") {
 	$pipeline_file =~ s!OOCFILE!$oocfile!gs;
     }
     if($fast eq "false") {
