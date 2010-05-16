@@ -126,7 +126,7 @@ foreach $CHR (keys %allchrs) {
 	    $start = $2;
 	    $end = $3;
 	    $cov = $4;
-	    if($chr eq $CHR) {
+	    if($chr eq $CHR && $cov > 0) {
 		for($i=$start; $i<=$end-$adjust; $i++) {
 		    $cov1{$i}=$cov;
 		    $numpositions1++;
@@ -144,7 +144,7 @@ foreach $CHR (keys %allchrs) {
 	    $start = $2;
 	    $end = $3;
 	    $cov = $4;
-	    if($chr eq $CHR) {
+	    if($chr eq $CHR && $cov > 0) {
 		for($i=$start; $i<=$end-$adjust; $i++) {
 		    if(defined $cov1{$i}) {
 			$absval = absvalue($cov1{$i}, $cov);
