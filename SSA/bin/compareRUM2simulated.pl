@@ -42,13 +42,27 @@ for($i=5; $i<@ARGV; $i++) {
 
 $working_dir = $ARGV[0];
 $simulated_readsfile = $ARGV[1];
-$rum_cofig = $ARGV[3];
-`perl RUM_runner.pl $rum_cofig $working_dir/$simulated_readsfile $working_dir 1 $ARGV[4] -minidentity $minidentity`;
 $simulated_bedfile = $ARGV[2];
 $name = $ARGV[4];
 
-open(OUTFILE, ">$working_dir/temp_truth_all.bed");
-open(INFILE, "$working_dir/$simulated_bedfile");
+if(!(-e $working_dir/$simulated_readsfile)) {
+    die "
+Error: The file '$working_dir/$simulated_readsfile' does not seem to exist...
+
+";
+}
+if(!(-e $working_dir/$simulated_bedfile)) {
+    die "
+Error: The file '$working_dir/$simulated_bedfile' does not seem to exist...
+
+";
+}
+
+$rum_cofig = $ARGV[3];
+`perl RUM_runner.pl $rum_cofig $working_dir/$simulated_readsfile $working_dir 1 $ARGV[4] -minidentity $minidentity`;
+
+open(OUTFILE, ">$working_dir/temp_truth_all.bed") or die "\nError: cannot open the file '$working_dir/temp_truth_all.bed' for writing\n\n";
+open(INFILE, "$working_dir/$simulated_bedfile") or die "\nError: cannot open the file '$working_dir/simulated_bedfile' for reading\n\n";
 while($line = <INFILE>) {
     $line =~ s/^\S+\t//;
     print OUTFILE $line;
