@@ -326,7 +326,6 @@ if(!($stem =~ /\S/)) {
     # Here construct random set of $NUMGENES genes and call the 'make_config_files_for_subset_of_gene_ids'
     # script on the master-list files
     $F = $mastercfgdir . 'simulator_config_geneinfo';
-    print "F=$F\n";
     $total_num_genes = `wc -l $F`;
     $total_num_genes =~ /\s*(\d+)/;
     $total_num_genes = $1;
@@ -341,8 +340,6 @@ if(!($stem =~ /\S/)) {
 	print OUTFILE "GENE.$R\n";
     }
     close(OUTFILE);
-    print "mastercfgdir = $mastercfgdir\n";
-    print "outdir = $outdir\n";
     $x = `perl make_config_files_for_subset_of_gene_ids.pl temp $genes_temp_filename $mastercfgdir $outdir`;
 
     $simulator_config_geneinfo = $outdir . "simulator_config_geneinfo_temp";
