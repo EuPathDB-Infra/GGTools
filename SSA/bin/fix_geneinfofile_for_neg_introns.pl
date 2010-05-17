@@ -52,7 +52,9 @@ while($line = <INFILE>) {
         }
         else {
 #           print "$line\n";
-            $a[$exon_count_col]--;
+	    if($exon_count_col >= 0) {
+		$a[$exon_count_col]--;
+	    }
         }
     }
     $end_string = $end_string . $E[$N-1] . ",";;
