@@ -21,12 +21,14 @@ if(!($ARGV[1] eq "-go")) {
 $STR = "alias rum=\"cd /mnt/vol2/\"\n";
 $STR = $STR . "alias lsr=\"ls -ltr\"\n";
 $STR = $STR . "alias lsd=\"ls -lrt | grep ^d\"\n";
+$STR = $STR . "alias s3cmd=\"~/s3cmd-0.9.9.91/s3cmd\"\n";
 
 $x = `cat .bash_profile`;
 $x = $x . "\n$STR";
 
 open(OUTFILE, ">.bash_profile");
 print OUTFILE $x;
+close(OUTFILE);
 
 `mkdir /mnt/vol2/scripts`;
 `mkdir /mnt/vol2/bin`;
@@ -37,12 +39,14 @@ print STDERR "installing java, please wait...\n";
 print STDERR "installing emacs, please wait...\n";
 `yes|yum install emacs`;
 
+`wget http://sourceforge.net/projects/s3tools/files/s3cmd/0.9.9.91/s3cmd-0.9.9.91.tar.gz/download`;
+`gunzip s3cmd-0.9.9.91.tar.gz`;
+`tar -xvf s3cmd-0.9.9.91.tar`;
 `wget http://itmat.rum.s3.amazonaws.com/.emacs`;
 `wget http://itmat.rum.s3.amazonaws.com/rum_pipeline.tar`;
 `mv rum_pipeline.tar /mnt/vol2/`;
 `tar -C /mnt/vol2 -xvf /mnt/vol2/rum_pipeline.tar`;
 `rm /mnt/vol2/rum_pipeline.tar`;
-
 `wget http://itmat.rum.s3.amazonaws.com/organisms.txt`;
 
 $str = `grep "start \-\-" organisms.txt`;
@@ -95,7 +99,7 @@ until($line =~ /-- $org end --/) {
     chomp($line);
 }
 print "\n";
-$x = `ls /mnt/vol2/indexes/*gz`;
+$x = `ls /mnt/vol2/indexes/ | grep gz`;
 if($x =~ /\S/) {
     `gunzip /mnt/vol2/indexes/*gz`;
 }
