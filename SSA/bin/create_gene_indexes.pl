@@ -24,7 +24,7 @@ $N3 = $NAME . "_genes.fa";
 $N4 = $NAME . "_gene_info.txt";
 
 `perl make_master_file_of_genes.pl gene_info_files > gene_info_merged_unsorted.txt`;
-`perl fix_geneinfofile_for_neg_introns.pl gene_info_merged_unsorted.txt > gene_info_merged_unsorted_fixed.txt`;
+`perl fix_geneinfofile_for_neg_introns.pl gene_info_merged_unsorted.txt 2 3 -1 > gene_info_merged_unsorted_fixed.txt`;
 `perl sort_geneinfofile.pl gene_info_merged_unsorted_fixed.txt > gene_info_merged_sorted_fixed.txt`;
 `perl make_ids_unique4geneinfofile.pl gene_info_merged_sorted_fixed.txt $N1;`;
 `perl get_master_list_of_exons_from_geneinfofile.pl $N1`;
