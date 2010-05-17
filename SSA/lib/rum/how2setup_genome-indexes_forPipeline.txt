@@ -53,15 +53,10 @@ output file: ucscknown.txt (keep the name of this file simple)
 
 Hit "get output"
 
-Select the following fields from the first table:
+Select the following fields from the table:
 name
 chrom
 strand
-txStart
-txEnd
-cdsStart
-cdsEnd
-exonCount
 exonStarts
 exonEnds
 
