@@ -45,13 +45,13 @@ $simulated_readsfile = $ARGV[1];
 $simulated_bedfile = $ARGV[2];
 $name = $ARGV[4];
 
-if(!(-e $working_dir/$simulated_readsfile)) {
+if(!(-e "$working_dir/$simulated_readsfile")) {
     die "
 Error: The file '$working_dir/$simulated_readsfile' does not seem to exist...
 
 ";
 }
-if(!(-e $working_dir/$simulated_bedfile)) {
+if(!(-e "$working_dir/$simulated_bedfile")) {
     die "
 Error: The file '$working_dir/$simulated_bedfile' does not seem to exist...
 
