@@ -9,9 +9,6 @@ if(@ARGV < 5) {
     die "
 Usage: finalcleanup.pl <rum_unique> <rum_nu> <cleaned rum_unique outfile> <cleaned rum_nu outfile> <genome seq> [options]
 
-Note: this script rewrites the fasta file to a temp file that has sequence all on one line.
-If the file already in that format, use the -faok option.
-
 Options:
    -faok  : the fasta file already has sequence all on one line
 
@@ -44,6 +41,10 @@ if($faok eq "false") {
 } else {
     open(GENOMESEQ, $ARGV[4]);
 }
+open(OUTFILE, ">$ARGV[2]");
+close(OUTFILE);
+open(OUTFILE, ">$ARGV[3]");
+close(OUTFILE);
 
 $FLAG = 0;
 while($FLAG == 0) {
@@ -77,15 +78,15 @@ close(GENOMESEQ);
 sub clean () {
     ($infilename, $outfilename) = @_;
     open(INFILE, $infilename);
-    open(OUTFILE, ">$outfilename");
+    open(OUTFILE, ">>$outfilename");
     while($line = <INFILE>) {
-	if($line =~ /\+/) {   # insertions will break things, have to fix this, for now not just cleaning these lines
-	    print OUTFILE $line;
-	} else {
-	    chomp($line);
-	    @a = split(/\t/,$line);
-	    $chr = $a[1];
-	    if(defined $CHR2SEQ{$a[1]}) {
+	chomp($line);
+	@a = split(/\t/,$line);
+	$chr = $a[1];
+	if(defined $CHR2SEQ{$a[1]}) {
+	    if($line =~ /\+/) {   # insertions will break things, have to fix this, for now not just cleaning these lines
+		print OUTFILE $line;
+	    } else {
 		@b = split(/, /, $a[2]);
 		$SEQ = "";
 		for($i=0; $i<@b; $i++) {
