@@ -162,17 +162,19 @@ if($kill eq "true") {
     $str = `ps x | grep $outdir`;
     @candidates = split(/\n/,$str);
     for($i=0; $i<@candidates; $i++) {
-	if($candidates[$i] =~ /^(\d+)\s.*(\s|\/)$outdir\/pipeline.\d+.sh/) {
+	if($candidates[$i] =~ /^\s*(\d+)\s.*(\s|\/)$outdir\/pipeline.\d+.sh/) {
 	    $pid = $1;
 	    print "killing $pid\n";
 	    `kill $pid`;
 	}
     }
     for($i=0; $i<@candidates; $i++) {
-	if($candidates[$i] =~ /^(\d+)\s.*(\s|\/)$outdir(\s|\/)/) {
-	    $pid = $1;
-	    print "killing $pid\n";
-	    `kill $pid`;
+	if($candidates[$i] =~ /^\s*(\d+)\s.*(\s|\/)$outdir(\s|\/)/) {
+	    if(!($candidates[$i] =~ /pipeline.\d+.sh/)) {
+		$pid = $1;
+		print "killing $pid\n";
+		`kill $pid`;
+	    }
 	}
     }
     exit();
@@ -477,18 +479,18 @@ $M2C_log = "M2C_$name" . ".log";
 $shellscript = "#!/bin/sh\n";
 $shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl $output_dir/RUM_Unique $output_dir/RUM_NU > $output_dir/mapping_stats.txt\n";
 $shellscript = $shellscript . "echo making bed > $output_dir/$M2C_log\n";
-$shellscript = $shellscript . "echo `date` > $output_dir/$M2C_log\n";
+$shellscript = $shellscript . "echo `date` >> $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "perl $scripts_dir/make_bed.pl $output_dir/RUM_Unique $output_dir/RUM_Unique.bed\n";
-$shellscript = $shellscript . "echo starting M2C > $output_dir/$M2C_log\n";
-$shellscript = $shellscript . "echo `date` > $output_dir/$M2C_log\n";
+$shellscript = $shellscript . "echo starting M2C >> $output_dir/$M2C_log\n";
+$shellscript = $shellscript . "echo `date` >> $output_dir/$M2C_log\n";
 $covfilename = $name . ".cov";
 $logfilename = $name . ".log";
 $shellscript = $shellscript . "java -Xmx2000m M2C $output_dir/RUM_Unique.bed $output_dir/RUM_$covfilename $output_dir/RUM_$logfilename -ucsc -name \"$name\" -chunks 4\n";
-$shellscript = $shellscript . "echo starting to quantify features > $output_dir/$M2C_log\n";
+$shellscript = $shellscript . "echo starting to quantify features >> $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "perl $scripts_dir/quantify_one_sample.pl $output_dir/RUM_$name";
-$shellscript = $shellscript . ".cov $gene_annot_file -zero -open > $output_dir/feature_quantifications_$name\n";
-$shellscript = $shellscript . "echo finished > $output_dir/$M2C_log\n";
+$shellscript = $shellscript . ".cov $gene_annot_file -zero -open >> $output_dir/feature_quantifications_$name\n";
+$shellscript = $shellscript . "echo finished >> $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$M2C_log\n";
 $str = "m2c_$name" . ".sh";
 open(OUTFILE2, ">$output_dir/$str");
