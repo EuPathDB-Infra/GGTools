@@ -85,7 +85,7 @@ sub clean () {
 	$chr = $a[1];
 	if(defined $CHR2SEQ{$a[1]}) {
 	    if($line =~ /\+/) {   # insertions will break things, have to fix this, for now not just cleaning these lines
-		print OUTFILE $line;
+		print OUTFILE "$line\n";
 	    } else {
 		@b = split(/, /, $a[2]);
 		$SEQ = "";
