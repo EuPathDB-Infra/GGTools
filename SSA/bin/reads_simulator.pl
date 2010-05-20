@@ -1184,9 +1184,12 @@ sub getreads () {
     @D = split(/, /,$mergedcoords);
     $bed = "";
     for($dd=0; $dd<@D; $dd++) {
+	$D[$dd] =~ /(\d+)-(\d+)/;
+	$SSS123 = $1;
+	$EEE123 = $1;
 	$D[$dd] =~ s/-/\t/;
 	$str = "$chr{$GENE}\t$D[$dd]\t+\n";
-	if($str =~ /^\S+\t\d+\t\d+\t\+$/) {
+	if($str =~ /^\S+\t\d+\t\d+\t\+$/ && $SSS123 <= $EEE123) {
 	    if($seq_num_in_bedfile eq "true") {
 		$bed = $bed . "seq.$CNT\t$str";
 	    } else {
