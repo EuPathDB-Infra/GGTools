@@ -14,7 +14,7 @@ will be queried for the right organism to install.
 
 ";
 }
-if(!($ARGV[1] eq "-go")) {
+if(!($ARGV[0] eq "-go")) {
     exit(0);
 }
 
@@ -22,6 +22,7 @@ $STR = "alias rum=\"cd /mnt/vol2/\"\n";
 $STR = $STR . "alias lsr=\"ls -ltr\"\n";
 $STR = $STR . "alias lsd=\"ls -lrt | grep ^d\"\n";
 $STR = $STR . "alias s3cmd=\"~/s3cmd-0.9.9.91/s3cmd\"\n";
+$STR = $STR . "PS1=\"[\\w]: \"\n";
 
 $x = `cat .bash_profile`;
 $x = $x . "\n$STR";
