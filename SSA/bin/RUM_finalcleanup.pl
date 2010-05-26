@@ -51,6 +51,7 @@ while($FLAG == 0) {
     undef %CHR2SEQ;
     $sizeflag = 0;
     $totalsize = 0;
+    print STDERR "here 1\n";
     while($sizeflag == 0) {
 	$line = <GENOMESEQ>;
 	if($line eq '') {
@@ -70,8 +71,11 @@ while($FLAG == 0) {
 	    }
 	}
     }
+    print STDERR "here 2\n";
     &clean($ARGV[0], $ARGV[2]);
+    print STDERR "here 3\n";
     &clean($ARGV[1], $ARGV[3]);
+    print STDERR "here 4\n";
 }
 close(GENOMESEQ);
 
@@ -80,10 +84,18 @@ sub clean () {
     open(INFILE, $infilename);
     open(OUTFILE, ">>$outfilename");
     while($line = <INFILE>) {
+	$flag = 0;
 	chomp($line);
 	@a = split(/\t/,$line);
 	$chr = $a[1];
-	if(defined $CHR2SEQ{$a[1]}) {
+	@b2 = split(/, /,$a[2]);
+	for($i=0; $i<@b2; $i++) {
+	    @c2 = split(/-/,$b2[$i]);
+	    if($c2[1] < $c2[0]) {
+		$flag = 1;
+	    }
+	}
+	if(defined $CHR2SEQ{$a[1]} && $flag == 0) {
 	    if($line =~ /\+/) {   # insertions will break things, have to fix this, for now not just cleaning these lines
 		print OUTFILE "$line\n";
 	    } else {
@@ -93,6 +105,9 @@ sub clean () {
 		    @c = split(/-/,$b[$i]);
 		    $len = $c[1] - $c[0] + 1;
 		    $start = $c[0] - 1;
+		    if($len <= 0 || $len > 200) {
+			print STDERR "$line\n";
+		    }
 		    $SEQ = $SEQ . substr($CHR2SEQ{$a[1]}, $start, $len);
 		}
 		$a[3] =~ s/://g;
