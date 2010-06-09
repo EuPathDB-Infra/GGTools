@@ -29,11 +29,9 @@ my $a=`cat $infile`;
 my @originaldata = split(/\n/,$a);
 my $numberdatarows=@originaldata;
 
-my $start;
+my $start = 0;
 if($header eq 'true') {
-    print "$originaldata[1]\n";
-    $start = 2;
-} else {
+    print OUTFILE "$originaldata[0]\n";
     $start = 1;
 }
 
