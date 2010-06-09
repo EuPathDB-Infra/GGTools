@@ -69,8 +69,8 @@ for(my $i=$start; $i<$numberdatarows; $i++) {
     }
     $line = $line . "\n";
 
-#    print OUTFILE "$line";
-    print "$line";
+    print OUTFILE "$line";
+#    print "$line";
 
 }
 
