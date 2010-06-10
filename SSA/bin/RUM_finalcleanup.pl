@@ -36,7 +36,7 @@ if($faok eq "false") {
     print STDERR "Modifying genome fa file\n";
     $r = int(rand(1000));
     $f = "temp_" . $r . ".fa";
-    `perl modify_fa_to_have_seq_on_one_line.pl $ARGV[4] > $f`;
+    `modify_fa_to_have_seq_on_one_line.pl $ARGV[4] > $f`;
     open(GENOMESEQ, $f);
 } else {
     open(GENOMESEQ, $ARGV[4]);
