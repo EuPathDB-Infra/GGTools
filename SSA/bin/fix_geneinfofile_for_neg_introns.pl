@@ -13,7 +13,8 @@ but for some annotation sets there are.
 
 <starts col> is the column with the exon starts, <ends col> is the column with
 the exon ends.  These are counted starting from zero.  <num exons col> is the
-column that has the number of exons, also counted starting from zero.
+column that has the number of exons, also counted starting from zero.  If there
+is no such column, set this to -1.
 
 This script is part of the pipeline of scripts used to create RUM indexes.
 For more information see the library file: 'how2setup_genome-indexes_forPipeline.txt'.
