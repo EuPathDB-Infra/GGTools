@@ -90,9 +90,13 @@ $output_dir = $ARGV[2];
 $output_dir =~ s!/$!!;
 $numchunks = $ARGV[3];
 $name = $ARGV[4];
+if($name =~ /^-/) {
+    die "\nError: The name '$name' is invalid, probably you forgot a required argument\n\n";
+}
+
 $name_o = $ARGV[4];
 $name =~ s/\s+/_/g;
-$name =~ s/^(a-z|A-Z|0-9|_)//g;
+$name =~ s/[^a-zA-Z0-9_]//g;
 
 if($name ne $name_o) {
     print STDERR "\nWarning: name changed from '$name_o' to '$name'.\n\n";
@@ -265,7 +269,6 @@ if($ooc_yes eq "false" && ($ooc eq "false" || $fast eq "false")) {
     $ooc_log = "false";
 }
 print LOGFILE "ooc: $ooc_log\n";
-print LOGFILE "\nstart: $date\n";
 
 if($numchunks =~ /(\d+)s/) {
     $numchunks = $1;
@@ -278,6 +281,9 @@ $head = `head -2 $readsfile | tail -1`;
 chomp($head);
 @a = split(//,$head);
 $readlength = @a;
+
+print LOGFILE "readlength: $readlength\n";
+print LOGFILE "\nstart: $date\n";
 
 $head = `head -4 $readsfile`;
 $head =~ /seq.(\d+)(.).*seq.(\d+)(.)/s;
@@ -304,11 +310,6 @@ if($type1 ne "a") {
     print LOGFILE "Error: fasta file misformatted... The first line should end in an 'a'.\n";
     exit();
 }
-#if($num1 ne "1") {
-#    print STDERR "ERROR: the fasta def lines are misformatted.  The first one should be '1a'.\n";
-#    print LOGFILE "Error: fasta file misformatted... The first line should be '1a'.\n";
-#    exit();
-#}
 if($num2 ne "2" && $paired_end eq "false") {
     print STDERR "ERROR: the fasta def lines are misformatted.  The second one should be '2a' or '1b'\n";
     print STDERR "       depending on whether it is paired end or not.  ";
@@ -489,7 +490,7 @@ $shellscript = $shellscript . "java -Xmx2000m M2C $output_dir/RUM_Unique.bed $ou
 $shellscript = $shellscript . "echo starting to quantify features >> $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "perl $scripts_dir/quantify_one_sample.pl $output_dir/RUM_$name";
-$shellscript = $shellscript . ".cov $gene_annot_file -zero -open >> $output_dir/feature_quantifications_$name\n";
+$shellscript = $shellscript . ".cov $gene_annot_file -zero -open > $output_dir/feature_quantifications_$name\n";
 $shellscript = $shellscript . "echo finished >> $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$M2C_log\n";
 $str = "m2c_$name" . ".sh";
