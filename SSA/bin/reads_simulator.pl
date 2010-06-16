@@ -1,46 +1,70 @@
 $| = 1;
 
 if(@ARGV < 1) {
-    print "\nusage: reads_simulator.pl <num_reads> <name> [options]\n\n";
-    print "<name> str is used in the names of the output files.\nUse only alphanumeric, underscores and dashes.\n";
+    die "
+Usage: reads_simulator.pl <num_reads> <name> [options]
 
-    print "\nThis program outputs a fasta file of reads and a bed file representing the truth of where these reads map.\n";
-    print "   - bed file is in one-based coords and contains both endpoints of each span.\n";
-    print "Also output are: a file of indels, a file of substitutions, and a file of novel splice forms.\n";
-    print "\n   options:\n";
-    print "      -numgenes n     : Choose n>=1 genes at random from a master pool of gene models (default n = 100000).\n";
-    print "      -error x        : Set the error rate that any given base is sequenced wrong to 0<=x<=1 (default x = 0.005).\n";
-    print "      -indelfreq x    : Set indel rate to 0<=x<1 (default x = 0.0005).\n";
-    print "      -nalt n         : Set the number of novel splice forms per gene to n>1 (default n = 2).\n";
-    print "      -palt x         : Set the percentage of signal coming from novel splice\n                        forms to 0<=x<=1 (default x = 0.2).\n";
-    print "      -readlength n   : Set readlength to n>0 bases (default n = 100).\n";
-    print "      -sn             : Add sequence number to the first column of the bed file.\n";
-    print "      -filenamestem x : The stem x will be added to the four default filenames for the four\n                        required files.  Use this if you have made your own config files (see\n                        below about config files and custom config files).\n";
-    print "                        E.g. \"simulator_config_geneinfo\" becomes \"simulator_config_geneinfo_x\".\n";
-    print "      -subfreq x      : Set substitution rate to 0<=x<1 (default x = 0.001).\n";
-    print "      -tlen n         : Set the length of the low quality tail to n bases (default n = 10).\n";
-    print "      -tpercent x     : Set the percent of tails that are low quality to 0<=x<=1\n                        (default x = 0).\n";
-    print "      -tqual x        : Set quality of the low quality tail to 0<=x<=1 (default x = 0.8).\n";
-    print "      -cntstart n     : Start the read counter at n (default n = 1).\n";
-    print "      -outdir x       : x is a path to a directory to write to.  Default is the current directory.\n";
-    print "      -mastercfgdir x : x is a path to a directory where the master config files are.  Default is the\n                        current directory.\n";
-    print "      -customcfgdir x : If you are using -filenamestem option, then x is a path to a directory where the\n";
-    print "                        custom config files are.  Default is the directory specified by -outdir, which.\n";
-    print "                        itself defaults to the current directory.\n";
-    print "\n";
-    print "This program depends on four files:\n";
-    print "  1) simulator_config_geneinfo\n";
-    print "  2) simulator_config_geneseq\n";
-    print "  3) simulator_config_intronseq\n";
-    print "  4) simulator_config_featurequantifications\n\n";
-    print "To create such files for a subset of genes use the script:\n";
-    print "   - make_config_files_for_subset_of_gene_ids.pl\n";
-    print "Run it with no parameters for the usage\n";
-    print "To use those config files with this program put them in the same directory as the script, or\n";
-    print "in the directory specified by -outdir (not -mastercfgdir which specifies the master config files)\n";
-    print "and use the option -filenamestem\n";
-    print "\n";
-    exit(0);
+Where:
+
+<name> str is used in the names of the output files.  Use only alphanumeric,
+underscores and dashes.
+
+This program outputs the following files:
+ 1) A fasta file of reads, paired end (forward are indicated with an 'a' and
+    reverse with a 'b'.
+ 2) A bed file representing the true alignment, in one-based closed coords
+ 3) A log file with the parameter settings
+ 4) A file with the transcripts used for the simulation.  Alternate splice
+    forms are indicated with an \"_0\", \"_1\", \"_2\", etc...
+ 5) A file of substitutions
+ 6) A file of indels
+
+Options:
+      -numgenes n     : Choose n>=1 genes at random from a master pool of gene
+                        models (default n = 100000).
+      -error x        : Set the error rate that any given base is sequenced
+                        wrong to 0<=x<=1 (default x = 0.005).
+      -indelfreq x    : Set indel rate to 0<=x<1 (default x = 0.0005).
+      -nalt n         : Set the number of novel splice forms per gene to n>1
+                        (default n = 2).
+      -palt x         : Set the percentage of signal coming from novel splice
+      -readlength n   : Set readlength to n>0 bases (default n = 100).
+      -sn             : Add sequence number to the first column of the bed file
+      -filenamestem x : The stem x will be added to the four default filenames
+                        for the four required files.  Use this if you have made
+                        your own config files (see below about config files and
+                        custom config files).  E.g. \"simulator_config_geneinfo\"
+                        becomes \"simulator_config_geneinfo_x\".
+      -subfreq x      : Set substitution rate to 0<=x<1 (default x = 0.001).
+      -tlen n         : Set the length of the low quality tail to n bases (default
+                        n = 10).
+      -tpercent x     : Set the percent of tails that are low quality to 0<=x<=1
+                        (default x = 0).
+      -tqual x        : Set quality of the low quality tail to 0<=x<=1 (default
+                        x = 0.8).
+      -cntstart n     : Start the read counter at n (default n = 1).
+      -outdir x       : x is a path to a directory to write to.  Default is the
+                        current directory.
+      -mastercfgdir x : x is a path to a directory where the master config files
+                        are.  Default is the current directory.
+      -customcfgdir x : If you are using -filenamestem option, then x is a path to
+                        a directory where the custom config files are.  Default is
+                        the directory specified by -outdir, which itself defaults
+                        to the current directory.
+
+This program depends on four files:
+  1) simulator_config_geneinfo
+  2) simulator_config_geneseq
+  3) simulator_config_intronseq
+  4) simulator_config_featurequantifications
+To create such files for a subset of genes use the script:
+   - make_config_files_for_subset_of_gene_ids.pl
+Run it with no parameters for the usage
+To use those config files with this program put them in the same directory as the
+script, or in the directory specified by -outdir (not -mastercfgdir which specifies
+the master config files) and use the option -filenamestem
+
+";
 }
 
 $name = $ARGV[1];
