@@ -18,8 +18,11 @@ output at the exon or intron level.
 
 Options: -exons   : rank exons by fold change
          -introns : rank introns by fold change
-         -annot f : f is a file of gene annotation with col 2 = ucsc id and col 3 = refseq id
-                    col 1 is the annotation that is used in the output.
+         -raf x   : ratio adjustment factor (added to numerator and denominator to avoid
+                    small numbers in the denominator blowing up the ratio).  Default is
+                    (ave_cond1 + ave_cond2) / 20.
+         -annot f : f is a file of gene annotation with col 1 being the id and col 2
+                    being the annotation that is used in the output.  File is tab delimited.
 
 Note: -exons and -introns can both be set, but if either is set it will not report gene-level
 results, to get genes and exons/introns you have to run twice.
@@ -29,6 +32,7 @@ results, to get genes and exons/introns you have to run twice.
 $min_depth = $ARGV[2];
 $exons="false";
 $introns="false";
+$userraf = "false";
 for($i=3; $i<@ARGV; $i++) {
     $optionrecognized = 0;
     if($ARGV[$i] eq "-exons") {
@@ -37,6 +41,12 @@ for($i=3; $i<@ARGV; $i++) {
     }
     if($ARGV[$i] eq "-introns") {
 	$introns = "true";
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-raf") {
+	$userraf = "true";
+	$raf = $ARGV[$i+1];
+	$i++;
 	$optionrecognized = 1;
     }
     if($ARGV[$i] eq "-annot") {
@@ -54,8 +64,7 @@ open(INFILE, $annotfile) or die "Error: Cannot open file '$annotfile' for readin
 while($line = <INFILE>) {
     chomp($line);
     @a = split(/\t/,$line);
-    $ucsc{$a[1]} = $a[0];
-    $refseq{$a[2]} = $a[0];
+    $ANNOT{$a[0]} = $a[1];
 }
 close(INFILE);
 
@@ -140,6 +149,12 @@ close(INFILE);
 $gene_ave2 = $gene_ave2 / $genecounter;
 
 $ratio_adjustment_factor = ($gene_ave + $gene_ave2) / 20;
+if($userraf eq "true") {
+    $ratio_adjustment_factor = $raf;
+}
+if($ratio_adjustment_factor == 0) {
+    $ratio_adjustment_factor = .0000001;
+}
 
 if($exons eq "false" && $introns eq "false") {
     print "GENE_ID\tLocation\tintensity1\tintensity2\tadj-ratio\n";
@@ -150,29 +165,33 @@ if($exons eq "false" && $introns eq "false") {
 	}
 	if($gene_ave_count[$i] >= $min_depth || $gene_ave_count2[$i] >= $min_depth) {
 	    $geneid[$i] =~ s/\s+(\+|-)\s*$//;
-	    if($geneid[$i] =~ /([^:]*)\([^)]*ucsc[^)]*\)/) {
-		$u = $ucsc{$1};
+	    $ID = $geneid[$i];
+	    $ID =~ s/\(.*//;
+	    $u = $ANNOT{$ID};
+	    $name = "";
+	    if($u =~ /\S/) {
+		$name = $u;
+	    } else {
+		$ID = $geneid[$i];
+		$ID =~ s/.*:::://;
+		$ID =~ s/\(.*//;
+		$u = $ANNOT{$ID};
 		if($u =~ /\S/) {
 		    $name = $u;
 		}
 	    }
-	    if($geneid[$i] =~ /([^:]*)\([^)]*refseq[^)]*\)/) {
-		$u = $refseq{$1};
-		if($u =~ /\S/) {
-		    $name = $u;
-		}
-	    }
+	    $gene_hash{"$geneid[$i]\t$gene_loc[$i]\t$gene_ave_norm[$i]\t$gene_ave_norm2[$i]"} = $gene_ratio[$i];
 	    if($name =~ /\S/) {
-		$gene_hash{"$name\t$gene_loc[$i]\t$gene_ave_norm[$i]\t$gene_ave_norm2[$i]"} = $gene_ratio[$i];
-	    }
-	    else {
-		$gene_hash{"$geneid[$i]\t$gene_loc[$i]\t$gene_ave_norm[$i]\t$gene_ave_norm2[$i]"} = $gene_ratio[$i];
+		$names{"$geneid[$i]\t$gene_loc[$i]\t$gene_ave_norm[$i]\t$gene_ave_norm2[$i]"} = $name;
 	    }
 	}
     }
     foreach $key (sort {$gene_hash{$b}<=>$gene_hash{$a}} keys %gene_hash) {
 	$gene_ratio = $gene_hash{$key};
-	print "$key\t$gene_ratio\n";
+	$name = $names{$key};
+	$key =~ s/::::/, /g;
+	$key =~ s/_genes//g;
+	print "$key\t$gene_ratio\t$name\n";
     }
 }
 if($exons eq "true") {
