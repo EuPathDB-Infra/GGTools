@@ -18,6 +18,8 @@ if(@ARGV<1 || $ARGV[0] eq "/help/") {
     print "     -sort n   : sort column n.  For n>0, n sorts decreasing, -n sorts increasing.\n";
     print "     -locations   : output also the location of the feature.\n";
     print "     -cnt      : report the avereage depth, unnormalized for number of bases mapped.\n";
+    print "     -annot x  : x is the name of a file of annotation, first column is the id in the feature\n";
+    print "                 quantification file and the second column is the annotation.\n";
     print "\n";
     exit();
 }
@@ -25,6 +27,8 @@ if(@ARGV<1 || $ARGV[0] eq "/help/") {
 for($i=0; $i<@ARGV; $i++) {
     if(-e $ARGV[$i]) {
 	$numfiles = $i + 1;
+    } else {
+	$i = @ARGV;
     }
 }
 
@@ -44,8 +48,19 @@ $sort = "false";
 $sort_decreasing = "false";
 $locations = "false";
 $reportcnt = "false";
+$annotfile_given = "false";
+$annotfile = "";
 for($i=$numfiles; $i<@ARGV; $i++) {
     $optionrecognized = 0;
+    if($ARGV[$i] eq "-annot") {
+	$annotfile_given = "true";
+        $i++;
+        $annotfile = $ARGV[$i];
+        if(!(-e $annotfile)) {
+            die "Error: annotation file '$annotfile' does not seem to exist.\n\n";
+        }
+	$optionrecognized = 1;
+    }
     if($ARGV[$i] eq "-cnt") {
 	$reportcnt = "true";
 	$optionrecognized = 1;
@@ -117,6 +132,14 @@ for($i=$numfiles; $i<@ARGV; $i++) {
     }
 }
 
+open(INFILE, $annotfile);
+while($line = <INFILE>) {
+    chomp($line);
+    @a = split(/\t/,$line);
+    $ANNOT{$a[0]} = $a[1];
+}
+close(INFILE);
+
 for($i=0; $i<$numfiles; $i++) {
     $CNT = 0;
     if(!(-e $ARGV[$i])) {
@@ -132,6 +155,8 @@ for($i=0; $i<$numfiles; $i++) {
 	    $line =~ s/\t(\+|-)//;
 	    $geneid = $line;
 	    $ALL[$CNT][$i][0] = $geneid;
+	    $line = <INFILE>;
+	    next;
 	}
 	if($line =~ /gene/) {
 	    @a = split(/\t/,$line);
@@ -204,8 +229,6 @@ for($i=0; $i<$numfiles; $i++) {
     }
 }
 
-print "here 1\n";
-
 if($printheader eq "true") {
     if($simple eq "false") {
 	print "\t";
@@ -227,9 +250,23 @@ if($printheader eq "true") {
 
 if($all eq "true") {
     for($cnt=0; $cnt<$CNT; $cnt++) {
-	print "$ALL[$cnt][0][0]\t$ALL[$cnt][0][1]";
+	$IDout = $ALL[$cnt][0][0];
+	$IDout =~ s/::::/, /g;
+	$IDout =~ s/_genes//g;
+	print "$IDout";
+	$ID = $ALL[$cnt][0][0];
+	$ID =~ s/\(.*//;
+	if(!($ANNOT{$ID} =~ /\S/)) {
+	    $ID = $ALL[$cnt][0][0];
+	    $ID =~ s/.*://;
+	    $ID =~ s/\(.*//;
+	}	
+	print "\t$ALL[$cnt][0][1]";
 	for($i=0; $i<$numfiles;$i++) {
 	    print "\t$ALL[$cnt][$i][2]";
+	}
+	if($ANNOT{$ID} =~ /\S/) {
+	    print "\t$ANNOT{$ID}";
 	}
 	print "\n";
     }
@@ -238,36 +275,75 @@ if($all eq "true") {
 if($genesonly eq "true") {
     if($sort eq "true" && $sort_decreasing eq "true") {
 	foreach $geneid (sort {$profile{$b}[$sortcol]<=>$profile{$a}[$sortcol]} keys %genelocation) {
-	    print "$geneid";
+	    $IDout = $geneid;
+	    $IDout =~ s/::::/, /g;
+	    $IDout =~ s/_genes//g;
+	    print "$IDout";
+	    $ID = $geneid;
+	    $ID =~ s/\(.*//;
+	    if(!($ANNOT{$ID} =~ /\S/)) {
+		$ID = $geneid;
+		$ID =~ s/.*://;
+		$ID =~ s/\(.*//;
+	    }
 	    if($locations eq "true") {
 		print "\t$genelocation{$geneid}";
 	    }
 	    for($i=0; $i<$numfiles; $i++) {
 		print "\t$profile{$geneid}[$i]";
+	    }
+	    if($ANNOT{$ID} =~ /\S/) {
+		print "\t$ANNOT{$ID}";
 	    }
 	    print "\n";
 	}
     }
     if($sort eq "true" && $sort_decreasing eq "false") {
 	foreach $geneid (sort {$profile{$a}[$sortcol]<=>$profile{$b}[$sortcol]} keys %genelocation) {
-	    print "$geneid";
+	    $IDout = $geneid;
+	    $IDout =~ s/::::/, /g;
+	    $IDout =~ s/_genes//g;
+	    print "$IDout";
+	    $ID = $geneid;
+	    $ID =~ s/\(.*//;
+	    if(!($ANNOT{$ID} =~ /\S/)) {
+		$ID = $geneid;
+		$ID =~ s/.*://;
+		$ID =~ s/\(.*//;
+	    }
 	    if($locations eq "true") {
 		print "\t$genelocation{$geneid}";
 	    }
 	    for($i=0; $i<$numfiles; $i++) {
 		print "\t$profile{$geneid}[$i]";
+	    }
+	    if($ANNOT{$ID} =~ /\S/) {
+		print "\t$ANNOT{$ID}";
 	    }
 	    print "\n";
 	}
     }
     if($sort eq "false") {
 	foreach $geneid (sort {$genelocation{$a} cmp $genelocation{$b}} keys %genelocation) {
-	    print "$geneid";
+	    $IDout = $geneid;
+	    $IDout =~ s/::::/, /g;
+	    $IDout =~ s/_genes//g;
+	    print "$IDout";
+	    $ID = $geneid;
+	    $ID =~ s/\(.*//;
+	    if(!($ANNOT{$ID} =~ /\S/)) {
+		$ID = $geneid;
+		$ID =~ s/.*://;
+		$ID =~ s/\(.*//;
+	    }
 	    if($locations eq "true") {
 		print "\t$genelocation{$geneid}";
 	    }
 	    for($i=0; $i<$numfiles; $i++) {
 		print "\t$profile{$geneid}[$i]";
+	    }
+	    if($ANNOT{$ID} =~ /\S/) {
+		print "\t$ANNOT{$ID}";
 	    }
 	    print "\n";
 	}
