@@ -33,6 +33,7 @@ $min_depth = $ARGV[2];
 $exons="false";
 $introns="false";
 $userraf = "false";
+$annot_exists = "false";
 for($i=3; $i<@ARGV; $i++) {
     $optionrecognized = 0;
     if($ARGV[$i] eq "-exons") {
@@ -52,6 +53,7 @@ for($i=3; $i<@ARGV; $i++) {
     if($ARGV[$i] eq "-annot") {
 	$annotfile = $ARGV[$i+1];
 	$i++;
+	$annot_exists = "true";
 	$optionrecognized = 1;
     }
     if($optionrecognized == 0) {
@@ -60,13 +62,15 @@ for($i=3; $i<@ARGV; $i++) {
     }
 }
 
-open(INFILE, $annotfile) or die "Error: Cannot open file '$annotfile' for reading.\n\n";
-while($line = <INFILE>) {
-    chomp($line);
-    @a = split(/\t/,$line);
-    $ANNOT{$a[0]} = $a[1];
+if($annot_exists eq "true") {
+    open(INFILE, $annotfile) or die "Error: Cannot open file '$annotfile' for reading.\n\n";
+    while($line = <INFILE>) {
+	chomp($line);
+	@a = split(/\t/,$line);
+	$ANNOT{$a[0]} = $a[1];
+    }
+    close(INFILE);
 }
-close(INFILE);
 
 open(INFILE, $ARGV[0]);
 $line = <INFILE>;
