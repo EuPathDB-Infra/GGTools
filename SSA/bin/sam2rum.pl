@@ -75,8 +75,11 @@ until($line eq '') {
 		$offset = $E - $current_loc + 1;
 		$current_loc = $E;
 	    }
-	    if($type eq 'D' || $type eq 'N' || $type eq 'S') {
+	    if($type eq 'D' || $type eq 'N') {
 		$current_loc = $current_loc + $num + 1;
+	    }
+	    if($type eq 'S') {
+		$current_loc = $current_loc + $num;
 	    }
 	    if($type eq 'I') {
 		$current_loc++;
@@ -121,8 +124,12 @@ until($line eq '') {
 		if($forward_end + 1 < $reverse_start || $forward_chr ne $reverse_chr) {
 		    $forward_seq_with_junctions = addJunctionsToSeq($forward_seq, $forward_spans);
 		    $reverse_seq_with_junctions = addJunctionsToSeq($reverse_seq, $reverse_spans);
-		    print "$forward_seqname\t$forward_chr\t$forward_spans\t$forward_seq_with_junctions\n";
-		    print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$reverse_seq_with_junctions\n";
+		    if($forward_seqname =~ /\S/) {
+			print "$forward_seqname\t$forward_chr\t$forward_spans\t$forward_seq_with_junctions\n";
+		    }
+		    if($reverse_seqname =~ /\S/) {
+			print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$reverse_seq_with_junctions\n";
+		    }
 		}
 		else {
 		    ($merged_spans, $merged_seq) = merge($forward_spans, $reverse_spans, $forward_seq, $reverse_seq);
@@ -130,6 +137,10 @@ until($line eq '') {
 		    $seq_with_junctions = addJunctionsToSeq($merged_seq, $merged_spans);
 		    print "$forward_seqname\t$forward_chr\t$merged_spans\t$merged_seq\n";
 		}
+		$forward_seqname = "";
+		$forward_chr = "";
+		$forward_spans = "";
+		$forward_seq = "";
 	    }
 	}
 #	for($j=0; $j<10; $j++) {
