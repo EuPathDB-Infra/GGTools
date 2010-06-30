@@ -28,10 +28,6 @@ $bitflag[8] = "the alignment is not primary";
 $bitflag[9] = "the read fails platform/vendor quality checks";
 $bitflag[10] = "the read is either a PCR duplicate or an optical duplicate";
 
-# seq.242b        147     chr1:1-197195432_strand=+       152180500       60      89M1D11M        =       152180287       -314    TGTGGCTGAACACTTTGCTGAAGAATTTTTTGCTGTGGATGTGGAGTCTTTCCTAAATGAATATGGATTACTACCAGAAAGAGAGATACTGATCTAGAGC        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa        XT:A:U  NM:i:3  SM:i:37 AM:i:37 X0:i:1  X1:i:0  XM:i:2      XO:i:1  XG:i:1  MD:Z:12A76^A3C7
-
-# seq.242b        chr1    152180500-152180588, 152180590-152180600        TGTGGCTGAACACTTTGCTGAAGAATTTTTTGCTGTGGATGTGGAGTCTTTCCTAAATGAATATGGATTACTACCAGAAAGAGAGATAC:TGATCTAGAGC
-
 $|=1;
 
 open(INFILE, $ARGV[0]);
