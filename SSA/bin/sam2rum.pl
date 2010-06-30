@@ -75,7 +75,7 @@ until($line eq '') {
 		$offset = $E - $current_loc + 1;
 		$current_loc = $E;
 	    }
-	    if($type eq 'D' || $type eq 'N') {
+	    if($type eq 'D' || $type eq 'N' || $type eq 'S') {
 		$current_loc = $current_loc + $num + 1;
 	    }
 	    if($type eq 'I') {
