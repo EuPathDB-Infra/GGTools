@@ -237,9 +237,8 @@ for($i=2; $i<@ARGV; $i++) {
     if($ARGV[$i] eq "-usesubs") {
 	$i++;
 	$subsfile = $ARGV[$i];
-	$subsfile =~ s!/$!!;
-	$subsfile = $subsfile . "/";
 	$option_recognized = 1;
+	$usesubs = "true";
 	if(!(-e $subsfile)) {
 	    print STDERR "\nError: cannot open the file '$subsfile' specified by the -usesubs option.\n\n";
 	    exit(0);
@@ -248,8 +247,7 @@ for($i=2; $i<@ARGV; $i++) {
     if($ARGV[$i] eq "-useindels") {
 	$i++;
 	$indelsfile = $ARGV[$i];
-	$indelsfile =~ s!/$!!;
-	$indelsfile = $indelsfile . "/";
+	$useindels = "true";
 	$option_recognized = 1;
 	if(!(-e $indelsfile)) {
 	    print STDERR "\nError: cannot open the file '$indelsfile' specified by the -useindels option.\n\n";
@@ -330,6 +328,10 @@ for($i=2; $i<@ARGV; $i++) {
 	print STDERR "\nError: option $ARGV[$i] not recognized.\n\n";
 	exit(0);
     }
+}
+
+if(!($stem =~ /\S/) && ($use)) {
+    
 }
 
 if($customcfgdir =~ /\S/ && !($stem =~ /\S/)) {
@@ -720,38 +722,75 @@ while($flag == 0) {
 close(INFILE);
 
 # The following puts substitutions and indels into each exon
-foreach $exon (keys %exon2gene) {
-    $try_cnt = 0;
-    $exon =~ /^(.*):(\d+)-(\d+)/;
-    $chr = $1;
-    $start = $2;
-    $end = $3;
-    $length = $end - $start + 1;
-    $num_substitutions = random_binomial(1, $length, $substitutionfrequency);
-    undef %substitutions_locs;
-    undef @indels_temp;
-    $SEQ = $exonseq{$exon};
-    if($usesubs eq "true") {
-	open(SUBSINFILE, $subsfile);
-# chr4:132811957-132812946        132812455       T->C
-	while($sub = <SUBSINFILE>) {
-	    chomp($sub);
-	    @ssub = split(/\t/,$sub);
-	    $exon = $ssub[0];
-	    $LOC = $ssub[1] - $start + 1;
-	    $substitutions_locs{$LOC}++;
-	    $i = @{$substitutions{$exon}} + 0;
-	    $substitutions{$exon}[$i] = $LOC;
-	    $orig = substr($SEQ,$LOC-1,1);
-	    $B = $ssub[2];
-	    $B =~ s/.*>//;
-	    $Z = substr($SEQ,$LOC-1,1,$B);
+
+if($usesubs eq "true") {  # user want to read substitutions from a file
+    print STDERR "adding substitutions from the file '$subsfile'\n";
+    open(SUBSINFILE, $subsfile);
+    while($sub = <SUBSINFILE>) {
+	chomp($sub);
+	@ssub = split(/\t/,$sub);
+	$exon = $ssub[0];
+	$exon =~ /^(.*):(\d+)-(\d+)/;
+	$start = $2;
+	$SEQ = $exonseq{$exon};
+	$LOC = $ssub[1] - $start + 1;
+	$substitutions_locs{$LOC}++;
+	$i = @{$substitutions{$exon}} + 0;
+	$substitutions{$exon}[$i] = $LOC;
+	$orig = substr($SEQ,$LOC-1,1);
+	$B = $ssub[2];
+	$B =~ s/.*>//;
+	$Z = substr($SEQ,$LOC-1,1,$B);
+	$exonseq{$exon} = $SEQ;
+	$C = $start + $LOC - 1;
+	print SIMSUBSOUT "$exon\t$C\t$Z->$B\n";
+    }
+    close(SUBSINFILE);
+}
+
+if($useindels eq "true") {  # user wants to read indels from a file
+    print STDERR "adding indels from the file '$indelsfile'\n";
+    open(INDELSINFILE, $indelsfile);
+    while($ind = <INDELSINFILE>) {
+	chomp($ind);
+	@iind = split(/\t/,$ind);
+	$exon = $iind[0];
+	$SEQ = $exonseq{$exon};
+	$LOC = $iind[1];
+	$indellength = $iind[2];
+	$insert = $iind[3];
+	$j = @{$indels{$exon}} + 0;
+	$indels{$exon}[$j][0] = $LOC;
+	$indels{$exon}[$j][1] = $indellength;
+	$indels{$exon}[$j][2] = $insert;
+	if($indellength > 0) {  # it's an insertion
+	    print SIMINDELSOUT "$exon\t$LOC\t$indellength\t$insert\n";
+	    $Z = substr($SEQ,$LOC,0,$insert);
 	    $exonseq{$exon} = $SEQ;
-	    $C = $start + $LOC - 1;
-	    print SIMSUBSOUT "$exon\t$C\t$Z->$B\n";
+	} else {                # it's an deletion
+	    $l = -1 * $indellength;
+	    $Z = substr($SEQ,$LOC,$l,"");
+	    print SIMINDELSOUT "$exon\t$LOC\t$indellength\t$Z\n";
+	    $exonseq{$exon} = $SEQ;		    
 	}
-	close(SUBSINFILE);
-    } else {
+
+    }
+    close(INDELSINFILE);
+}
+
+if($useindels eq "false" && $useindels eq "false") {  # user wants de novo substitutions and indels, 
+                                                      # as opposed to being read from files
+    foreach $exon (keys %exon2gene) {
+	$try_cnt = 0;
+	$exon =~ /^(.*):(\d+)-(\d+)/;
+	$chr = $1;
+	$start = $2;
+	$end = $3;
+	$length = $end - $start + 1;
+	$num_substitutions = random_binomial(1, $length, $substitutionfrequency);
+	undef %substitutions_locs;
+	undef @indels_temp;
+	$SEQ = $exonseq{$exon};
 	for($i=0; $i<$num_substitutions; $i++) {
 	    $LOC = int(rand($length)) + 1;
 	    while($substitutions_locs{$LOC}+0>0) {
@@ -769,45 +808,17 @@ foreach $exon (keys %exon2gene) {
 	    $C = $start + $LOC - 1;
 	    print SIMSUBSOUT "$exon\t$C\t$Z->$B\n";
 	}
-    }
-
-    $num_indels = random_binomial(1, $length, $indelfrequency);
-    $flag = 0;
-
-    while($flag == 0) {  # the following gets the indel locations and makes sure
-	                 # indels are at least two bases apart and are in different
-                         # places from the substitutions
-	$flag = 1;
-	undef %indels_locs_temp;
-	undef %indels_locs;
 	
-# chr4:132811957-132812946        300     2       CA
-# chr10:42254459-42255177         138     -1      T
-	if($usesubs eq "true") {
-	    open(INDELSINFILE, $indelsfile);
-	    while($ind = <INDELSINFILE>) {
-		chomp($ind);
-		@iind = split(/\t/,$ind);
-
-		$exon = $iind[0];
-		$LOC = $iind[1];
-		$indellength = $iind[2];
-		$insert = $iind[3];
-		$j = @{$indels{$exon}} + 0;
-		$indels{$exon}[$j][0] = $LOC;
-		$indels{$exon}[$j][1] = $indellength;
-		$indels{$exon}[$j][2] = $insert;
-		if($indellength > 0) {  # it's an insertion
-		    $Z = substr($SEQ,$LOC,0,$insert);
-		    $exonseq{$exon} = $SEQ;
-		} else {  # it's an deletion
-		    $l = -1 * $indellength;
-		    $Z = substr($SEQ,$LOC,$l,"");
-		    $exonseq{$exon} = $SEQ;		    
-		}
-	    }
-	    close(INDELSINFILE);
-	} else {
+	$num_indels = random_binomial(1, $length, $indelfrequency);
+	$flag = 0;
+	
+	while($flag == 0) {  # the following gets the indel locations and makes sure
+	    # indels are at least two bases apart and are in different
+	    # places from the substitutions
+	    $flag = 1;
+	    undef %indels_locs_temp;
+	    undef %indels_locs;
+	    
 	    
 	    # first have to choose the indel locations:
 	    for($i=0; $i<$num_indels; $i++) {
@@ -875,7 +886,7 @@ foreach $exon (keys %exon2gene) {
 		    $indellength = $indels_temp[$j][1];
 		    $insert = $indels_temp[$j][2];
 		    $indels{$exon}[$j][0] = $LOC;  # This is the location within the exon, where the
-		    # first base in the exon is location 1.
+                                                   # first base in the exon is location 1.
 		    $indels{$exon}[$j][1] = $indellength;
 		    $indels{$exon}[$j][2] = $insert;
 		    if($indellength > 0) {
@@ -897,8 +908,8 @@ foreach $exon (keys %exon2gene) {
 		    $num_indels = int($num_indels/2);
 		    $try_cnt=0;
 		}
-	    }
-	}	
+	    }	
+	}
     }
 }
 close(SIMINDELSOUT);
