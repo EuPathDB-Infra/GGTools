@@ -1,70 +1,51 @@
 $| = 1;
 
 if(@ARGV < 1) {
-    die "
-Usage: reads_simulator.pl <num_reads> <name> [options]
+    print "\nusage: reads_simulator.pl <num_reads> <name> [options]\n\n";
+    print "<name> str is used in the names of the output files.\nUse only alphanumeric, underscores and dashes.\n";
 
-Where:
-
-<name> str is used in the names of the output files.  Use only alphanumeric,
-underscores and dashes.
-
-This program outputs the following files:
- 1) A fasta file of reads, paired end (forward are indicated with an 'a' and
-    reverse with a 'b'.
- 2) A bed file representing the true alignment, in one-based closed coords
- 3) A log file with the parameter settings
- 4) A file with the transcripts used for the simulation.  Alternate splice
-    forms are indicated with an \"_0\", \"_1\", \"_2\", etc...
- 5) A file of substitutions
- 6) A file of indels
-
-Options:
-      -numgenes n     : Choose n>=1 genes at random from a master pool of gene
-                        models (default n = 100000).
-      -error x        : Set the error rate that any given base is sequenced
-                        wrong to 0<=x<=1 (default x = 0.005).
-      -indelfreq x    : Set indel rate to 0<=x<1 (default x = 0.0005).
-      -nalt n         : Set the number of novel splice forms per gene to n>1
-                        (default n = 2).
-      -palt x         : Set the percentage of signal coming from novel splice
-      -readlength n   : Set readlength to n>0 bases (default n = 100).
-      -sn             : Add sequence number to the first column of the bed file
-      -filenamestem x : The stem x will be added to the four default filenames
-                        for the four required files.  Use this if you have made
-                        your own config files (see below about config files and
-                        custom config files).  E.g. \"simulator_config_geneinfo\"
-                        becomes \"simulator_config_geneinfo_x\".
-      -subfreq x      : Set substitution rate to 0<=x<1 (default x = 0.001).
-      -tlen n         : Set the length of the low quality tail to n bases (default
-                        n = 10).
-      -tpercent x     : Set the percent of tails that are low quality to 0<=x<=1
-                        (default x = 0).
-      -tqual x        : Set quality of the low quality tail to 0<=x<=1 (default
-                        x = 0.8).
-      -cntstart n     : Start the read counter at n (default n = 1).
-      -outdir x       : x is a path to a directory to write to.  Default is the
-                        current directory.
-      -mastercfgdir x : x is a path to a directory where the master config files
-                        are.  Default is the current directory.
-      -customcfgdir x : If you are using -filenamestem option, then x is a path to
-                        a directory where the custom config files are.  Default is
-                        the directory specified by -outdir, which itself defaults
-                        to the current directory.
-
-This program depends on four files:
-  1) simulator_config_geneinfo
-  2) simulator_config_geneseq
-  3) simulator_config_intronseq
-  4) simulator_config_featurequantifications
-To create such files for a subset of genes use the script:
-   - make_config_files_for_subset_of_gene_ids.pl
-Run it with no parameters for the usage
-To use those config files with this program put them in the same directory as the
-script, or in the directory specified by -outdir (not -mastercfgdir which specifies
-the master config files) and use the option -filenamestem
-
-";
+    print "\nThis program outputs a fasta file of reads and a bed file representing the truth of where these reads map.\n";
+    print "   - bed file is in one-based coords and contains both endpoints of each span.\n";
+    print "Also output are: a file of indels, a file of substitutions, a file of splice forms, and a file of junctions\n";
+    print "and gaps crossed by the simulated reads.\n";
+    print "\n   options:\n";
+    print "      -readlength n   : Set readlength to n>0 bases (default n = 100).\n";
+    print "      -numgenes n     : Choose n>=1 genes at random from a master pool of gene models (default n = 100000).\n";
+    print "      -error x        : Set the error rate that any given base is sequenced wrong to 0<=x<=1 (default x = 0.005).\n";
+    print "      -subfreq x      : Set substitution rate to 0<=x<1 (default x = 0.001).\n";
+    print "      -indelfreq x    : Set indel rate to 0<=x<1 (default x = 0.0005).\n";
+    print "      -tlen n         : Set the length of the low quality tail to n bases (default n = 10).\n";
+    print "      -tpercent x     : Set the percent of tails that are low quality to 0<=x<=1\n                        (default x = 0).\n";
+    print "      -tqual x        : Set quality of the low quality tail to 0<=x<=1 (default x = 0.8).\n";
+    print "      -nalt n         : Set the number of novel splice forms per gene to n>1 (default n = 2).\n";
+    print "      -palt x         : Set the percentage of signal coming from novel splice\n                        forms to 0<=x<=1 (default x = 0.2).\n";
+    print "      -sn             : Add sequence number to the first column of the bed file.\n";
+    print "      -filenamestem x : The stem x will be added to the four default filenames for the four\n                        required files.  Use this if you have made your own config files (see\n                        below about config files and custom config files).\n";
+    print "                        E.g. \"simulator_config_geneinfo\" becomes \"simulator_config_geneinfo_x\".\n";
+    print "      -cntstart n     : Start the read counter at n (default n = 1).\n";
+    print "      -outdir x       : x is a path to a directory to write to.  Default is the current directory.\n";
+    print "      -mastercfgdir x : x is a path to a directory where the master config files are.  Default is the\n                        current directory.\n";
+    print "      -customcfgdir x : If you are using -filenamestem option, then x is a path to a directory where the\n";
+    print "                        custom config files are.  Default is the directory specified by -outdir, which.\n";
+    print "                        itself defaults to the current directory.\n";
+    print "      -usesubs x      : x is a file of substitutions in the format output by this program in case you want\n";
+    print "                        to resuse them for another run with the same gene models.\n";
+    print "      -useindels x    : x is a file of indels in the format output by this program in case you want\n";
+    print "                        to resuse them for another run with the same gene models.\n";
+    print "\n";
+    print "This program depends on four files:\n";
+    print "  1) simulator_config_geneinfo\n";
+    print "  2) simulator_config_geneseq\n";
+    print "  3) simulator_config_intronseq\n";
+    print "  4) simulator_config_featurequantifications\n\n";
+    print "To create such files for a subset of genes use the script:\n";
+    print "   - make_config_files_for_subset_of_gene_ids.pl\n";
+    print "Run it with no parameters for the usage\n";
+    print "To use those config files with this program put them in the same directory as the script, or\n";
+    print "in the directory specified by -outdir (not -mastercfgdir which specifies the master config files)\n";
+    print "and use the option -filenamestem\n";
+    print "\n";
+    exit(0);
 }
 
 $name = $ARGV[1];
@@ -110,6 +91,8 @@ $genecnt=0;
 $exoncount_total=0;
 $introncount_total=0;
 
+$usesubs = "false";   # will become true if there is a custom subsitutions file specified
+$useindels = "false"; # will become true if there is a custom indels file specified
 $seq_num_in_bedfile = "false";
 for($i=2; $i<@ARGV; $i++) {
     $option_recognized = 0;
@@ -251,6 +234,28 @@ for($i=2; $i<@ARGV; $i++) {
 	    exit(0);
 	}
     }
+    if($ARGV[$i] eq "-usesubs") {
+	$i++;
+	$subsfile = $ARGV[$i];
+	$subsfile =~ s!/$!!;
+	$subsfile = $subsfile . "/";
+	$option_recognized = 1;
+	if(!(-e $subsfile)) {
+	    print STDERR "\nError: cannot open the file '$subsfile' specified by the -usesubs option.\n\n";
+	    exit(0);
+	}
+    }
+    if($ARGV[$i] eq "-useindels") {
+	$i++;
+	$indelsfile = $ARGV[$i];
+	$indelsfile =~ s!/$!!;
+	$indelsfile = $indelsfile . "/";
+	$option_recognized = 1;
+	if(!(-e $indelsfile)) {
+	    print STDERR "\nError: cannot open the file '$indelsfile' specified by the -useindels option.\n\n";
+	    exit(0);
+	}
+    }
     if($ARGV[$i] eq "-customcfgdir") {
 	$i++;
 	$customcfgdir = $ARGV[$i];
@@ -377,12 +382,14 @@ $bedfilename = $outdir . "simulated_reads_$name" . ".bed";
 $fafilename = $outdir . "simulated_reads_$name" . ".fa";
 $substitutionsfilename = $outdir . "simulated_reads_substitutions_$name" . ".txt";
 $indelsfilename = $outdir . "simulated_reads_indels_$name" . ".txt";
+$junctionssfilename = $outdir . "simulated_reads_junctions-crossed_$name" . ".txt";
 
 open(SIMLOGOUT, ">$logfilename") or die "\nError: cannot open file '$logfilename' for writing\n\n";
 open(SIMBEDOUT, ">$bedfilename") or die "\nError: cannot open file '$bedfilename' for writing\n\n";
 open(SIMFAOUT, ">$fafilename") or die "\nError: cannot open file '$fafilename' for writing\n\n";
 open(SIMSUBSOUT, ">$substitutionsfilename") or die "\nError: cannot open file '$substitutionsfilename' for writing\n\n";
 open(SIMINDELSOUT, ">$indelsfilename") or die "\nError: cannot open file '$indelsfilename' for writing\n\n";
+open(SIMJUNCTIONSOUT, ">$junctionssfilename") or die "\nError: cannot open file '$substitutionsfilename' for writing\n\n";
 
 $date = `date`;
 chomp($date);
@@ -391,6 +398,7 @@ print SIMLOGOUT "started: $date\n";
 $f = format_large_int($num_reads);
 print SIMLOGOUT "num reads: $f\n";
 print SIMLOGOUT "readlength: $READLENGTH\n";
+print SIMLOGOUT "substitution frequency: $substitutionfrequency\n";
 print SIMLOGOUT "indel frequency: $indelfrequency\n";
 print SIMLOGOUT "base error: $base_error\n";
 print SIMLOGOUT "low quality tail length: $low_qual_tail_length\n";
@@ -723,116 +731,172 @@ foreach $exon (keys %exon2gene) {
     undef %substitutions_locs;
     undef @indels_temp;
     $SEQ = $exonseq{$exon};
-    for($i=0; $i<$num_substitutions; $i++) {
-	$LOC = int(rand($length)) + 1;
-	while($substitutions_locs{$LOC}+0>0) {
+    if($usesubs eq "true") {
+	open(SUBSINFILE, $subsfile);
+# chr4:132811957-132812946        132812455       T->C
+	while($sub = <SUBSINFILE>) {
+	    chomp($sub);
+	    @ssub = split(/\t/,$sub);
+	    $exon = $ssub[0];
+	    $LOC = $ssub[1] - $start + 1;
+	    $substitutions_locs{$LOC}++;
+	    $i = @{$substitutions{$exon}} + 0;
+	    $substitutions{$exon}[$i] = $LOC;
+	    $orig = substr($SEQ,$LOC-1,1);
+	    $B = $ssub[2];
+	    $B =~ s/.*>//;
+	    $Z = substr($SEQ,$LOC-1,1,$B);
+	    $exonseq{$exon} = $SEQ;
+	    $C = $start + $LOC - 1;
+	    print SIMSUBSOUT "$exon\t$C\t$Z->$B\n";
+	}
+	close(SUBSINFILE);
+    } else {
+	for($i=0; $i<$num_substitutions; $i++) {
 	    $LOC = int(rand($length)) + 1;
-	}
-	$substitutions_locs{$LOC}++;
-	$substitutions{$exon}[$i] = $LOC;
-	$orig = substr($SEQ,$LOC-1,1);
-	$B = getrandombase();
-	while($B eq $orig) {
+	    while($substitutions_locs{$LOC}+0>0) {
+		$LOC = int(rand($length)) + 1;
+	    }
+	    $substitutions_locs{$LOC}++;
+	    $substitutions{$exon}[$i] = $LOC;
+	    $orig = substr($SEQ,$LOC-1,1);
 	    $B = getrandombase();
+	    while($B eq $orig) {
+		$B = getrandombase();
+	    }
+	    $Z = substr($SEQ,$LOC-1,1,$B);
+	    $exonseq{$exon} = $SEQ;
+	    $C = $start + $LOC - 1;
+	    print SIMSUBSOUT "$exon\t$C\t$Z->$B\n";
 	}
-	$Z = substr($SEQ,$LOC-1,1,$B);
-	$exonseq{$exon} = $SEQ;
-	$C = $start + $LOC - 1;
-	print SIMSUBSOUT "$exon\t$C\t$Z->$B\n";
     }
 
     $num_indels = random_binomial(1, $length, $indelfrequency);
     $flag = 0;
+
     while($flag == 0) {  # the following gets the indel locations and makes sure
-                         # indels are at least two bases apart and are in different
+	                 # indels are at least two bases apart and are in different
                          # places from the substitutions
 	$flag = 1;
 	undef %indels_locs_temp;
 	undef %indels_locs;
-	for($i=0; $i<$num_indels; $i++) {
-	    $LOC = int(rand($length)+1);
-	    while(($substitutions_locs{$LOC}+0>0) && ($indels_locs_temp{$LOC}+0>0)) {
-		$LOC = int(rand($length)+1);
-	    }
-	    $indels_locs_temp{$LOC}++;
-	}
-	foreach $LOC (keys %indels_locs_temp) {
-	    if($indels_locs_temp{$LOC} > 0) {
-		$indels_locs{$LOC}++;
-	    }
-	}
-	foreach $LOC1 (keys %indels_locs) {
-	    foreach $LOC2 (keys %indels_locs) {
-		$X = $LOC1 - $LOC2;
-		if($X < 2 && $X > -2 && $X != 0) {
-		    $flag = 0;
-		}
-	    }	    
-	}	
-	$indelcounter=0;
-	foreach $LOC (sort {$b<=>$a} keys %indels_locs) {
-	    $indellength = int(random_exponential(1, 1));
-	    while($indellength < 1) {
-		$indellength = int(random_exponential(1, 1));
-	    }
-	    $flip = int(rand(2));
-	    if($flip == 1) {                                       # INSERTION
-		$insert = "";
-		for($i=0; $i<$indellength; $i++) {
-		    $insert = $insert . getrandombase();
-		}
-		$indels_temp[$indelcounter][0] = $LOC;
-		$indels_temp[$indelcounter][1] = $indellength;
-		$indels_temp[$indelcounter][2] = $insert;
-		$indelcounter++;
-	    }
-	    else {                                                 # DELETION
-		# have to make sure we don't delete a substitution or part of an insertion or overlap
-                # two deletions, and make sure it doesn't overrun the end of the sequence
-		foreach $LOC2 (keys %substitutions_locs) {
-		    if($LOC2 <= $LOC + $indellength && $LOC2 > $LOC) {
-			$flag = 0;
-		    }
-		}
-		foreach $LOC2 (keys %indels_locs) {
-		    if($LOC2 <= $LOC + $indellength && $LOC2 > $LOC) {
-			$flag = 0;
-		    }
-		    if($LOC + $indellength >= $length) {
-			$flag = 0;
-		    }		    
-		}
-		$indels_temp[$indelcounter][0] = $LOC;
-		$indels_temp[$indelcounter][1] = -1 * $indellength;
-		$indelcounter++;
-	    }
-	}
-	if($flag == 1) {
-	    for($j=0;$j<$indelcounter;$j++) {
-		$LOC = $indels_temp[$j][0];
-		$indellength = $indels_temp[$j][1];
-		$insert = $indels_temp[$j][2];
-		$indels{$exon}[$j][0] = $LOC;  # This is the location within the exon, where the
-                                               # first base in the exon is location 1.
+	
+# chr4:132811957-132812946        300     2       CA
+# chr10:42254459-42255177         138     -1      T
+	if($usesubs eq "true") {
+	    open(INDELSINFILE, $indelsfile);
+	    while($ind = <INDELSINFILE>) {
+		chomp($ind);
+		@iind = split(/\t/,$ind);
+
+		$exon = $iind[0];
+		$LOC = $iind[1];
+		$indellength = $iind[2];
+		$insert = $iind[3];
+		$j = @{$indels{$exon}} + 0;
+		$indels{$exon}[$j][0] = $LOC;
 		$indels{$exon}[$j][1] = $indellength;
 		$indels{$exon}[$j][2] = $insert;
-		if($indellength > 0) {
+		if($indellength > 0) {  # it's an insertion
 		    $Z = substr($SEQ,$LOC,0,$insert);
 		    $exonseq{$exon} = $SEQ;
-		    print SIMINDELSOUT "$exon\t$LOC\t$indellength\t$insert\n";
-		}
-		if($indellength < 0) {
+		} else {  # it's an deletion
 		    $l = -1 * $indellength;
 		    $Z = substr($SEQ,$LOC,$l,"");
-		    $exonseq{$exon} = $SEQ;
-		    print SIMINDELSOUT "$exon\t$LOC\t$indellength\t$Z\n";
+		    $exonseq{$exon} = $SEQ;		    
 		}
 	    }
+	    close(INDELSINFILE);
 	} else {
-	    $try_cnt++;
-	    if($try_cnt > 500) {
-		$num_indels = int($num_indels/2);
-		$try_cnt=0;
+	    
+	    # first have to choose the indel locations:
+	    for($i=0; $i<$num_indels; $i++) {
+		$LOC = int(rand($length)+1);
+		while(($substitutions_locs{$LOC}+0>0) && ($indels_locs_temp{$LOC}+0>0)) {
+		    $LOC = int(rand($length)+1);
+		}
+		$indels_locs_temp{$LOC}++;
+	    }
+	    foreach $LOC (keys %indels_locs_temp) {
+		if($indels_locs_temp{$LOC} > 0) {
+		    $indels_locs{$LOC}++;
+		}
+	    }
+	    foreach $LOC1 (keys %indels_locs) {
+		foreach $LOC2 (keys %indels_locs) {
+		    $X = $LOC1 - $LOC2;
+		    if($X < 2 && $X > -2 && $X != 0) {
+			$flag = 0;
+		    }
+		}	    
+	    }	
+	    $indelcounter=0;
+	    # second have to choose the indel lengths:
+	    foreach $LOC (sort {$b<=>$a} keys %indels_locs) {
+		$indellength = int(random_exponential(1, 1));
+		while($indellength < 1) {
+		    $indellength = int(random_exponential(1, 1));
+		}
+		$flip = int(rand(2));
+		if($flip == 1) {                                       # INSERTION
+		    $insert = "";
+		    for($i=0; $i<$indellength; $i++) {
+			$insert = $insert . getrandombase();
+		    }
+		    $indels_temp[$indelcounter][0] = $LOC;
+		    $indels_temp[$indelcounter][1] = $indellength;
+		    $indels_temp[$indelcounter][2] = $insert;
+		    $indelcounter++;
+		}
+		else {                                                 # DELETION
+		    # have to make sure we don't delete a substitution or part of an insertion or overlap
+		    # two deletions, and make sure it doesn't overrun the end of the sequence
+		    foreach $LOC2 (keys %substitutions_locs) {
+			if($LOC2 <= $LOC + $indellength && $LOC2 > $LOC) {
+			    $flag = 0;
+			}
+		    }
+		    foreach $LOC2 (keys %indels_locs) {
+			if($LOC2 <= $LOC + $indellength && $LOC2 > $LOC) {
+			    $flag = 0;
+			}
+			if($LOC + $indellength >= $length) {
+			    $flag = 0;
+			}		    
+		    }
+		    $indels_temp[$indelcounter][0] = $LOC;
+		    $indels_temp[$indelcounter][1] = -1 * $indellength;
+		    $indelcounter++;
+		}
+	    }
+	    if($flag == 1) {  # set of indels are in kosher posiitions
+		for($j=0;$j<$indelcounter;$j++) {
+		    $LOC = $indels_temp[$j][0];
+		    $indellength = $indels_temp[$j][1];
+		    $insert = $indels_temp[$j][2];
+		    $indels{$exon}[$j][0] = $LOC;  # This is the location within the exon, where the
+		    # first base in the exon is location 1.
+		    $indels{$exon}[$j][1] = $indellength;
+		    $indels{$exon}[$j][2] = $insert;
+		    if($indellength > 0) {
+			$Z = substr($SEQ,$LOC,0,$insert);
+			$exonseq{$exon} = $SEQ;
+			print SIMINDELSOUT "$exon\t$LOC\t$indellength\t$insert\n";
+		    }
+		    if($indellength < 0) {
+			$l = -1 * $indellength;
+			$Z = substr($SEQ,$LOC,$l,"");
+			$exonseq{$exon} = $SEQ;
+			print SIMINDELSOUT "$exon\t$LOC\t$indellength\t$Z\n";
+		    }
+		}
+	    } else {
+		$try_cnt++;
+		if($try_cnt > 500) { # can't seem to find that many kosherly placed indels
+		    # in this exon, going for fewer
+		    $num_indels = int($num_indels/2);
+		    $try_cnt=0;
+		}
 	    }
 	}	
     }
@@ -984,7 +1048,7 @@ while( 1 == 1) {
 	$STARTS = $starts{$GENE};
 	$ENDS = $ends{$GENE};
     }
-    $return_vector_ref = getreads($SEQ, \@INDELS, $STARTS, $ENDS, $CNT);
+    $return_vector_ref = getreads($SEQ, \@INDELS, $STARTS, $ENDS, $CNT, $chr{$GENE});
 
     @return_vector = @{$return_vector_ref};
     $fa = $return_vector[0];
@@ -1021,8 +1085,11 @@ while( 1 == 1) {
     }
 }
 
+close(SIMJUNCTIONSOUT);
+
+
 sub getreads () {
-    ($SEQ, $INDELS_ref, $STARTS, $ENDS, $CNT) = @_;
+    ($SEQ, $INDELS_ref, $STARTS, $ENDS, $CNT, $CHR) = @_;
 
 #    The following depends on:
 #    1) %seq which maps gene ids to gene sequence
@@ -1139,7 +1206,8 @@ sub getreads () {
 	    if($INDELS[$ind][1] < 0) {  # deletion w.r.t. reference
 		$fragment_start = $start_forward + $offset;
 		$fragment_length = $INDELS[$ind][0] - $fragment_start + 1;
-		$coords = $coords . ", " . getcoords($fragment_start, $fragment_length, $STARTS, $ENDS);
+		$SEQNAME = "seq." . $CNT . "a";
+		$coords = $coords . ", " . getcoords($fragment_start, $fragment_length, $STARTS, $ENDS, $CHR, $SEQNAME);
 		$offset = $offset + $fragment_length - $INDELS[$ind][1];
 	    }
 	    $readlength = $readlength - $INDELS[$ind][1];
@@ -1149,7 +1217,8 @@ sub getreads () {
     
     $fragment_start = $start_forward + $offset;
     $fragment_length = $end_forward - $fragment_start + 1;
-    $coords = $coords . ", " . getcoords($fragment_start, $fragment_length, $STARTS, $ENDS);
+    $SEQNAME = "seq." . $CNT . "a";
+    $coords = $coords . ", " . getcoords($fragment_start, $fragment_length, $STARTS, $ENDS, $CHR, $SEQNAME);
     $coords =~ s/^\s*,\s*//;
     $coords =~ s/\s*,\s*$//;
     $coords1 = $coords;
@@ -1188,7 +1257,8 @@ sub getreads () {
 	    if($INDELS[$ind][1] < 0) {
 		$fragment_start = $start_reverse + $offset;
 		$fragment_length = $INDELS[$ind][0] - $fragment_start + 1;
-		$coords = $coords . ", " . getcoords($fragment_start, $fragment_length, $STARTS, $ENDS);
+		$SEQNAME = "seq." . $CNT . "b";
+		$coords = $coords . ", " . getcoords($fragment_start, $fragment_length, $STARTS, $ENDS, $CHR, $SEQNAME);
 		$offset = $offset + $fragment_length - $INDELS[$ind][1];
 	    }
 	    $readlength = $readlength - $INDELS[$ind][1];
@@ -1198,7 +1268,8 @@ sub getreads () {
     
     $fragment_start = $start_reverse + $offset;
     $fragment_length = $end_reverse - $fragment_start + 1;
-    $coords = $coords . ", " . getcoords($fragment_start, $fragment_length, $STARTS, $ENDS);
+    $SEQNAME = "seq." . $CNT . "b";
+    $coords = $coords . ", " . getcoords($fragment_start, $fragment_length, $STARTS, $ENDS, $CHR, $SEQNAME);
     $coords =~ s/^\s*,\s*//;
     $coords =~ s/\s*,\s*$//;
     $coords2 = $coords;
@@ -1344,7 +1415,7 @@ sub reversecomplement () {
 }
 
 sub getcoords () {
-    ($readstart, $readlength2, $starts, $ends) = @_;
+    ($readstart, $readlength2, $starts, $ends, $CHR, $SEQNAME) = @_;
     $readend = $readstart + $readlength2 - 1;
     $COORDS = "";
     $starts =~ s/,\s*$//;
@@ -1388,6 +1459,8 @@ sub getcoords () {
 	else {
 	    $Z = $S[$en];
 	    $COORDS = $COORDS . ", $Z";
+	    $W = $Z;
+	    print SIMJUNCTIONSOUT "-$W\n";
 	}
 	if($en == $lastexon) {
 	    $Z = $S[$en] + ($readend - $offset2 - 1);
@@ -1395,6 +1468,8 @@ sub getcoords () {
 	}
 	else {
 	    $COORDS = $COORDS . "-$E[$en]";
+	    $W = $E[$en];
+	    print SIMJUNCTIONSOUT "$SEQNAME\t$CHR:$W";
 	}
     }
     return $COORDS;
