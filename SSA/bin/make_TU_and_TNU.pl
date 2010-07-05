@@ -166,14 +166,14 @@ while(1 == 1) {
 	    @a = split(/\t/,$str);
 	    $seq_new = addJunctionsToSeq($a[3], $a[1]);
 	    print OUTFILE1 "seq.$seqnum_prev";
-	    print OUTFILE1 "a\t$a[0]\t$a[1]\t$seq_new\n"
+	    print OUTFILE1 "a\t$a[0]\t$a[1]\t$seq_new\t$a[2]\n"
 	}
 	if($numb == 1 && $numa == 0) { # unique reverse match, no forward
 	    $str = $b_read_mapping_to_genome[0];
 	    @a = split(/\t/,$str);
 	    $seq_new = addJunctionsToSeq($a[3], $a[1]);
 	    print OUTFILE1 "seq.$seqnum_prev";
-	    print OUTFILE1 "b\t$a[0]\t$a[1]\t$seq_new\n"
+	    print OUTFILE1 "b\t$a[0]\t$a[1]\t$seq_new\t$a[2]\n"
 	}
 	if($paired_end eq "false") {  # write ambiguous mapper to NU file since there's no chance a later step
                                       # will resolve this read, like it might if it was paired end
@@ -204,7 +204,7 @@ while(1 == 1) {
 		    if($ss[0] >= $min_overlap) {
 			$seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 			print OUTFILE1 "seq.$seqnum_prev";
-			print OUTFILE1 "a\t$CHR\t$ss[1]\t$seq_new\n";			
+			print OUTFILE1 "a\t$CHR\t$ss[1]\t$seq_new\t$ss[2]\n";
 		    }
 		    else {
 			$uflag = 0;
@@ -216,7 +216,7 @@ while(1 == 1) {
 			@a = split(/\t/,$str);
 			$seq_new = addJunctionsToSeq($a[3], $a[1]);
 			print OUTFILE2 "seq.$seqnum_prev";
-			print OUTFILE2 "a\t$a[0]\t$a[1]\t$seq_new\n";
+			print OUTFILE2 "a\t$a[0]\t$a[1]\t$seq_new\t$a[2]\n";
 		    }
 		}
 	    }
@@ -256,17 +256,18 @@ while(1 == 1) {
 		    $bstart = $bstarts[0];
 		    $bend = $bends[$e-1];
 		    if($achr eq $bchr) {
-			if($astrand eq "+" && $bstrand eq "-" && ($aend < $bstart-1) && ($bstart - $aend <= $max_distance_between_paired_reads)) {
+			if($astrand eq "+" && $bstrand eq "+" && ($aend < $bstart-1) && ($bstart - $aend <= $max_distance_between_paired_reads)) {
 			    $consistent_mappers{"$a_read_mapping_to_genome[$i]\n$b_read_mapping_to_genome[$j]"}++;
 			}
-			if($astrand eq "-" && $bstrand eq "+" && ($bend < $astart-1) && ($astart - $bend <= $max_distance_between_paired_reads)) {
+			if($astrand eq "-" && $bstrand eq "-" && ($bend < $astart-1) && ($astart - $bend <= $max_distance_between_paired_reads)) {
 			    $consistent_mappers{"$a_read_mapping_to_genome[$i]\n$b_read_mapping_to_genome[$j]"}++;
 			}
-			if(($astrand eq "-") && ($bstrand eq "+") && ($bend >= $astart - 1) && ($astart >= $bstart) && ($aend >= $bend)) {
+			$swapped = "false";
+			if(($astrand eq "-") && ($bstrand eq "-") && ($bend >= $astart - 1) && ($astart >= $bstart) && ($aend >= $bend)) {
 			    # this is a hack to switch the a and b reads so the following if can take care of both cases
-			    $cstrand = $astrand;
-			    $astrand = $bstrand;
-			    $bstrand = $cstrand;
+			    $swapped = "true";
+			    $astrand = "+";
+			    $bstrand = "+";
 			    $cstart = $astart;
 			    $astart = $bstart;
 			    $bstart = $cstart;
@@ -283,7 +284,7 @@ while(1 == 1) {
 			    $aseq = $bseq;
 			    $bseq = $cseq;
 			}
-			if(($astrand eq "+") && ($bstrand eq "-") && ($aend == $bstart-1)) {
+			if(($astrand eq "+") && ($bstrand eq "+") && ($aend == $bstart-1)) {
 			    $num_exons_merged = @astarts + @bstarts - 1;
 			    undef @mergedstarts;
 			    undef @mergedends;
@@ -313,9 +314,13 @@ while(1 == 1) {
 				$merged_spans = $merged_spans . ", $mergedstarts[$e]-$mergedends[$e]";
 			    }
 			    $merged_seq = $aseq . $bseq;
-			    $consistent_mappers{"$achr\t$merged_spans\t+\t$merged_seq"}++;
+			    if($swapped eq "false") {
+				$consistent_mappers{"$achr\t$merged_spans\t+\t$merged_seq"}++;
+			    } else {
+				$consistent_mappers{"$achr\t$merged_spans\t-\t$merged_seq"}++;
+			    }
 			}
-			if(($astrand eq "+") && ($bstrand eq "-") && ($aend >= $bstart) && ($bstart >= $astart) && ($bend >= $aend)) {
+			if(($astrand eq "+") && ($bstrand eq "+") && ($aend >= $bstart) && ($bstart >= $astart) && ($bend >= $aend)) {
 			    $f = 0;
 			    $consistent = 1;
 			    $flag = 0;
@@ -398,7 +403,11 @@ while(1 == 1) {
 				for($p=$aseqlength+$bseqlength-$merged_length; $p<@s2; $p++) {
 				    $merged_seq = $merged_seq . $s2[$p]
 				}
-				$consistent_mappers{"$achr\t$merged_spans\t+\t$merged_seq"}++;
+				if($swapped eq "false") {
+				    $consistent_mappers{"$achr\t$merged_spans\t+\t$merged_seq"}++;
+				} else {
+				    $consistent_mappers{"$achr\t$merged_spans\t-\t$merged_seq"}++;
+				}
 			    }
 			}
 		    }
@@ -416,14 +425,14 @@ while(1 == 1) {
 			$seq_new = addJunctionsToSeq($a[3], $a[1]);
 			if(@A == 2 && $n == 0) {
 			    print OUTFILE1 "seq.$seqnum_prev";
-			    print OUTFILE1 "a\t$a[0]\t$a[1]\t$seq_new\n";
+			    print OUTFILE1 "a\t$a[0]\t$a[1]\t$seq_new\t$a[2]\n";
 			}
 			if(@A == 2 && $n == 1) {
 			    print OUTFILE1 "seq.$seqnum_prev";
-			    print OUTFILE1 "b\t$a[0]\t$a[1]\t$seq_new\n";
+			    print OUTFILE1 "b\t$a[0]\t$a[1]\t$seq_new\t$a[2]\n";
 			}
 			if(@A == 1) {
-			    print OUTFILE1 "seq.$seqnum_prev\t$a[0]\t$a[1]\t$seq_new\n";
+			    print OUTFILE1 "seq.$seqnum_prev\t$a[0]\t$a[1]\t$seq_new\t$a[2]\n";
 			}
 		    }
 		}
@@ -486,11 +495,11 @@ while(1 == 1) {
 				@ss = split(/\t/,$str1);
 				$seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 				print OUTFILE1 "seq.$seqnum_prev";
-				print OUTFILE1 "a\t$ss[0]\t$ss[1]\t$seq_new\n";
+				print OUTFILE1 "a\t$ss[0]\t$ss[1]\t$seq_new\t$ss[2]\n";
 				@ss = split(/\t/,$str2);
 				$seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 				print OUTFILE1 "seq.$seqnum_prev";
-				print OUTFILE1 "b\t$ss[0]\t$ss[1]\t$seq_new\n";
+				print OUTFILE1 "b\t$ss[0]\t$ss[1]\t$seq_new\t$ss[2]\n";
 			    }
 			    else {
 				$nointersection = 1;
@@ -512,7 +521,7 @@ while(1 == 1) {
 			if($size >= $min_overlap) {
 			    @ss = split(/\t/,$str);
 			    $seq_new = addJunctionsToSeq($ss[2], $ss[1]);
-			    print OUTFILE1 "seq.$seqnum_prev\t$ss[0]\t$ss[1]\t$seq_new\n";
+			    print OUTFILE1 "seq.$seqnum_prev\t$ss[0]\t$ss[1]\t$seq_new\t$ss[2]\n";
 			}
 			else {
 			    $nointersection = 1;
@@ -530,14 +539,14 @@ while(1 == 1) {
 			    $seq_new = addJunctionsToSeq($a[3], $a[1]);
 			    if(@A == 2 && $n == 0) {
 				print OUTFILE2 "seq.$seqnum_prev";
-				print OUTFILE2 "a\t$a[0]\t$a[1]\t$seq_new\n";
+				print OUTFILE2 "a\t$a[0]\t$a[1]\t$seq_new\t$a[2]\n";
 			    }
 			    if(@A == 2 && $n == 1) {
 				print OUTFILE2 "seq.$seqnum_prev";
-				print OUTFILE2 "b\t$a[0]\t$a[1]\t$seq_new\n";
+				print OUTFILE2 "b\t$a[0]\t$a[1]\t$seq_new\t$a[2]\n";
 			    }
 			    if(@A == 1) {
-				print OUTFILE2 "seq.$seqnum_prev\t$a[0]\t$a[1]\t$seq_new\n";
+				print OUTFILE2 "seq.$seqnum_prev\t$a[0]\t$a[1]\t$seq_new\t$a[2]\n";
 			    }
 			}
 		    }
@@ -628,7 +637,7 @@ while(1 == 1) {
 	$i++;
 	$s[$i] = $s[$i-1] + $ends[$i-1] - $starts[$i-1];
 	if($i > 100000) {
-	    print STDERR "\n\nERROR: Something is wrong, probably with the gene annotation file: $ARGV[1]\n\nExiting...\n\n";
+	    print STDERR "\n\nERROR: Something is wrong, probably with the gene annotation file: $ARGV[1]\nAre you sure it is zero-based, half-open?\n\nExiting...\n\n";
 	    exit(0);
 	}
     }
@@ -641,7 +650,7 @@ while(1 == 1) {
 	$cnt++;
 	$readstart[$cnt] = $starts[$i-1] + 1;
 	if($i > 100000) {
-	    print STDERR "\n\nERROR: Something is wrong, probably with the gene annotation file: $ARGV[1]\n\nExiting...\n\n";
+	    print STDERR "\n\nERROR: Something is wrong, probably with the gene annotation file: $ARGV[1]\nAre you sure it is zero-based, half-open?\n\nExiting...\n\n";
 	    exit(0);
 	}
     }
@@ -653,10 +662,18 @@ while(1 == 1) {
 	$output = $output . ", $readstart[$i]-$readsend[$i]";
     }
     if($qstrand eq $tstrand) {
-	$output = $output . "\t+\t$seq";
+	if($type eq "a") {
+	    $output = $output . "\t+\t$seq";
+	} else {
+	    $output = $output . "\t-\t$seq";
+	}
     }
     else {
-	$output = $output . "\t-\t$seq";
+	if($type eq "a") {
+	    $output = $output . "\t-\t$seq";
+	} else {
+	    $output = $output . "\t+\t$seq";
+	}
     }
     if($type eq "a") {
 	$isnew = 1;
