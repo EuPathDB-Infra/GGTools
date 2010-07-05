@@ -54,119 +54,131 @@ until($line eq '') {
     }
     $spans = "";
     $matchstring = $a[5];
-#    if($matchstring =~ /^\d+[^\d]/) {
-    if(1 == 1) {
-	$a[2] =~ s/:.*//;
-	$chr = $a[2];
-	$seqname = $a[0];
-	$start = $a[3];
-	$current_loc = $start;
-	$offset = 0;
-	while($matchstring =~ /^(\d+)([^\d])/) {
-	    $num = $1;
-	    $type = $2;
-	    $matchstring =~ s/^\d+[^\d]//;
-	    if($type eq 'M') {
-		$E = $current_loc + $num - 1;
-		if($spans =~ /\S/) {
-		    $spans = $spans . ", " .  $current_loc . "-" . $E;
-		} else {
-		    $spans = $current_loc . "-" . $E;
-		}
-		$offset = $E - $current_loc + 1;
-		$current_loc = $E;
+    $a[2] =~ s/:.*//;
+    $chr = $a[2];
+    $seqname = $a[0];
+    $start = $a[3];
+    $current_loc = $start;
+    $offset = 0;
+    while($matchstring =~ /^(\d+)([^\d])/) {
+	$num = $1;
+	$type = $2;
+	$matchstring =~ s/^\d+[^\d]//;
+	if($type eq 'M') {
+	    $E = $current_loc + $num - 1;
+	    if($spans =~ /\S/) {
+		$spans = $spans . ", " .  $current_loc . "-" . $E;
+	    } else {
+		$spans = $current_loc . "-" . $E;
 	    }
-	    if($type eq 'D' || $type eq 'N') {
-		$current_loc = $current_loc + $num + 1;
-	    }
-	    if($type eq 'S') {
-		if($a[5] =~ /^\d+S/) {
-		    for($i=0; $i<$num; $i++) {
-			$seq =~ s/^.//;
-		    }
-		} elsif($a[5] =~ /\d+S$/) {
-		    for($i=0; $i<$num; $i++) {
-			$seq =~ s/.$//;
-		    }
-		}
-	    }
-	    if($type eq 'I') {
-		$current_loc++;
-		substr($seq, $offset, 0, "+");
-		$offset = $offset  + $num + 1;
-		substr($seq, $offset, 0, "+");
-		$offset = $offset + 1;
-	    }
+	    $offset = $E - $current_loc + 1;
+	    $current_loc = $E;
 	}
-	$spans2 = "";
-	while($spans2 ne $spans) {
-	    $spans2 = $spans;
-	    @b = split(/, /, $spans);
-	    for($i=0; $i<@b-1; $i++) {
-		@c1 = split(/-/, $b[$i]);
-		@c2 = split(/-/, $b[$i+1]);
-		if($c1[1] + 1 >= $c2[0]) {
-		    $str = "-$c1[1], $c2[0]";
-		    $spans =~ s/$str//;
+	if($type eq 'D' || $type eq 'N') {
+	    $current_loc = $current_loc + $num + 1;
+	}
+	if($type eq 'S') {
+	    if($a[5] =~ /^\d+S/) {
+		for($i=0; $i<$num; $i++) {
+		    $seq =~ s/^.//;
+		}
+	    } elsif($a[5] =~ /\d+S$/) {
+		for($i=0; $i<$num; $i++) {
+		    $seq =~ s/.$//;
 		}
 	    }
 	}
-	if($paired eq "false") {
-	    $seq_with_junctions = addJunctionsToSeq($seq, $spans);
-	    print "$seqname\t$chr\t$spans\t$seq_with_junctions\n";
-	} else {
-	    if($BIT[6] == 1) {
-		$forward_seqname = $seqname;
-		$forward_chr = $chr;
-		$forward_spans = $spans;
-		$forward_seq = $seq;
-	    }
-	    if($BIT[7] == 1) {
-		$reverse_seqname = $seqname;
-		$reverse_chr = $chr;
-		$reverse_spans = $spans;
-		$reverse_seq = $seq;
-		$reverse_spans =~ /^(\d+)-/;
-		$reverse_start = $1;
-		$forward_spans =~ /-(\d+)$/;
-		$forward_end = $1;
-		if(!($forward_spans =~ /\S/) && $reverse_spans =~ /\S/) {
-		    $reverse_seq_with_junctions = addJunctionsToSeq($reverse_seq, $reverse_spans);		    
-		    if($reverse_seqname =~ /\S/) {
-			print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$reverse_seq_with_junctions\n";
-		    }
-		} elsif($forward_spans =~ /\S/ && !($reverse_spans =~ /\S/)) {
-		    $forward_seq_with_junctions = addJunctionsToSeq($forward_seq, $forward_spans);		    
-		    if($forward_seqname =~ /\S/) {
-			print "$forward_seqname\t$forward_chr\t$forward_spans\t$forward_seq_with_junctions\n";
-		    }
-		} elsif($forward_end + 1 < $reverse_start || $forward_chr ne $reverse_chr) {
-		    $forward_seq_with_junctions = addJunctionsToSeq($forward_seq, $forward_spans);
-		    $reverse_seq_with_junctions = addJunctionsToSeq($reverse_seq, $reverse_spans);
-		    if($forward_seqname =~ /\S/) {
-			print "$forward_seqname\t$forward_chr\t$forward_spans\t$forward_seq_with_junctions\n";
-		    }
-		    if($reverse_seqname =~ /\S/) {
-			print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$reverse_seq_with_junctions\n";
-		    }
-		} elsif($forward_spans =~ /\S/ && $reverse_spans =~ /\S/) {
-		    ($merged_spans, $merged_seq) = merge($forward_spans, $reverse_spans, $forward_seq, $reverse_seq);
-		    $forward_seqname =~ s/a//;
-		    $seq_with_junctions = addJunctionsToSeq($merged_seq, $merged_spans);
-		    print "$forward_seqname\t$forward_chr\t$merged_spans\t$merged_seq\n";
-		}
-		$forward_seqname = "";
-		$forward_chr = "";
-		$forward_spans = "";
-		$forward_seq = "";
-	    }
+	if($type eq 'I') {
+	    $current_loc++;
+	    substr($seq, $offset, 0, "+");
+	    $offset = $offset  + $num + 1;
+	    substr($seq, $offset, 0, "+");
+	    $offset = $offset + 1;
 	}
-#	for($j=0; $j<10; $j++) {
-#	    if($BIT[$j] == 1) {
-#		print "$bitflag[$j]\n";
-#	    }
-#        }
     }
+    $spans2 = "";
+    while($spans2 ne $spans) {
+	$spans2 = $spans;
+	@b = split(/, /, $spans);
+	for($i=0; $i<@b-1; $i++) {
+	    @c1 = split(/-/, $b[$i]);
+	    @c2 = split(/-/, $b[$i+1]);
+	    if($c1[1] + 1 >= $c2[0]) {
+		$str = "-$c1[1], $c2[0]";
+		$spans =~ s/$str//;
+	    }
+	}
+    }
+    if($BIT[4] == 0 && ($BIT[6] == 1 || $BIT[0] == 0)) {
+	$strand = "+";
+    }
+    if($BIT[4] == 1 && ($BIT[6] == 1 || $BIT[0] == 0)) {
+	$strand = "-";
+    }
+    if($BIT[3] == 1 && $BIT[7] == 1) {
+	if($BIT[4] == 0) {
+	    $strand = "-";
+	} else {
+	    $strand = "+";
+	}
+    }    
+
+    if($paired eq "false") {
+	$seq_with_junctions = addJunctionsToSeq($seq, $spans);
+	print "$seqname\t$chr\t$spans\t$strand\t$seq_with_junctions\n";
+    } else {
+	if($BIT[6] == 1) {
+	    $forward_seqname = $seqname;
+	    $forward_chr = $chr;
+	    $forward_spans = $spans;
+	    $forward_seq = $seq;
+	}
+	if($BIT[7] == 1) {
+	    $reverse_seqname = $seqname;
+	    $reverse_chr = $chr;
+	    $reverse_spans = $spans;
+	    $reverse_seq = $seq;
+	    $reverse_spans =~ /^(\d+)-/;
+	    $reverse_start = $1;
+	    $forward_spans =~ /-(\d+)$/;
+	    $forward_end = $1;
+	    if(!($forward_spans =~ /\S/) && $reverse_spans =~ /\S/) {
+		$reverse_seq_with_junctions = addJunctionsToSeq($reverse_seq, $reverse_spans);		    
+		if($reverse_seqname =~ /\S/) {
+		    print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+		}
+	    } elsif($forward_spans =~ /\S/ && !($reverse_spans =~ /\S/)) {
+		$forward_seq_with_junctions = addJunctionsToSeq($forward_seq, $forward_spans);		    
+		if($forward_seqname =~ /\S/) {
+		    print "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
+		}
+	    } elsif($forward_end + 1 < $reverse_start || $forward_chr ne $reverse_chr) {
+		$forward_seq_with_junctions = addJunctionsToSeq($forward_seq, $forward_spans);
+		$reverse_seq_with_junctions = addJunctionsToSeq($reverse_seq, $reverse_spans);
+		if($forward_seqname =~ /\S/) {
+		    print "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
+		}
+		if($reverse_seqname =~ /\S/) {
+		    print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+		}
+	    } elsif($forward_spans =~ /\S/ && $reverse_spans =~ /\S/) {
+		($merged_spans, $merged_seq) = merge($forward_spans, $reverse_spans, $forward_seq, $reverse_seq);
+		$forward_seqname =~ s/a//;
+		$seq_with_junctions = addJunctionsToSeq($merged_seq, $merged_spans);
+		print "$forward_seqname\t$forward_chr\t$merged_spans\t$strand\t$merged_seq\n";
+	    }
+	    $forward_seqname = "";
+	    $forward_chr = "";
+	    $forward_spans = "";
+	    $forward_seq = "";
+	}
+    }
+# DEBUG
+#	for($j=0; $j<10; $j++) {
+#	    print "$bitflag[$j]\t$BIT[$j]\n";
+#        }
+# DEBUG
+
     $line = <INFILE>;
 }
 
