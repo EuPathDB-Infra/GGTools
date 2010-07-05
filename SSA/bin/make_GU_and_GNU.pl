@@ -114,7 +114,7 @@ chomp($line);
 open(OUTFILE1, ">$outfile1") or die "\nERROR: Cannot open file '$outfile1' for writing\n";
 open(OUTFILE2, ">$outfile2") or die "\nERROR: Cannot open file '$outfile2' for writing\n";
 print "num_seqs = $num_seqs\n";
-for($seqnum=1; $seqnum<$num_seqs; $seqnum++) {
+for($seqnum=1; $seqnum<=$num_seqs; $seqnum++) {
     $numa=0;
     $numb=0;
     undef %a_reads;
@@ -192,39 +192,51 @@ for($seqnum=1; $seqnum<$num_seqs; $seqnum++) {
 
     if($num_different_a == 1 && $num_different_b == 0) { # unique forward match, no reverse
 	foreach $key (keys %a_reads) {
+	    $key =~ /^[^\t]+\t(.)\t/;
+	    $strand = $1;
 	    $key =~ s/\t\+//;
 	    $key =~ s/\t-//;
 	    $key =~ /^[^\t]+\t[^\t]+\t([^\t]+\t[^\t]+)\t/;
 	    $xx = $1;
 	    $yy = $xx;
-	    $xx =~ s/\t/-/;
+	    $xx =~ s/\t/-/;  # this puts the dash between the start and end
 	    $key =~ s/$yy/$xx/;
-	    print OUTFILE1 "$key\n";
+	    print OUTFILE1 "$key\t$strand\n";
 	}
     }
     if($num_different_a == 0 && $num_different_b == 1) { # unique reverse match, no forward
 	foreach $key (keys %b_reads) {
+	    $key =~ /^[^\t]+\t(.)\t/;
+	    $strand = $1;
+	    if($strand eq "+") {  # got to reverse this because it's the reverse read,
+                                  # because we are reporting strand of forward in all cases
+		$strand = "-";
+	    } else {
+		$strand = "+";
+	    }
 	    $key =~ s/\t\+//;
 	    $key =~ s/\t-//;
 	    $key =~ /^[^\t]+\t[^\t]+\t([^\t]+\t[^\t]+)\t/;
 	    $xx = $1;
 	    $yy = $xx;
-	    $xx =~ s/\t/-/;
+	    $xx =~ s/\t/-/;  # this puts the dash between the start and end
 	    $key =~ s/$yy/$xx/;
-	    print OUTFILE1 "$key\n";
+	    print OUTFILE1 "$key\t$strand\n";
 	}
     }
     if($paired_end eq "false") {
 	if($num_different_a > 1) { 
 	    foreach $key (keys %a_reads) {
+		$key =~ /^\t[^\t]+\t(.)\t/;
+		$strand = $1;
 		$key =~ s/\t\+//;
 		$key =~ s/\t-//;
 		$key =~ /^[^\t]+\t[^\t]+\t([^\t]+\t[^\t]+)\t/;
 		$xx = $1;
 		$yy = $xx;
-		$xx =~ s/\t/-/;
+		$xx =~ s/\t/-/;  # this puts the dash between the start and end
 		$key =~ s/$yy/$xx/;
-		print OUTFILE2 "$key\n";
+		print OUTFILE2 "$key\t$strand\n";
 	    }
 	}
     }
@@ -265,7 +277,7 @@ for($seqnum=1; $seqnum<$num_seqs; $seqnum++) {
 			    $yy = $xx;
 			    $xx =~ s/\t/-/;
 			    $bkey =~ s/$yy/$xx/;
-			    $consistent_mappers{"$akey\n$bkey\n"}++;
+			    $consistent_mappers{"$akey\t$astrand\n$bkey\t$astrand\n"}++;
 			}
 			else {
 			    $overlap = $aend - $bstart + 1;
@@ -275,7 +287,7 @@ for($seqnum=1; $seqnum<$num_seqs; $seqnum++) {
 				$joined_seq = $joined_seq . $sq[$i];
 			    }
 			    $aid =~ s/a//;
-			    $consistent_mappers{"$aid\t$achr\t$astart-$bend\t$joined_seq\n"}++;
+			    $consistent_mappers{"$aid\t$achr\t$astart-$bend\t$joined_seq\t$astrand\n"}++;
 			}
 		    }
 		}
@@ -296,7 +308,7 @@ for($seqnum=1; $seqnum<$num_seqs; $seqnum++) {
 			    $yy = $xx;
 			    $xx =~ s/\t/-/;
 			    $bkey =~ s/$yy/$xx/;
-			    $consistent_mappers{"$akey\n$bkey\n"}++;
+			    $consistent_mappers{"$akey\t$astrand\n$bkey\t$astrand\n"}++;
 			}
 			else {
 			    $overlap = $bend - $astart + 1;
@@ -307,7 +319,7 @@ for($seqnum=1; $seqnum<$num_seqs; $seqnum++) {
 			    }
 			    $joined_seq = $joined_seq . $aseq;
 			    $aid =~ s/a//;
-			    $consistent_mappers{"$aid\t$achr\t$bstart-$aend\t$joined_seq\n"}++;
+			    $consistent_mappers{"$aid\t$achr\t$bstart-$aend\t$joined_seq\t$astrand\n"}++;
 			}
 		    }
 		}
