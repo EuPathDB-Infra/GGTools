@@ -93,7 +93,8 @@ sub clean () {
 	}
 	if(defined $CHR2SEQ{$a[1]} && $flag == 0) {
 	    if($line =~ /[^\t]\+[^\t]/) {   # insertions will break things, have to fix this, for now not just cleaning these lines
-		print OUTFILE "$line\n";
+		@LINE = split(/\t/,$line);
+		print OUTFILE "$LINE[0]\t$LINE[1]\t$LINE[2]\t$LINE[4]\t$LINE[3]\n";
 	    } else {
 		@b = split(/, /, $a[2]);
 		$SEQ = "";
@@ -117,7 +118,7 @@ sub clean () {
 		$spans = $1;
 		$seq = $2;
 		$seq = addJunctionsToSeq($seq, $spans);
-		print OUTFILE "$a[0]\t$chr\t$spans\t$seq\t$strand\n";
+		print OUTFILE "$a[0]\t$chr\t$spans\t$strand\t$seq\n";
 	    }
 	}
     }
