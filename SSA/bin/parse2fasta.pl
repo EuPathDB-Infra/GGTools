@@ -3,6 +3,9 @@
 # Written by Gregory R Grant 
 # University of Pennsylvania, 2010
 
+# NOTE: add something to check if it's a fasta file with seq spanning
+# multiple lines, this case is otherwise not being handled.
+
 $|=1;
 use strict;
 
