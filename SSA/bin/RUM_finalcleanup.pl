@@ -36,7 +36,7 @@ if($faok eq "false") {
     print STDERR "Modifying genome fa file\n";
     $r = int(rand(1000));
     $f = "temp_" . $r . ".fa";
-    `modify_fa_to_have_seq_on_one_line.pl $ARGV[4] > $f`;
+    `perl modify_fa_to_have_seq_on_one_line.pl $ARGV[4] > $f`;
     open(GENOMESEQ, $f);
 } else {
     open(GENOMESEQ, $ARGV[4]);
@@ -51,7 +51,6 @@ while($FLAG == 0) {
     undef %CHR2SEQ;
     $sizeflag = 0;
     $totalsize = 0;
-    print STDERR "here 1\n";
     while($sizeflag == 0) {
 	$line = <GENOMESEQ>;
 	if($line eq '') {
@@ -61,7 +60,6 @@ while($FLAG == 0) {
 	    chomp($line);
 	    $line =~ />(.*):1-(\d+)_strand=./;
 	    $chr = $1;
-	    print STDERR "chr=$chr\n";
 	    $ref_seq = <GENOMESEQ>;
 	    chomp($ref_seq);
 	    $CHR2SEQ{$chr} = $ref_seq;
@@ -71,11 +69,8 @@ while($FLAG == 0) {
 	    }
 	}
     }
-    print STDERR "here 2\n";
     &clean($ARGV[0], $ARGV[2]);
-    print STDERR "here 3\n";
     &clean($ARGV[1], $ARGV[3]);
-    print STDERR "here 4\n";
 }
 close(GENOMESEQ);
 
@@ -87,6 +82,7 @@ sub clean () {
 	$flag = 0;
 	chomp($line);
 	@a = split(/\t/,$line);
+	$strand = $a[4];
 	$chr = $a[1];
 	@b2 = split(/, /,$a[2]);
 	for($i=0; $i<@b2; $i++) {
@@ -96,7 +92,7 @@ sub clean () {
 	    }
 	}
 	if(defined $CHR2SEQ{$a[1]} && $flag == 0) {
-	    if($line =~ /\+/) {   # insertions will break things, have to fix this, for now not just cleaning these lines
+	    if($line =~ /[^\t]\+[^\t]/) {   # insertions will break things, have to fix this, for now not just cleaning these lines
 		print OUTFILE "$line\n";
 	    } else {
 		@b = split(/, /, $a[2]);
@@ -105,9 +101,6 @@ sub clean () {
 		    @c = split(/-/,$b[$i]);
 		    $len = $c[1] - $c[0] + 1;
 		    $start = $c[0] - 1;
-		    if($len <= 0 || $len > 200) {
-			print STDERR "$line\n";
-		    }
 		    $SEQ = $SEQ . substr($CHR2SEQ{$a[1]}, $start, $len);
 		}
 		$a[3] =~ s/://g;
@@ -124,7 +117,7 @@ sub clean () {
 		$spans = $1;
 		$seq = $2;
 		$seq = addJunctionsToSeq($seq, $spans);
-		print OUTFILE "$a[0]\t$chr\t$spans\t$seq\n";
+		print OUTFILE "$a[0]\t$chr\t$spans\t$seq\t$strand\n";
 	    }
 	}
     }
