@@ -353,6 +353,7 @@ while($FLAG == 1) {
 		$seqnum = $a[0];
 		$seqnum =~ s/a$//;
 		$seqnum =~ s/b$//;
+		$astrand = $a[4];
 		@a = split(/\t/,$hash2{$id}[1]);
 		$bspans = $a[2];
 		$a[2] =~ /^(\d+)[^\d]/;
@@ -361,8 +362,9 @@ while($FLAG == 1) {
 		$bend = $1;
 		$chrb = $a[1];
 		$bseq = $a[3];
+		$bstrand = $a[4];
  # the next two if's take care of the case that there is no overlap, one read lies entirely downstream of the other
-		if(($chra eq $chrb) && ($aend < $bstart-1) && ($bstart - $aend < $max_distance_between_paired_reads)) {
+		if(($astrand eq $bstrand) && ($chra eq $chrb) && ($aend < $bstart-1) && ($bstart - $aend < $max_distance_between_paired_reads)) {
 		    if($hash1{$id}[1] =~ /a\t/) {
 			print OUTFILE1 "$hash1{$id}[1]\n$hash2{$id}[1]\n";
 		    }
@@ -379,7 +381,7 @@ while($FLAG == 1) {
 		    }
 		}
 		$Eflag =0;
-		if(($chra eq $chrb) && (($aend >= $bstart-1) && ($astart <= $bstart)) || (($bend >= $astart-1) && ($bstart <= $astart))) {
+		if(($astrand eq $bstrand) && ($chra eq $chrb) && (($aend >= $bstart-1) && ($astart <= $bstart)) || (($bend >= $astart-1) && ($bstart <= $astart))) {
 		    $aseq2 = $aseq;
 		    $aseq2 =~ s/://g;
 		    $bseq2 = $bseq;
@@ -467,7 +469,7 @@ while($FLAG == 1) {
 			}
 		    }
 		    $seq_j = addJunctionsToSeq($merged_seq, $merged_spans);
-		    print OUTFILE1 "$seqnum\t$chra\t$merged_spans\t$seq_j\n";
+		    print OUTFILE1 "$seqnum\t$chra\t$merged_spans\t$seq_j\t$astrand\n";
 		    $Eflag =1;
 		}
 	    }
