@@ -220,7 +220,8 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	$LENGTH = getTotalSizeFromBlockSizes($a[18]);
 	$SCORE = $LENGTH - $a[1]; # This is the number of matches minus the number of mismatches, ignoring N's and gaps
 	if($SCORE > $cutoff{$seqname}) {   # so match is at least cutoff long (and this cutoff was set to be longer if there are a lot of N's (bad reads or low complexity masked by dust)
-	    if($a[11] <= 1) {   # so match starts at position zero or one in the query (allow '1' because first base can tend to be an N or low quality)
+#	    if($a[11] <= 1) {   # so match starts at position zero or one in the query (allow '1' because first base can tend to be an N or low quality)
+	    if(1 == 1) {   # trying this with no condition to see if it helps...
 		if($a[4] <= 1) { # then the aligment has at most one gap in the query, allowing for an insertion in the sample, throw out this alignment otherwise (we don't believe two separate insertions in such a short span).
 		    if($Ncount{$a[9]} <= ($a[10] / 2) || $a[17] <= 3) { # IF SEQ IS MORE THAN 50% LOW COMPLEXITY, DON'T ALLOW MORE THAN 3 BLOCKS, OTHERWISE GIVING IT TOO MUCH OPPORTUNITY TO MATCH BY CHANCE.  
 			if($a[17] <= $num_blocks_allowed) { # NEVER ALLOW MORE THAN $num_blocks_allowed blocks, which is set to 1 for chipseq, and 1000 (the equiv of infinity) for rnaseq
@@ -438,7 +439,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	}
     }
 
-    for($t=0; $t<2; $t++) {  # $t=0 for the 'a' (forwad) reads, $t=1 for the 'b' (reverse) reads
+    for($t=0; $t<2; $t++) {  # $t=0 for the 'a' (forward) reads, $t=1 for the 'b' (reverse) reads
 	$max_length = 0;
 	$secondmax_length = 0;
 	$N = @{$read_mapping_to_genome_blatoutput[$t]};
@@ -468,7 +469,16 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 		else {
 		    $seq = getsequence($a4[6], $a4[9], $a4[4], $seqb);
 		}
-		$read_mapping_to_genome_coords[$t][$c2] = "$a4[0]\t$a4[1]\t$a4[2]\t$seq";
+		$STRAND = $a4[4];
+		if($t==1) {
+		    if($STRAND eq "-") {
+			$STRAND = "+";
+		    } else {
+			$STRAND = "-";
+		    }
+		}
+
+		$read_mapping_to_genome_coords[$t][$c2] = "$a4[0]\t$a4[1]\t$a4[2]\t$seq\t$STRAND";
 		$read_mapping_to_genome_pairing_candidate[$t][$c2] = $read_mapping_to_genome_blatoutput[$t][$c];
 		$c2++;
 	    }
@@ -493,13 +503,21 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	@a5 = split(/\t/,$secondmaxkey);
 	if($secondmax_length < $max_length) {
 	    @a6 = split(/\t/,$maxkey);
+	    $STRAND = $a6[4];
+	    if($t==1) {
+		if($STRAND eq "-") {
+		    $STRAND = "+";
+		} else {
+		    $STRAND = "-";
+		}
+	    }
 	    if($sname[$t] =~ /a/) {
 		$seq = getsequence($a6[6], $a6[9], $a6[4], $seqa);
 	    }
 	    else {
 		$seq = getsequence($a6[6], $a6[9], $a6[4], $seqb);
 	    }
-	    $one_dir_only_candidate[$t] = "$a6[0]\t$a6[1]\t$a6[2]\t$seq";
+	    $one_dir_only_candidate[$t] = "$a6[0]\t$a6[1]\t$a6[2]\t$seq\t$STRAND";
 	}
     }
 
@@ -519,10 +537,14 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	undef %CHRS;
 	if($unique == 0) {
 	    $nchrs = 0;
+	    $STRAND = "-";
 	    for($i=0; $i<$numa; $i++) {
 		@B1 = split(/\t/, $read_mapping_to_genome_coords[0][$i]);
 		$spans[$i] = $B1[2];
 		$seq_temp = $B1[3];
+		if($B1[4] eq "+") {
+		    $STRAND = "+";
+		}
 		$CHRS{$B1[1]}++;
 	    }
 	    $nchrs = 0;
@@ -538,7 +560,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 		    @ss = split(/\t/,$str);
 		    $seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 		    print RESULTS "seq.$seq_count";
-		    print RESULTS "a\t$ss[0]\t$ss[1]\t$seq_new\n";
+		    print RESULTS "a\t$ss[0]\t$ss[1]\t$seq_new\t$STRAND\n";
 		    $unique = 1;
 		}
 	    }
@@ -565,10 +587,14 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	undef %CHRS;
 	if($unique == 0) {
 	    $nchrs = 0;
+	    $STRAND = "-";
 	    for($i=0; $i<$numb; $i++) {
 		@B1 = split(/\t/, $read_mapping_to_genome_coords[1][$i]);
 		$spans[$i] = $B1[2];
 		$seq_temp = $B1[3];
+		if($B1[4] eq "+") {
+		    $STRAND = "+";
+		}
 		$CHRS{$B1[1]}++;
 	    }
 	    $nchrs = 0;
@@ -584,7 +610,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 		    @ss = split(/\t/,$str);
 		    $seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 		    print RESULTS "seq.$seq_count";
-		    print RESULTS "b\t$ss[0]\t$ss[1]\t$seq_new\n";
+		    print RESULTS "b\t$ss[0]\t$ss[1]\t$seq_new\t$STRAND\n";
 		    $unique = 1;
 		}
 	    }
@@ -604,8 +630,8 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	    @B1 = split(/\t/, $read_mapping_to_genome_pairing_candidate[0][$i]);
 	    $achr = $B1[1];
 	    $astrand = $B1[4];
-	    $aseq = $read_mapping_to_genome_coords[0][$i];
-	    $aseq =~ s/.*\t//;
+	    @AR = split(/\t/,$read_mapping_to_genome_coords[0][$i]);
+	    $aseq = $AR[3];
 	    @aexons = split(/, /,$B1[2]);
 	    undef @astarts;
 	    undef @aends;
@@ -620,8 +646,8 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 		@B1 = split(/\t/, $read_mapping_to_genome_pairing_candidate[1][$j]);
 		$bchr = $B1[1];
 		$bstrand = $B1[4];
-		$bseq = $read_mapping_to_genome_coords[1][$j];
-		$bseq =~ s/.*\t//;
+		@BR = split(/\t/,$read_mapping_to_genome_coords[1][$j]);
+		$bseq = $BR[3];
 		@bexons = split(/, /,$B1[2]);
 		undef @bstarts;
 		undef @bends;
@@ -633,6 +659,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 		$bstart = $bstarts[0];
 		$bend = $bends[$e-1];
 		if($achr eq $bchr) {
+		    $ostrand = $astrand;  # "o" for "original"
 		    if($astrand eq "+" && $bstrand eq "-" && ($aend < $bstart-1) && ($bstart - $aend <= $max_distance_between_paired_reads)) {
 			$consistent_mappers{"$read_mapping_to_genome_coords[0][$i]\n$read_mapping_to_genome_coords[1][$j]"}++;
 		    }
@@ -690,7 +717,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			    $merged_spans = $merged_spans . ", $mergedstarts[$e]-$mergedends[$e]";
 			}
 			$merged_seq = $aseq . $bseq;
-			$consistent_mappers{"seq.$seq_count\t$achr\t$merged_spans\t$merged_seq"}++;
+			$consistent_mappers{"seq.$seq_count\t$achr\t$merged_spans\t$merged_seq\t$ostrand"}++;
 		    }
 		    if(($astrand eq "+") && ($bstrand eq "-") && ($aend >= $bstart) && ($bstart >= $astart) && ($bend >= $aend)) {
 			$f = 0;
@@ -789,7 +816,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			    if(!($merged_seq =~ /$str_temp/)) {
 				$merged_seq =~ s/$bpostfix$/$ins$bpostfix/;
 			    }
-			    $consistent_mappers{"seq.$seq_count\t$achr\t$merged_spans\t$merged_seq"}++;
+			    $consistent_mappers{"seq.$seq_count\t$achr\t$merged_spans\t$merged_seq\t$ostrand"}++;
 			}
 		    }
 		}
@@ -833,30 +860,34 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 		    @a = split(/\t/,$A[$n]);
 		    $seq_new = addJunctionsToSeq($a[3], $a[2]);
 		    if(@A == 2 && $n == 0) {
-			$outstring = "$a[0]\t$a[1]\t$a[2]\t$seq_new\n";
+			$outstring = "$a[0]\t$a[1]\t$a[2]\t$seq_new\t$a[4]\n";
 			print RESULTS $outstring;
 		    }
 		    if(@A == 2 && $n == 1) {
-			$outstring = "$a[0]\t$a[1]\t$a[2]\t$seq_new\n";
+			$outstring = "$a[0]\t$a[1]\t$a[2]\t$seq_new\t$a[4]\n";
 			print RESULTS $outstring;
 		    }
 		    if(@A == 1) {
-			print RESULTS "$a[0]\t$a[1]\t$a[2]\t$seq_new\n";
+			print RESULTS "$a[0]\t$a[1]\t$a[2]\t$seq_new\t$a[4]\n";
 		    }
 		}
 	    }
-	}
-	else {
+	} else {
 	    $ccnt = 0;
 	    $num_absplit = 0;
 	    $num_absingle = 0;
 	    undef @spans1;
 	    undef @spans2;
 	    undef %CHRS;
+	    $STRAND = "-";
 	    foreach $key (keys %consistent_mappers2) {
 		@A = split(/\n/,$key);
 		@a = split(/\t/,$A[0]);
 		$CHRS{$a[1]}++;
+		$strnd[$ccnt] = $a[4];
+		if($a[4] eq "+") {
+		    $STRAND = "+";
+		}
 		if(@A == 1) {
 		    $num_absingle++;
 		    $spans1[$ccnt] = $a[2];
@@ -897,7 +928,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			@ss = split(/\t/,$str1);
 			$seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 			print RESULTS "seq.$seq_count";
-			print RESULTS "a\t$ss[0]\t$ss[1]\t$seq_new\n";
+			print RESULTS "a\t$ss[0]\t$ss[1]\t$seq_new\t$STRAND\n";
 			$nointersection = 0;
 		    }
 		}
@@ -908,7 +939,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			@ss = split(/\t/,$str2);
 			$seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 			print RESULTS "seq.$seq_count";
-			print RESULTS "b\t$ss[0]\t$ss[1]\t$seq_new\n";
+			print RESULTS "b\t$ss[0]\t$ss[1]\t$seq_new\t$STRAND\n";
 			$nointersection = 0;
 		    }
 		}
@@ -921,14 +952,14 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			@ss = split(/\t/,$str1);
 			$seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 			print RESULTS "seq.$seq_count";
-			print RESULTS "a\t$ss[0]\t$ss[1]\t$seq_new\n";
+			print RESULTS "a\t$ss[0]\t$ss[1]\t$seq_new\t$STRAND\n";
 			$nointersection = 0;
 		    }
 		    if($size2 >= $min_size_intersection_allowed && $size1 < $min_size_intersection_allowed) {
 			@ss = split(/\t/,$str2);
 			$seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 			print RESULTS "seq.$seq_count";
-			print RESULTS "b\t$ss[0]\t$ss[1]\t$seq_new\n";
+			print RESULTS "b\t$ss[0]\t$ss[1]\t$seq_new\t$STRAND\n";
 			$nointersection = 0;
 		    }
 		    if($size1 >= $min_size_intersection_allowed && $size2 >= $min_size_intersection_allowed) {
@@ -942,11 +973,11 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			    @ss = split(/\t/,$str1);
 			    $seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 			    print RESULTS "seq.$seq_count";
-			    print RESULTS "a\t$ss[0]\t$ss[1]\t$seq_new\n";
+			    print RESULTS "a\t$ss[0]\t$ss[1]\t$seq_new\t$STRAND\n";
 			    @ss = split(/\t/,$str2);
 			    $seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 			    print RESULTS "seq.$seq_count";
-			    print RESULTS "b\t$ss[0]\t$ss[1]\t$seq_new\n";
+			    print RESULTS "b\t$ss[0]\t$ss[1]\t$seq_new\t$STRAND\n";
 			    $nointersection = 0;
 			}
 		    }
@@ -960,7 +991,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 		    if($size >= $min_size_intersection_allowed) {
 			@ss = split(/\t/,$str);
 			$seq_new = addJunctionsToSeq($ss[2], $ss[1]);
-			print RESULTS "seq.$seq_count\t$ss[0]\t$ss[1]\t$seq_new\n";
+			print RESULTS "seq.$seq_count\t$ss[0]\t$ss[1]\t$seq_new\t$STRAND\n";
 			$nointersection = 0;
 		    }
 		}
@@ -973,13 +1004,13 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			@a = split(/\t/,$A[$n]);
 			$seq_new = addJunctionsToSeq($a[3], $a[2]);
 			if(@A == 2 && $n == 0) {
-			    print RESULTS2 "$a[0]\t$a[1]\t$a[2]\t$seq_new\n";
+			    print RESULTS2 "$a[0]\t$a[1]\t$a[2]\t$seq_new\t$a[4]\n";
 			}
 			if(@A == 2 && $n == 1) {
-			    print RESULTS2 "$a[0]\t$a[1]\t$a[2]\t$seq_new\n";
+			    print RESULTS2 "$a[0]\t$a[1]\t$a[2]\t$seq_new\t$a[4]\n";
 			}
 			if(@A == 1) {
-			    print RESULTS2 "$a[0]\t$a[1]\t$a[2]\t$seq_new\n";
+			    print RESULTS2 "$a[0]\t$a[1]\t$a[2]\t$seq_new\t$a[4]\n";
 			}
 		    }
 		}
