@@ -222,6 +222,7 @@ while($FLAG == 1 || $FLAG2 == 1) {
     undef %hash2;
     undef %allids;
     $linecount = 0;
+    # get the bowtie output into hash1 for a bunch of ids
     until($linecount == $num_lines_at_once) {
 	$line=<INFILE1>;
 	if(!($line =~ /\S/)) {
@@ -268,6 +269,7 @@ while($FLAG == 1 || $FLAG2 == 1) {
 	    $FLAG2=0;
 	}
     }
+    # now get the blat output for this bunch of ids, that goes in hash2
     until($id > $last_id || $FLAG3 > 1 || $id eq '') {
 	$allids{$id}++;
 	if($a[0] =~ /a$/ || $a[0] =~ /b$/) {
@@ -296,6 +298,9 @@ while($FLAG == 1 || $FLAG2 == 1) {
     if($FLAG2 == 0) {
 	$line_prev = "";
     }
+
+    # now parse for this bunch of ids:
+
     foreach $id (sort {$a <=> $b} keys %allids) {
 	if($bowtie_ambiguous_mappers{$id}+0 > 0) {
 	    next;
@@ -456,6 +461,7 @@ while($FLAG == 1 || $FLAG2 == 1) {
 		$aend = $1;
 		$chra = $a[1];
 		$aseq = $a[3];
+		$Astrand = $a[4];
 		$seqnum = $a[0];
 		$seqnum =~ s/a$//;
 		$seqnum =~ s/b$//;
@@ -467,7 +473,8 @@ while($FLAG == 1 || $FLAG2 == 1) {
 		$bend = $1;
 		$chrb = $a[1];
 		$bseq = $a[3];
-		if(($chra eq $chrb) && ($aend < $bstart-1) && ($bstart - $aend < $max_distance_between_paired_reads)) {
+		$Bstrand = $a[4];
+		if(($Astrand eq $Bstrand) && ($chra eq $chrb) && ($aend < $bstart-1) && ($bstart - $aend < $max_distance_between_paired_reads)) {
 		    if($hash1{$id}[1] =~ /a\t/) {
 			print OUTFILE1 "$hash1{$id}[1]\n$hash2{$id}[1]\n";
 		    }
@@ -475,7 +482,7 @@ while($FLAG == 1 || $FLAG2 == 1) {
 			print OUTFILE1 "$hash2{$id}[1]\n$hash1{$id}[1]\n";
 		    }
 		}
-		if(($chra eq $chrb) && ($bend < $astart-1) && ($astart - $bend < $max_distance_between_paired_reads)) {
+		if(($Astrand eq $Bstrand) && ($chra eq $chrb) && ($bend < $astart-1) && ($astart - $bend < $max_distance_between_paired_reads)) {
 		    if($hash1{$id}[1] =~ /a\t/) {
 			print OUTFILE1 "$hash1{$id}[1]\n$hash2{$id}[1]\n";
 		    }
@@ -506,7 +513,7 @@ while($FLAG == 1 || $FLAG2 == 1) {
 		    }
 		}
 		$dflag = 0;
-		if(($chra eq $chrb) && ($aend >= $bstart-1) && ($astart <= $bstart) && ($aend <= $bend)) {
+		if(($Astrand eq $Bstrand) && ($chra eq $chrb) && ($aend >= $bstart-1) && ($astart <= $bstart) && ($aend <= $bend)) {
 		    # they overlap and forward is to left of reverse
 		    $spans_merged = merge($aspans,$bspans);
 		    $merged_length = spansTotalLength($spans_merged);
@@ -532,10 +539,10 @@ while($FLAG == 1 || $FLAG2 == 1) {
 			}
 		    }
 		    $seq_j = addJunctionsToSeq($seq_merged, $spans_merged);
-		    print OUTFILE1 "$seqnum\t$chra\t$spans_merged\t$seq_j\n";
+		    print OUTFILE1 "$seqnum\t$chra\t$spans_merged\t$seq_j\t$Astrand\n";
 		    $dflag = 1;
 		}
-		if(($chra eq $chrb) && ($bend >= $astart-1) && ($bstart <= $astart) && ($bend <= $aend) && ($dflag == 0)) {
+		if(($Astrand eq $Bstrand) && ($chra eq $chrb) && ($bend >= $astart-1) && ($bstart <= $astart) && ($bend <= $aend) && ($dflag == 0)) {
 		    # they overlap and reverse is to left of forward
 		    $spans_merged = merge($bspans,$aspans);
 		    $merged_length = spansTotalLength($spans_merged);
@@ -561,7 +568,7 @@ while($FLAG == 1 || $FLAG2 == 1) {
 			}
 		    }
 		    $seq_j = addJunctionsToSeq($seq_merged, $spans_merged);
-		    print OUTFILE1 "$seqnum\t$chra\t$spans_merged\t$seq_j\n";
+		    print OUTFILE1 "$seqnum\t$chra\t$spans_merged\t$seq_j\t$Astrand\n";
 		}
 	    }
 	}
@@ -632,6 +639,7 @@ sub joinifpossible () {
     $aend = $1;
     $chra = $a[1];
     $aseq = $a[3];
+    $astrand = $a[4];
     $seqnum = $a[0];
     $seqnum =~ s/a$//;
     $seqnum =~ s/b$//;
@@ -643,7 +651,11 @@ sub joinifpossible () {
     $bend = $1;
     $chrb = $a[1];
     $bseq = $a[3];
+    $bstrand = $a[4];
     $returnstring = "";
+    if($astrand ne $bstrand) {
+	return "";
+    }
     if(($chra eq $chrb) && ($aend < $bstart-1) && ($bstart - $aend < $max_distance_between_paired_reads)) {
 	if($line1 =~ /a\t/) {
 	    $returnstring = $returnstring . "$line1\n$line2\n";
@@ -709,7 +721,7 @@ sub joinifpossible () {
 	    }
 	}
 	$seq_j = addJunctionsToSeq($seq_merged, $spans_merged);
-	$returnstring = $returnstring . "$seqnum\t$chra\t$spans_merged\t$seq_j\n";
+	$returnstring = $returnstring . "$seqnum\t$chra\t$spans_merged\t$seq_j\t$astrand\n";
 	$dflag = 1;
     }
     if(($chra eq $chrb) && ($bend >= $astart-1) && ($bstart <= $astart) && ($bend <= $aend) && ($dflag == 0)) {
@@ -738,7 +750,7 @@ sub joinifpossible () {
 	    }
 	}
 	$seq_j = addJunctionsToSeq($seq_merged, $spans_merged);
-	$returnstring = $returnstring . "$seqnum\t$chra\t$spans_merged\t$seq_j\n";
+	$returnstring = $returnstring . "$seqnum\t$chra\t$spans_merged\t$seq_j\t$astrand\n";
     }
     return $returnstring;
 }
