@@ -246,6 +246,10 @@ if(($readsfile =~ /,,,/) && ($paired_end eq "true")) {
     if(!(-e $a[1])) {
 	die "\nError: The reads file '$a[1]' does not seem to exist\n\n";
     }
+    if($a[0] eq $a[1]) {
+	die "\nError: You specified the same file for the forward and reverse reads, must be an error...\n\n";
+    }
+
     print STDERR "Reformatting reads file...\n";
     `perl $scripts_dir/parse2fasta.pl $a[0] $a[1] > $output_dir/reads.fa`;
     $readsfile = "$output_dir/reads.fa";
