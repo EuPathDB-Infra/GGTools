@@ -58,6 +58,8 @@ Options: -single    : Data is single-end (default is paired-end).
          -chipseq   : Run in chipseq mode, meaning don't map across splice
                       junctions.
          -minidentity x : run blat with minIdentity=x (default x=93)
+         -countmismatches : report in the last column the number of mismatches,
+                            ignoring insertions
          -qsub      : Use qsub to fire the job off to multiple nodes.  This
                       means you're on a cluster that understands qsub.  If not
                       using -qsub, you can still break it into multiple chunks,
@@ -110,11 +112,16 @@ $ooc_yes = "false";
 $qsub = "false";
 $minidentity=93;
 $kill = "false";
+$countmismatches = "false";
 if(@ARGV > 5) {
     for($i=5; $i<@ARGV; $i++) {
 	$optionrecognized = 0;
 	if($ARGV[$i] eq "-single") {
 	    $paired_end = "false";
+	    $optionrecognized = 1;
+	}
+	if($ARGV[$i] eq "-countmismatches") {
+	    $countmismatches = "true";
 	    $optionrecognized = 1;
 	}
 	if($ARGV[$i] eq "-fast") {
@@ -416,6 +423,11 @@ for($i=1; $i<=$numchunks; $i++) {
     $pipeline_file =~ s!MINSCORE!$min_score!gs;
     $pipeline_file =~ s!GENOMEFA!$genomefa!gs;
     $pipeline_file =~ s!READLENGTH!$readlength!gs;
+    if($countmismatches eq "true") {
+	$pipeline_file =~ s!COUNTMISMATCHES!-countmismatches!gs;
+    } else {
+	$pipeline_file =~ s!COUNTMISMATCHES!!gs;
+    }
     if($limitNU eq "true") {
 	$pipeline_file =~ s! -a ! -k 100 !gs;	
     }
