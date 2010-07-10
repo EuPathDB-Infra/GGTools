@@ -32,6 +32,8 @@ if(@ARGV < 1) {
     print "                        to resuse them for another run with the same gene models.\n";
     print "      -useindels x    : x is a file of indels in the format output by this program in case you want\n";
     print "                        to resuse them for another run with the same gene models.\n";
+    print "      -usealts x      : x is a file of transcripts in the format output by this program in case you want\n";
+    print "                        to resuse them for another run with the same gene models.\n";
     print "\n";
     print "This program depends on four files:\n";
     print "  1) simulator_config_geneinfo\n";
@@ -93,6 +95,7 @@ $introncount_total=0;
 
 $usesubs = "false";   # will become true if there is a custom subsitutions file specified
 $useindels = "false"; # will become true if there is a custom indels file specified
+$usealts = "false"; # will become true if there is a custom transcripts file specified
 $seq_num_in_bedfile = "false";
 for($i=2; $i<@ARGV; $i++) {
     $option_recognized = 0;
@@ -254,6 +257,16 @@ for($i=2; $i<@ARGV; $i++) {
 	    exit(0);
 	}
     }
+    if($ARGV[$i] eq "-usealts") {
+	$i++;
+	$altsfile = $ARGV[$i];
+	$usealts = "true";
+	$option_recognized = 1;
+	if(!(-e $altsfile)) {
+	    print STDERR "\nError: cannot open the file '$altsfile' specified by the -usealts option.\n\n";
+	    exit(0);
+	}
+    }
     if($ARGV[$i] eq "-customcfgdir") {
 	$i++;
 	$customcfgdir = $ARGV[$i];
@@ -332,6 +345,12 @@ for($i=2; $i<@ARGV; $i++) {
 
 if(!($stem =~ /\S/) && ($use)) {
     
+}
+if($usesubs eq "false" && $useindels eq "true") {
+    die "Error: specify either both -usesubs and -useindels or neither.\n\n";
+}
+if($usesubs eq "true" && $useindels eq "false") {
+    die "Error: specify either both -usesubs and -useindels or neither.\n\n";
 }
 
 if($customcfgdir =~ /\S/ && !($stem =~ /\S/)) {
@@ -417,6 +436,7 @@ if($stem =~ /\S/) {
 close(SIMLOGOUT);
 open(SIMLOGOUT, ">>$logfilename");
 
+print STDERR "reading the gene info file\n";
 open(INFILE, $simulator_config_geneinfo) or die "\nError: cannot open file '$simulator_config_geneinfo' for reading\n\n";
 while($line = <INFILE>) {
     chomp($line);
@@ -434,8 +454,8 @@ while($line = <INFILE>) {
 }
 close(INFILE);
 
+print STDERR "reading the feature quantification file\n";
 open(INFILE, $simulator_config_featurequantifications) or die "\nError: cannot open file '$simulator_config_featurequantifications' for reading\n\n";
-
 while($line = <INFILE>) {
     chomp($line);
     if($line =~ /(exon)/) {
@@ -487,9 +507,14 @@ close(SIMLOGOUT);
 open(SIMLOGOUT, ">>$logfilename");
 
 # making alternate (unknown) splice forms
+if($percent_alt_spliceforms > 0) {
+    if($usealts eq 'false') {
+	print STDERR "creating the alternate (unknown) splice forms\n";
+    }
+}
 for($i=0; $i<$numgenes; $i++) {
     # $i is the original gene id
-    # $genecnt is the same gene as $i but will be modified to be an alternate splice form
+    # gene $genecnt is the same gene as $i but will be modified to be an alternate splice form
     $geneid = $genes[$i];
     @a = @{$gene2exon{$geneid}};
     $exoncnt = @a;
@@ -520,6 +545,7 @@ for($i=0; $i<$numgenes; $i++) {
 	    $ends_new = "";
 	    $exoncnt_x = 0;
 	    delete($gene2exon{$geneid_x});
+
 	    for($k=0; $k<$exoncnt; $k++) {
 		$flip = int(rand(2));
 		if($flip == 1) {
@@ -553,7 +579,54 @@ for($i=0; $i<$numgenes; $i++) {
 @genes = @genes2;
 $genecnt = @genes;
 
-$alttranscriptsfilename = "transcripts_$name" . ".txt";
+if($usealts eq "true") {
+    print STDERR "reading the user specified alternate (unknown) splice forms\n";
+    open(INFILE, $altsfile) or die "\nError: cannot open the file '$altsfile' for reading.\n\n";
+    $flag = 0;
+    $line = <INFILE>;
+    chomp($line);
+    while($flag == 0) {
+	if($line =~ /---------/) {
+	    $line = <INFILE>;
+	    chomp($line);
+	    $line =~ /genes\[(\d+)\] = (.*)/;
+	    $i = $1;
+	    $geneid = $2;
+	    $genes[$i] = $geneid;
+	    $line = <INFILE>;
+	    chomp($line);
+	    $line =~ s/.*= //;
+	    $starts{$geneid} = $line;
+	    $line = <INFILE>;
+	    chomp($line);
+	    $line =~ s/.*= //;
+	    $ends{$geneid} = $line;
+	    $line = <INFILE>;
+	    chomp($line);
+	    $line =~ s/.*= //;
+	    $strand{$geneid} = $line;
+	    $line = <INFILE>;
+	    chomp($line);
+	    $line =~ s/.*= //;
+	    $chr{$geneid} = $line;
+	    $line = <INFILE>;
+	    chomp($line);
+	    $j=0;
+	    delete($gene2exon{$geneid});
+	    until($line =~ /---------/ || $line eq '') {
+		$gene2exon{$geneid}[$j] = $line;
+		$j++;
+		$line = <INFILE>;
+		chomp($line);
+	    }
+	}
+	if($line eq '') {
+	    $flag = 1;
+	}
+    }
+}
+
+$alttranscriptsfilename = "simulated_reads_transcripts_$name" . ".txt";
 open(ALTTRANSCRIPTS, ">$alttranscriptsfilename") or die "\nError: cannot open file '$alttranscriptsfilename' for writing.\n\n";
 for($i=0; $i<@genes; $i++) {
     $geneid = $genes[$i];
@@ -585,27 +658,14 @@ for($i=0; $i<$genecnt; $i++) {
     $gene_distribution[$i] = $gene_density[$i];
 }
 
-# START DEBUG
-$debug_file = "debug_" . $name;
-open(DEBUG, ">$debug_file");
- print DEBUG "gene_distribution[0] = $gene_distribution[0]\n";
+$dist_file = "simulated_reads_gene_distribution_" . $name . ".txt";
+open(DIST, ">$dist_file");
+ print DIST "gene_distribution[0] = $gene_distribution[0]\n";
  for($i=1; $i<$genecnt; $i++) {
     $gene_distribution[$i] = $gene_distribution[$i] + $gene_distribution[$i-1];
-    print DEBUG "gene_distribution[$i] = $gene_distribution[$i]\n";
+    print DIST "gene_distribution[$i] = $gene_distribution[$i]\n";
  }
-close(DEBUG);
-
-# gene_distribution[0] = 0.00187578675910727
-# gene_distribution[1] = 0.117339022869102
-# gene_distribution[2] = 0.992555680544236
-# gene_distribution[3] = 0.992555680544236
-#    gene	chr1:95202541-95213886	3922	4.4316	0.4269	885
-#    gene	chr15:35670847-35859855	241417	39.0452	3.7615	6183
-#    gene	chr2:90977518-91023975	1829952	323.5989	31.1751	5655
-#    gene	chr2:151287781-151295349	0	0	0	508
-#    gene	chr2:162843255-162849277	15565	46.8825	4.5166	332
-
-# END DEBUG
+close(DIST);
 
 $introncount_total=0;
 $sum_of_intron_counts = 0;
@@ -778,7 +838,7 @@ if($useindels eq "true") {  # user wants to read indels from a file
     close(INDELSINFILE);
 }
 
-if($useindels eq "false" && $useindels eq "false") {  # user wants de novo substitutions and indels, 
+if($usesubs eq "false" && $useindels eq "false") {  # user wants de novo substitutions and indels, 
                                                       # as opposed to being read from files
     foreach $exon (keys %exon2gene) {
 	$try_cnt = 0;
@@ -1067,16 +1127,25 @@ while( 1 == 1) {
     $mergedcoords = $return_vector[2];
 
     if($fa ne "none") {
+	$rev_flip = int(rand(2));
 	@F = split(/\n/,$fa);
-	print SIMFAOUT "$F[0]\n";
 	$stemp = &add_sequencing_error($F[1], $base_error);
 	$stemp2 = &add_error_to_tail($stemp, $low_qual_tail_length, $percent_of_tails_that_are_low_qual, $quality_of_low_qual_tail);
-	print SIMFAOUT "$stemp2\n";
-	print SIMFAOUT "$F[2]\n";
+	$ONE = "$F[0]\n$stemp2\n";
 
 	$stemp = &add_sequencing_error($F[3], $base_error);
 	$stemp2 = &add_error_to_tail($stemp, $low_qual_tail_length, $percent_of_tails_that_are_low_qual, $quality_of_low_qual_tail);
-	print SIMFAOUT "$stemp2\n";
+	$TWO = "$F[2]\n$stemp2\n";
+
+	if($rev_flip == 0) {
+	    print SIMFAOUT $ONE;
+	    print SIMFAOUT $TWO;
+	} else {
+	    $ONE =~ s/a/b/;
+	    $TWO =~ s/b/a/;
+	    print SIMFAOUT $TWO;
+	    print SIMFAOUT $ONE;
+	}
 
 	print SIMBEDOUT $bed;
 	
