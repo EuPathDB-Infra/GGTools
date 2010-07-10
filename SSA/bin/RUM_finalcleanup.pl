@@ -7,10 +7,11 @@ $|=1;
 
 if(@ARGV < 5) {
     die "
-Usage: finalcleanup.pl <rum_unique> <rum_nu> <cleaned rum_unique outfile> <cleaned rum_nu outfile> <genome seq> [options]
+Usage: RUM_finalcleanup.pl <rum_unique> <rum_nu> <cleaned rum_unique outfile> <cleaned rum_nu outfile> <genome seq> [options]
 
 Options:
    -faok  : the fasta file already has sequence all on one line
+   -countmismatches : report in the final column the number of mismatches, ignoring insertions
 
 This script modifies the RUM_Unique and RUM_NU files to clean
 up things like mismatches at the ends of alignments.  This is necessary
@@ -21,10 +22,15 @@ report the location of the mismatches in the output.
 
 }
 $faok = "false";
+$countmismatches = "false";
 for($i=5; $i<@ARGV; $i++) {
     $optionrecognized = 0;
     if($ARGV[$i] eq "-faok") {
 	$faok = "true";
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-countmismatches") {
+	$countmismatches = "true";
 	$optionrecognized = 1;
     }
     if($optionrecognized == 0) {
@@ -99,7 +105,7 @@ sub clean () {
 		@b = split(/, /, $a[2]);
 		$SEQ = "";
 		for($i=0; $i<@b; $i++) {
-		    @c = split(/-/,$b[$i]);
+ 		    @c = split(/-/,$b[$i]);
 		    $len = $c[1] - $c[0] + 1;
 		    $start = $c[0] - 1;
 		    $SEQ = $SEQ . substr($CHR2SEQ{$a[1]}, $start, $len);
@@ -118,7 +124,13 @@ sub clean () {
 		$spans = $1;
 		$seq = $2;
 		$seq = addJunctionsToSeq($seq, $spans);
-		print OUTFILE "$a[0]\t$chr\t$spans\t$strand\t$seq\n";
+
+		if($countmismatches eq "true") {
+		    $num_mismatches = &countmismatches($SEQ, $seq);
+		    print OUTFILE "$a[0]\t$chr\t$spans\t$strand\t$seq\t$num_mismatches\n";
+		} else {
+		    print OUTFILE "$a[0]\t$chr\t$spans\t$strand\t$seq\n";
+		}
 	    }
 	}
     }
@@ -282,4 +294,23 @@ sub addJunctionsToSeq () {
 	}
     }
     return $seq_out;
+}
+
+sub countmismatches () {
+    ($seq1m, $seq2m) = @_;
+    # seq2m is the "read"
+
+    $seq1m =~ s/://g;
+    $seq2m =~ s/://g;
+    $seq2m =~ s/\+[^+]\+//g;
+
+    @C1 = split(//,$seq1m);
+    @C2 = split(//,$seq2m);
+    $NUM=0;
+    for($k=0; $k<@C1; $k++) {
+	if($C1[$k] ne $C2[$k]) {
+	    $NUM++;
+	}
+    }
+    return $NUM;
 }
