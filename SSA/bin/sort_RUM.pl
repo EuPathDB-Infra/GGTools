@@ -32,6 +32,7 @@ close(OUTFILE1);
 close(OUTFILE2);
 close(INFILE);
 
+$num_merges = 0;
 $still_unsorted_flag = 1;
 while($still_unsorted_flag == 1) {
     $still_unsorted_flag = 0;
@@ -55,14 +56,14 @@ while($still_unsorted_flag == 1) {
     close(INFILE);
     `mv RUM_unsorted_temp2 RUM_unsorted_temp1`;
     merge();
-    print "done merging...\n";
+    $num_merges++;
 }
 $sortedfile = $ARGV[1];
 `mv RUM_sorted_temp1 $sortedfile`;
 unlink("RUM_unsorted_temp1");
+print "number of merges required to sort '$ARGV[0]': $num_merges\n";
 
 sub merge () {
-    print STDERR "merging...\n";
     open(INFILE1, "RUM_sorted_temp1");
     open(INFILE2, "RUM_sorted_temp2");
     open(OUTFILE, ">RUM_sorted_temp3");
