@@ -140,6 +140,10 @@ until($line eq '') {
 	    $reverse_seq = $seq;
 	    $reverse_spans =~ /^(\d+)-/;
 	    $reverse_start = $1;
+	    $reverse_spans =~ /-(\d+)$/;
+	    $reverse_end = $1;
+	    $forward_spans =~ /^(\d+)-/;
+	    $forward_start = $1;
 	    $forward_spans =~ /-(\d+)$/;
 	    $forward_end = $1;
 	    if(!($forward_spans =~ /\S/) && $reverse_spans =~ /\S/) {
@@ -162,7 +166,11 @@ until($line eq '') {
 		    print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
 		}
 	    } elsif($forward_spans =~ /\S/ && $reverse_spans =~ /\S/) {
-		($merged_spans, $merged_seq) = merge($forward_spans, $reverse_spans, $forward_seq, $reverse_seq);
+		if($forward_start < $reverse_start) {
+		    ($merged_spans, $merged_seq) = merge($forward_spans, $reverse_spans, $forward_seq, $reverse_seq);
+		} else {
+		    ($merged_spans, $merged_seq) = merge($reverse_spans, $forward_spans, $reverse_seq, $forward_seq);
+		}
 		$forward_seqname =~ s/a//;
 		$seq_with_junctions = addJunctionsToSeq($merged_seq, $merged_spans);
 		print "$forward_seqname\t$forward_chr\t$merged_spans\t$strand\t$merged_seq\n";
