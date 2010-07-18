@@ -192,19 +192,14 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    $L = length($x);
 		}
 	    }	    
-	    $FR = $upstream_read;
+	    $UR = $upstream_read;
 	    $replace = "";
 	    for($i=0; $i<$suffix_offset_upstream; $i++) {
-		$FR =~ s/.$//;
+		$UR =~ s/.$//;
 		$replace = $replace . "X";
 	    }
-	    $FR = $FR . $replace;
-	    print "\n$upstream_read\n";
-	    print "$FR\n";
-	    for($i=0; $i<$prefix_offset_upstream; $i++) {
-		print " ";
-	    }
-	    print "$ruj[4]\n";
+	    $UR = $UR . $replace;
+
 
 	    if($ruj[3] eq "-") {
 		$downstream_read = reversecomplement($forward_read);
@@ -234,18 +229,31 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    $L = length($x);
 		}
 	    }	    
-	    $FR = $downstream_read;
+	    $DR = $downstream_read;
 	    $replace = "";
 	    for($i=0; $i<$prefix_offset_downstream; $i++) {
-		$FR =~ s/^.//;
+		$DR =~ s/^.//;
 		$replace = $replace . "X";
 	    }
-	    $FR = $replace . $FR;
-	    $offset = length($ruj[4]) + $prefix_offset_upstream - length($FR);
+	    $DR = $replace . $DR;
+	    $offset = length($ruj[4]) + $prefix_offset_upstream + $suffix_offset_downstream - length($DR);
+	    print "\n$upstream_read\n\n";
+	    $OFFSET = $prefix_offset_upstream + $readlength - length($ruj[4]) - $suffix_offset_downstream;
+	    $P = "";
+	    for($i=0; $i<$OFFSET; $i++) {
+		$P = $P . " ";
+	    }
+	    print $P;
+	    print "$UR\n";
+	    print $P;
+	    for($i=0; $i<$prefix_offset_upstream; $i++) {
+		print " ";
+	    }
+	    print "$ruj[4]\n";
 	    for($i=0; $i<$offset; $i++) {
 		print " ";
 	    }
-	    print "$FR\n";
+	    print "$DR\n";
 	    print "\n$downstream_read\n";
 	}
     }
