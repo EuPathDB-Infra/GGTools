@@ -125,6 +125,8 @@ sub clean () {
 		$seq = $2;
 		$seq = addJunctionsToSeq($seq, $spans);
 
+		# should fix the following so it doesn't repeat the operation unnecessarily
+		# while processin the RUM_NU file
 		if($countmismatches eq "true") {
 		    $num_mismatches = &countmismatches($SEQ, $seq);
 		    print OUTFILE "$a[0]\t$chr\t$spans\t$strand\t$seq\t$num_mismatches\n";
