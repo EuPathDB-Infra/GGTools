@@ -37,9 +37,18 @@ echo `date` >> OUTDIR/rum_log.CHUNK
 perl SCRIPTSDIR/merge_Bowtie_and_Blat.pl OUTDIR/BowtieUnique.CHUNK OUTDIR/BlatUnique.CHUNK OUTDIR/BowtieNU.CHUNK OUTDIR/BlatNU.CHUNK OUTDIR/RUM_Unique_temp.CHUNK OUTDIR/RUM_NU_temp.CHUNK PAIREDEND
 echo "finished merging Bowtie and Blat" >> OUTDIR/rum_log.CHUNK
 echo `date` >> OUTDIR/rum_log.CHUNK
-perl SCRIPTSDIR/RUM_finalcleanup.pl OUTDIR/RUM_Unique_temp.CHUNK OUTDIR/RUM_NU_temp.CHUNK OUTDIR/RUM_Unique.CHUNK OUTDIR/RUM_NU.CHUNK GENOMEFA -faok
+perl SCRIPTSDIR/RUM_finalcleanup.pl OUTDIR/RUM_Unique_temp.CHUNK OUTDIR/RUM_NU_temp.CHUNK OUTDIR/RUM_Unique_temp2.CHUNK OUTDIR/RUM_NU_temp2.CHUNK GENOMEFA -faok COUNTMISMATCHES
 echo "finished cleaning up final results" >> OUTDIR/rum_log.CHUNK
 echo `date` >> OUTDIR/rum_log.CHUNK
+perl SCRIPTSDIR/sort_RUM.pl OUTDIR/RUM_Unique_temp2.CHUNK OUTDIR/RUM_Unique.CHUNK
+perl SCRIPTSDIR/limit_NU.pl OUTDIR/RUM_NU_temp2.CHUNK LIMITNUCUTOFF > OUTDIR/RUM_NU_temp3.CHUNK
+perl SCRIPTSDIR/sort_RUM.pl OUTDIR/RUM_NU_temp2.CHUNK OUTDIR/RUM_NU.CHUNK
+echo "finished sorting final results" >> OUTDIR/rum_log.CHUNK
+echo `date` >> OUTDIR/rum_log.CHUNK
+#rm OUTDIR/RUM_Unique_temp.CHUNK
+#rm OUTDIR/RUM_NU_temp.CHUNK
+#rm OUTDIR/RUM_Unique_temp2.CHUNK
+#rm OUTDIR/RUM_NU_temp2.CHUNK
 
 echo "pipeline complete" >> OUTDIR/rum_log.CHUNK
 echo `date` >> OUTDIR/rum_log.CHUNK
