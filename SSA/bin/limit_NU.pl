@@ -8,9 +8,11 @@ if(@ARGV<1) {
 Usage: limit_NU.pl <RUM NU file> <cutoff>
 
 Where: <RUM NU file> is a file or non-unique mappers coming out of the RUM pipeline
-       <cutoff> is a positive integer and only reads for which the forward (and reverse
-                if it is paired-end) appear at most this many times in the RUM NU file
-                are output to standard out
+
+       <cutoff> is a positive integer.  Alignments for reads for which the either the forward,
+                or reverse if it is paired-end, appear more than <cutoff> times in the RUM NU
+                file are filtered out.  Alignments of the joined reads count as one forward
+                and one reverse.
 
 ";
 }
