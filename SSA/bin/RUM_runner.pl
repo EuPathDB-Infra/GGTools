@@ -51,7 +51,8 @@ Options: -single    : Data is single-end (default is paired-end).
                       a tad less sensitive
          -noooc     : Run without blat ooc file
          -ooc       : Run with blat ooc file
-         -limitNU   : Limits the number of ambiguoust mappers to a max of 100
+         -limitNUhard x : Limits the number of ambiguous mappers to a max of x
+         -limitNU   : Limits the number of ambiguous mappers to a max of 100
                       locations.  If you have short reads and a large genome
                       then this will probably be necessary (45 bases is short
                       for mouse, 70 bases is long, between it's hard to say).
@@ -107,6 +108,7 @@ $paired_end = "true";
 $fast = "false";
 $chipseq = "false";
 $limitNU = "false";
+$limitNUhard = "false";
 $ooc = "true";
 $ooc_yes = "false";
 $qsub = "false";
@@ -158,6 +160,15 @@ if(@ARGV > 5) {
 	    $i++;
 	    if(!($minidentity =~ /^\d+$/ && $minidentity <= 100)) {
 		die "\nERROR: minidentity must be an integer between zero and 100.\nYou have given '$minidentity'.\n\n";
+	    }
+	    $optionrecognized = 1;
+	}
+	if($ARGV[$i] eq "-limitNUhard") {
+	    $NU_limit = $ARGV[$i+1];
+	    $i++;
+	    $limitNUhard = "true";
+	    if(!($NU_limit =~ /^\d+$/ && $NU_limit > 0)) {
+		die "\nERROR: -limitNUhard must be an integer greater than zero.\nYou have given '$NU_limit'.\n\n";
 	    }
 	    $optionrecognized = 1;
 	}
@@ -405,6 +416,12 @@ print "paired_end = $paired_end\n";
 
 for($i=1; $i<=$numchunks; $i++) {
     $pipeline_file = $pipeline_template;
+    if($limitNUhard eq "true") {
+	$pipeline_file =~ s!LIMITNUCUTOFF!$NU_limit!gs;
+	$pipeline_file =~ s!sort_RUM.pl OUTDIR.RUM_NU_temp2.CHUNK!sort_RUM.pl OUTDIR/RUM_NU_temp3.CHUNK!gs;
+    } else {
+	$pipeline_file =~ s!perl SCRIPTSDIR/limit_NU.pl OUTDIR/RUM_NU_temp2.CHUNK LIMITNUCUTOFF > OUTDIR/RUM_NU_temp3.CHUNK\n!!gs;
+    }
     $pipeline_file =~ s!OUTDIR!$output_dir!gs;
     $pipeline_file =~ s!CHUNK!$i!gs;
     $pipeline_file =~ s!MINIDENTITY!$minidentity!gs;
@@ -461,6 +478,7 @@ for($i=1; $i<=$numchunks; $i++) {
 	system("/bin/bash $output_dir/$outfile &");
     }
 }
+
 $doneflag = 0;
 while($doneflag == 0) {
     $doneflag = 1;
