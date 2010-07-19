@@ -89,6 +89,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
     $rum_u_reverse = "";
     $rum_u_joined = "";
     $unique_mapper_found = "false";
+    $non_unique_mappers_found = "false";
     while($flag == 0) {
 	$line = <RUMU>;
 	chomp($line);
@@ -113,17 +114,43 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $flag = 1;
 	}
     }
+    if($unique_mapper_found eq "false" && $non_unique_mappers_found eq "false") {
+	# handle case here where neither read mapped anywhere
+    }
     if($unique_mapper_found eq "true") {
+	print "--------\n$seqnum\n";
+	if($paired eq "true") {
+	    $bitscore_f = 65;
+	    $bitscore_r = 129;
+	    if(!($rum_u_joined =~ /\S/)) {
+		if($rum_u_forward =~ /\S/ && !($rum_u_reverse =~ /\S/)) {
+		    $bitscore_r = $bitscore_r + 4;
+		    $bitscore_f = $bitscore_f + 8;
+		}
+		if($rum_u_reverse =~ /\S/ && !($rum_u_forward =~ /\S/)) {
+		    $bitscore_f = $bitscore_f + 4;
+		    $bitscore_r = $bitscore_r + 8;
+		}
+	    }
+	} else {
+	    $bitscore = 0;
+	}
+	if(($rum_u_forward =~ /\S/ && $rum_u_reverse =~ /\S/) || $rum_u_joined =~ /\S/) {
+	    $bitscore_f = $bitscore_f + 2;
+	    $bitscore_r = $bitscore_r + 2;
+	}
 	if($rum_u_forward =~ /\S/) {
-#	    print "rum_u_forward = $rum_u_forward\n";
+	    print "rum_u_forward = $rum_u_forward\n\n";
 	    @ruf = split(/\t/,$rum_u_forward);
 	    $ruf[4] =~ s/://g;
 	    $ruf[4] =~ s/\+//g;
 	    $rum_u_forward_length = length($ruf[4]);
 	    if($ruf[3] eq "-") {
 		$forward_read = reversecomplement($forward_read);
+		$bitscore_f = $bitscore_f + 16;
+		$bitscore_r = $bitscore_r + 32;
 	    }
-#	    print "$forward_read\n";
+	    print "$forward_read\n";
 	    if($rum_u_forward_length < $readlength) {
 		$prefix_offset_forward = 0;
 		$x = $forward_read;
@@ -131,22 +158,23 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		until($x =~ /^$y/) {
 		    $x =~ s/^.//;
 		    $prefix_offset_forward++;
-#		    print " ";
+		    print " ";
 		}
 	    }
-#	    print "$ruf[4]\n";
-#	    print "rum_u_forward_length = $rum_u_forward_length\n";
+	    print "$ruf[4]\n";
 	}
 	if($rum_u_reverse =~ /\S/) {
-#	    print "rum_u_reverse = $rum_u_reverse\n";
+	    print "rum_u_reverse = $rum_u_reverse\n\n";
 	    @rur = split(/\t/,$rum_u_reverse);
 	    $rur[4] =~ s/://g;
 	    $rur[4] =~ s/\+//g;
 	    $rum_u_reverse_length = length($rur[4]);
 	    if($rur[3] eq "+") {
 		$reverse_read = reversecomplement($reverse_read);
+		$bitscore_r = $bitscore_r + 16;
+		$bitscore_f = $bitscore_f + 32;
 	    }
-#	    print "$reverse_read\n";
+	    print "$reverse_read\n";
 	    if($rum_u_reverse_length < $readlength) {
 		$prefix_offset_reverse = 0;
 		$x = $reverse_read;
@@ -154,14 +182,13 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		until($x =~ /^$y/) {
 		    $x =~ s/^.//;
 		    $prefix_offset_reverse++;
-#		    print " ";
+		    print " ";
 		}
 	    }
-#	    print "$rur[4]\n";
-#	    print "rum_u_reverse_length = $rum_u_reverse_length\n";
+	    print "$rur[4]\n";
+	    print "rum_u_reverse_length = $rum_u_reverse_length\n";
 	}
 	if($rum_u_joined =~ /\S/) {
-	    print "--------\n$seqnum\n";
 	    print "rum_u_joined = $rum_u_joined\n";
 	    @ruj = split(/\t/,$rum_u_joined);
 	    if($ruj[3] eq "-") {
@@ -199,12 +226,14 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$replace = $replace . "X";
 	    }
 	    $UR = $UR . $replace;
-
-
 	    if($ruj[3] eq "-") {
 		$downstream_read = reversecomplement($forward_read);
+		$bitscore_f = $bitscore_f + 16;
+		$bitscore_r = $bitscore_r + 32;
 	    } else {
 		$downstream_read = reversecomplement($reverse_read);
+		$bitscore_r = $bitscore_r + 16;
+		$bitscore_f = $bitscore_f + 32;
 	    }
 	    $x = $downstream_read;
 	    $y = $ruj[4];
@@ -255,6 +284,41 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    }
 	    print "$DR\n";
 	    print "\n$downstream_read\n";
+	}
+	print "bitscore_f = $bitscore_f\n";
+	print "bitscore_r = $bitscore_r\n";
+	print "seq.$seqnum";
+	print "a\t$bitscore_f";
+	if($rum_u_forward =~ /\S/ || $rum_u_joined =~ /\S/) {
+	    print "\t$ruf[1]";
+	    print "\n";
+	} else {
+	    print "\t*\t0\t0\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
+	}
+	if($rum_u_reverse =~ /\S/ || $rum_u_joined =~ /\S/) {
+	    print "seq.$seqnum";
+	    print "b\t$bitscore_r";
+	    print "\t$rur[1]";
+	    print "\n";
+	} else {
+	    if($paired eq "true") {
+		print "seq.$seqnum";
+		print "b\t$bitscore_r";
+		print "\t*\t0\t0\t*\t*\t0\t0\t$reverse_read\t$reverse_qual\n";
+	    }
+	}
+    }
+    if($non_unique_mappers_found eq "true") {
+
+    }    
+    if($unique_mapper_found eq "false" && $non_unique_mappers_found eq "false") {
+	print "seq.$seqnum";
+	print "a\t$bitscore_f";	
+	print "\t*\t0\t0\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
+	if($paired eq "true") {
+	    print "seq.$seqnum";
+	    print "b\t$bitscore_r";
+	    print "\t*\t0\t0\t*\t*\t0\t0\t$reverse_read\t$reverse_qual\n";
 	}
     }
 }
