@@ -28,7 +28,6 @@ $firstseqnum = $1;
 $line = <INFILE>;
 chomp($line);
 $readlength = length($line);
-print "readlength = $readlength\n";
 $line = <INFILE>;
 chomp($line);
 $line =~ /seq.\d+(.)/;
@@ -92,16 +91,20 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
     $non_unique_mappers_found = "false";
     while($flag == 0) {
 	$line = <RUMU>;
+	print $line;
 	chomp($line);
-	$line =~ /seq.(\d+)(.)/;
-	$sn = $1;
-	$type = $2;
+	$type = "";
+	if($line =~ /seq.(\d+)(.)/) {
+	    $sn = $1;
+	    $type = $2;
+	}
 	if($sn == $seqnum && $type eq "a") {
 	    $rum_u_forward = $line;
 	    $unique_mapper_found = "true";
 	}
 	if($sn == $seqnum && $type eq "b") {
 	    $rum_u_reverse = $line;
+	    print "here x\n";
 	    $unique_mapper_found = "true";
 	}
 	if($sn == $seqnum && $type eq "\t") {
@@ -113,7 +116,13 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    seek(RUMU, $len, 1);
 	    $flag = 1;
 	}
+	if($line eq '') {
+	    $flag = 1;
+	}
     }
+    print "unique_mapper_found = $unique_mapper_found\n";
+    print "non_unique_mappers_found = $non_unique_mappers_found\n";
+
     if($unique_mapper_found eq "false" && $non_unique_mappers_found eq "false") {
 	# handle case here where neither read mapped anywhere
     }
@@ -144,6 +153,11 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    print "rum_u_forward = $rum_u_forward\n\n";
 	    @ruf = split(/\t/,$rum_u_forward);
 	    $ruf[4] =~ s/://g;
+	    @PL = split(/\+/,$ruf[4]);
+	    $piecelength[0] = length($PL[0]);
+	    for($pl=1; $pl<@PL; $pl++) {
+		$piecelength[$pl] = length($PL[$pl]) + $piecelength[$pl-1];
+	    }
 	    $ruf[4] =~ s/\+//g;
 	    $rum_u_forward_length = length($ruf[4]);
 	    if($ruf[3] eq "-") {
@@ -164,14 +178,26 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    }
 	    print "$ruf[4]\n\n";
 	    $CIGAR_f = "";
+	    $insertions_finished = 0;
 	    if($prefix_offset_forward > 0) {
 		$CIGAR_f = $prefix_offset_forward . "S";
 	    }
 	    @aspans = split(/, /,$ruf[2]);
 	    @C1 = split(/-/,$aspans[0]);
 	    $L = $C1[1] - $C1[0] + 1;
-	    $CIGAR_f = $CIGAR_f . $L . "M";
-	    $running_length = $L;
+	    $running_length = 0;
+	    # code for insertions follows
+	    print "piecelength[$insertions_finished*2] = $piecelength[$insertions_finished*2]\n";
+	    if($running_length+$L >= $piecelength[$insertions_finished*2]) {
+		$pref_length = $piecelength[$insertions_finished*2] - $running_length;
+		$insertion_length = $piecelength[$insertions_finished*2+1] - $piecelength[$insertions_finished*2];
+		$suff_length = $piecelength[$insertions_finished*2+2] - $piecelength[$insertions_finished*2+1];
+		$CIGAR_f = $CIGAR_f . $pref_length . "M" . $insertion_length . "I" . $suff_length . "M";
+		$running_length = $running_length + $insertion_length;
+	    } else {
+		$CIGAR_f = $CIGAR_f . $L . "M";
+	    }
+	    $running_length = $running_length + $L;
 	    for($i=1; $i<@aspans; $i++) {
 		@C2 = split(/-/,$aspans[$i]);
 		$skipped = $C2[0] - $C1[1] - 1;
@@ -181,7 +207,17 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    $CIGAR_f = $CIGAR_f . $skipped . "D";
 		}
 		$L = $C2[1] - $C2[0] + 1;
-		$CIGAR_f = $CIGAR_f . $L . "M";
+		# code for insertions follows
+		print "piecelength[$insertions_finished*2] = $piecelength[$insertions_finished*2]\n";
+		if($running_length+$L >= $piecelength[$insertions_finished*2]) {
+		    $pref_length = $piecelength[$insertions_finished*2] - $running_length;
+		    $insertion_length = $piecelength[$insertions_finished*2+1] - $piecelength[$insertions_finished*2];
+		    $suff_length = $running_length + $L - $piecelength[$insertions_finished*2+1];
+		    $CIGAR_f = $CIGAR_f . $pref_length . "M" . $insertion_length . "I" . $suff_length . "M";
+		    $running_length = $running_length + $insertion_length;
+		} else {
+		    $CIGAR_f = $CIGAR_f . $L . "M";
+		}
 		$running_length = $running_length + $L;
 		$C1[0] = $C2[0];
 		$C1[1] = $C2[1];
@@ -387,134 +423,6 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    print "b\t$bitscore_r";
 	    print "\t*\t0\t0\t*\t*\t0\t0\t$reverse_read\t$reverse_qual\n";
 	}
-    }
-}
-
-while($flag == 1) {
-    @a = split(/\t/,$line1);
-    if($line1 =~ /seq.(\d+)a/) {
-	$seqnum_a = $1;
-	$line2 = <INFILE>;
-	chomp($line2);
-	@b = split(/\t/,$line2);	
-	if($line2 =~ /seq.(\d+)b/) {
-	    $seqnum_q = $1;
-	    if($seqnum_a == $seqnum_q) { # consistent pair found
-		$seqnum_b = $seqnum_q;
-		$seq_a = $a[4];
-		$seq_a =~ s/://g;
-		$seq_a =~ s/\+//g;
-		$seq_b = $b[4];
-		$seq_b =~ s/\+//g;
-		$a_insertion = "false";
-		if($a[4] =~ /\+/) {
-		    $a_insertion = "true";
-		    if($a[4] =~ /^([^+]*)\+([^+]*)\+/) {
-			$a_prefix = $1;
-			$a_insert = $2;
-			$a_prefix_length = length($a_prefix);
-			$a_insert_length = length($a_insert);
-		    }			
-		}
-		$b_insertion = "false";
-		if($b[4] =~ /\+/) {
-		    $b_insertion = "true";
-		    if($b[4] =~ /^([^+]*)\+([^+]*)\+/) {
-			$b_prefix = $1;
-			$b_insert = $2;
-			$b_prefix_length = length($b_prefix);
-			$b_insert_length = length($b_insert);
-		    }			
-		}
-		$alignment_length_a = length($seq_a);
-		$alignment_length_b = length($seq_b);
-		if($alignment_length_a == $readlength && $alignment_length_b == $readlength) {
-		    $strand = $a[3];
-		    $BITFLAGa = 67;
-		    $BITFLAGb =131;
-		    if($strand eq '-') {
-			$BITFLAGa = $BITFLAGa + 16;
-			$BITFLAGb = $BITFLAGb + 32;
-		    } else {
-			$BITFLAGa = $BITFLAGa + 32;
-			$BITFLAGb = $BITFLAGb + 16;
-		    }
-		    $a[2] =~ /^(\d+)/;
-		    $forward_start = $1;
-		    $b[2] =~ /^(\d+)/;
-		    $reverse_start = $1;
-		    print "$a[0]\t$BITFLAGa\t$a[1]\t$forward_start\t255\t";
-		    @aspans = split(/, /,$a[2]);
-		    @C1 = split(/-/,$aspans[0]);
-		    $L = $C1[1] - $C1[0] + 1;
-		    $CIGAR = $L . "M";
-		    $running_length = $L;
-		    for($i=1; $i<@aspans; $i++) {
-			@C2 = split(/-/,$aspans[$i]);
-			$skipped = $C2[0] - $C1[1] - 1;
-			if($skipped >= 15) {
-			    $CIGAR = $CIGAR . $skipped . "N";
-			} else {
-			    $CIGAR = $CIGAR . $skipped . "D";
-			}
-			$L = $C2[1] - $C2[0] + 1;
-			$CIGAR = $CIGAR . $L . "M";
-			$running_length = $running_length + $L;
-			$C1[0] = $C2[0];
-			$C1[1] = $C2[1];
-		    }
-		    if($strand eq "+") {
-			$b[2] =~ /-(\d+)$/;
-			$reverse_end = $1;
-			$ilen = $reverse_end - $forward_start;
-		    } else {
-			$a[2] =~ /-(\d+)$/;
-			$forward_end = $1;
-			$ilen = $reverse_start - $forward_end;
-		    }
-		    print $CIGAR . "\t=\t$reverse_start\t$ilen\t$seq_a\t";
-		    for($i=0; $i<$alignment_length_a; $i++) {
-			print "h";
-		    }
-		    print "\n";
-
-		    print "$b[0]\t$BITFLAGb\t$a[1]\t$reverse_start\t255\t";
-		    @bspans = split(/, /,$b[2]);
-		    @C1 = split(/-/,$bspans[0]);
-		    $L = $C1[1] - $C1[0] + 1;
-		    $CIGAR = $L . "M";
-		    for($i=1; $i<@bspans; $i++) {
-			@C2 = split(/-/,$bspans[$i]);
-			$skipped = $C2[0] - $C1[1] - 1;
-			if($skipped >= 15) {
-			    $CIGAR = $CIGAR . $skipped . "N";
-			} else {
-			    $CIGAR = $CIGAR . $skipped . "D";
-			}
-			$L = $C2[1] - $C2[0] + 1;
-			$CIGAR = $CIGAR . $L . "M";
-			$C1[0] = $C2[0];
-			$C1[1] = $C2[1];
-		    }
-		    $ilen = -1 * $ilen;
-		    print $CIGAR . "\t=\t$reverse_start\t$ilen\t$seq_b\t";
-		    for($i=0; $i<$alignment_length_b; $i++) {
-			print "h";
-		    }
-		    print "\n";
-		}
-		$line1 = <INFILE>;
-		chomp($line1);
-	    } else { # only forward exists
-		$line1 = $line2;
-	    }
-	}
-    } else { # only reverse exists
-	$line1 = <INFILE>;
-	chomp($line1);
-    }
-    if($line1 eq '') {
-	$flag = 0;
     }
 }
 
