@@ -150,6 +150,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $bitscore_r = $bitscore_r + 2;
 	}
 	if($rum_u_forward =~ /\S/) {
+	    undef @piecelength;
 	    print "rum_u_forward = $rum_u_forward\n\n";
 	    @ruf = split(/\t/,$rum_u_forward);
 	    $ruf[4] =~ s/://g;
@@ -188,12 +189,13 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $running_length = 0;
 	    # code for insertions follows
 	    print "piecelength[$insertions_finished*2] = $piecelength[$insertions_finished*2]\n";
-	    if($running_length+$L >= $piecelength[$insertions_finished*2]) {
+	    if($running_length+$L > $piecelength[$insertions_finished*2]) {
 		$pref_length = $piecelength[$insertions_finished*2] - $running_length;
 		$insertion_length = $piecelength[$insertions_finished*2+1] - $piecelength[$insertions_finished*2];
 		$suff_length = $piecelength[$insertions_finished*2+2] - $piecelength[$insertions_finished*2+1];
 		$CIGAR_f = $CIGAR_f . $pref_length . "M" . $insertion_length . "I" . $suff_length . "M";
 		$running_length = $running_length + $insertion_length;
+		$insertions_finished++;
 	    } else {
 		$CIGAR_f = $CIGAR_f . $L . "M";
 	    }
@@ -215,6 +217,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    $suff_length = $running_length + $L - $piecelength[$insertions_finished*2+1];
 		    $CIGAR_f = $CIGAR_f . $pref_length . "M" . $insertion_length . "I" . $suff_length . "M";
 		    $running_length = $running_length + $insertion_length;
+		    $insertions_finished++;
 		} else {
 		    $CIGAR_f = $CIGAR_f . $L . "M";
 		}
@@ -228,9 +231,15 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    }
 	}
 	if($rum_u_reverse =~ /\S/) {
+	    undef @piecelength;
 	    print "rum_u_reverse = $rum_u_reverse\n\n";
 	    @rur = split(/\t/,$rum_u_reverse);
 	    $rur[4] =~ s/://g;
+	    @PL = split(/\+/,$rur[4]);
+	    $piecelength[0] = length($PL[0]);
+	    for($pl=1; $pl<@PL; $pl++) {
+		$piecelength[$pl] = length($PL[$pl]) + $piecelength[$pl-1];
+	    }
 	    $rur[4] =~ s/\+//g;
 	    $rum_u_reverse_length = length($rur[4]);
 	    if($rur[3] eq "+") {
@@ -252,14 +261,27 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    print "$rur[4]\n\n";
 
 	    $CIGAR_r = "";
+	    $insertions_finished = 0;
 	    if($prefix_offset_reverse > 0) {
 		$CIGAR_r = $prefix_offset_reverse . "S";
 	    }
 	    @bspans = split(/, /,$rur[2]);
 	    @C1 = split(/-/,$bspans[0]);
 	    $L = $C1[1] - $C1[0] + 1;
-	    $CIGAR_r = $CIGAR_r . $L . "M";
-	    $running_length = $L;
+	    $running_length = 0;
+	    # code for insertions follows
+	    print "piecelength[$insertions_finished*2] = $piecelength[$insertions_finished*2]\n";
+	    if($running_length+$L > $piecelength[$insertions_finished*2]) {
+		$pref_length = $piecelength[$insertions_finished*2] - $running_length;
+		$insertion_length = $piecelength[$insertions_finished*2+1] - $piecelength[$insertions_finished*2];
+		$suff_length = $piecelength[$insertions_finished*2+2] - $piecelength[$insertions_finished*2+1];
+		$CIGAR_r = $CIGAR_r . $pref_length . "M" . $insertion_length . "I" . $suff_length . "M";
+		$running_length = $running_length + $insertion_length;
+		$insertions_finished++;
+	    } else {
+		$CIGAR_r = $CIGAR_r . $L . "M";
+	    }
+	    $running_length = $running_length + $L;
 	    for($i=1; $i<@bspans; $i++) {
 		@C2 = split(/-/,$bspans[$i]);
 		$skipped = $C2[0] - $C1[1] - 1;
@@ -269,7 +291,18 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    $CIGAR_r = $CIGAR_r . $skipped . "D";
 		}
 		$L = $C2[1] - $C2[0] + 1;
-		$CIGAR_r = $CIGAR_r . $L . "M";
+		# code for insertions follows
+		print "piecelength[$insertions_finished*2] = $piecelength[$insertions_finished*2]\n";
+		if($running_length+$L >= $piecelength[$insertions_finished*2]) {
+		    $pref_length = $piecelength[$insertions_finished*2] - $running_length;
+		    $insertion_length = $piecelength[$insertions_finished*2+1] - $piecelength[$insertions_finished*2];
+		    $suff_length = $running_length + $L - $piecelength[$insertions_finished*2+1];
+		    $CIGAR_r = $CIGAR_r . $pref_length . "M" . $insertion_length . "I" . $suff_length . "M";
+		    $running_length = $running_length + $insertion_length;
+		    $insertions_finished++;
+		} else {
+		    $CIGAR_r = $CIGAR_r . $L . "M";
+		}
 		$running_length = $running_length + $L;
 		$C1[0] = $C2[0];
 		$C1[1] = $C2[1];
