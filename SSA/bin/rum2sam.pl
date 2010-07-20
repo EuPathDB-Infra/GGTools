@@ -91,7 +91,6 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
     $non_unique_mappers_found = "false";
     while($flag == 0) {
 	$line = <RUMU>;
-	print $line;
 	chomp($line);
 	$type = "";
 	if($line =~ /seq.(\d+)(.)/) {
@@ -104,7 +103,6 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	}
 	if($sn == $seqnum && $type eq "b") {
 	    $rum_u_reverse = $line;
-	    print "here x\n";
 	    $unique_mapper_found = "true";
 	}
 	if($sn == $seqnum && $type eq "\t") {
@@ -120,8 +118,6 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $flag = 1;
 	}
     }
-    print "unique_mapper_found = $unique_mapper_found\n";
-    print "non_unique_mappers_found = $non_unique_mappers_found\n";
 
     if($unique_mapper_found eq "false" && $non_unique_mappers_found eq "false") {
 	# handle case here where neither read mapped anywhere
@@ -167,8 +163,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$bitscore_r = $bitscore_r + 32;
 	    }
 	    print "$forward_read\n";
+	    $prefix_offset_forward = 0;
 	    if($rum_u_forward_length < $readlength) {
-		$prefix_offset_forward = 0;
 		$x = $forward_read;
 		$y = $ruf[4];
 		until($x =~ /^$y/) {
@@ -188,7 +184,6 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $L = $C1[1] - $C1[0] + 1;
 	    $running_length = 0;
 	    # code for insertions follows
-	    print "piecelength[$insertions_finished*2] = $piecelength[$insertions_finished*2]\n";
 	    if($running_length+$L > $piecelength[$insertions_finished*2]) {
 		$pref_length = $piecelength[$insertions_finished*2] - $running_length;
 		$insertion_length = $piecelength[$insertions_finished*2+1] - $piecelength[$insertions_finished*2];
@@ -210,8 +205,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		}
 		$L = $C2[1] - $C2[0] + 1;
 		# code for insertions follows
-		print "piecelength[$insertions_finished*2] = $piecelength[$insertions_finished*2]\n";
-		if($running_length+$L >= $piecelength[$insertions_finished*2]) {
+		if($running_length+$L > $piecelength[$insertions_finished*2]) {
 		    $pref_length = $piecelength[$insertions_finished*2] - $running_length;
 		    $insertion_length = $piecelength[$insertions_finished*2+1] - $piecelength[$insertions_finished*2];
 		    $suff_length = $running_length + $L - $piecelength[$insertions_finished*2+1];
@@ -248,8 +242,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$bitscore_f = $bitscore_f + 32;
 	    }
 	    print "$reverse_read\n";
+	    $prefix_offset_reverse = 0;
 	    if($rum_u_reverse_length < $readlength) {
-		$prefix_offset_reverse = 0;
 		$x = $reverse_read;
 		$y = $rur[4];
 		until($x =~ /^$y/) {
@@ -293,7 +287,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$L = $C2[1] - $C2[0] + 1;
 		# code for insertions follows
 		print "piecelength[$insertions_finished*2] = $piecelength[$insertions_finished*2]\n";
-		if($running_length+$L >= $piecelength[$insertions_finished*2]) {
+		if($running_length+$L > $piecelength[$insertions_finished*2]) {
 		    $pref_length = $piecelength[$insertions_finished*2] - $running_length;
 		    $insertion_length = $piecelength[$insertions_finished*2+1] - $piecelength[$insertions_finished*2];
 		    $suff_length = $running_length + $L - $piecelength[$insertions_finished*2+1];
