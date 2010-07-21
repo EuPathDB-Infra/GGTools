@@ -125,10 +125,16 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
     print "--------\n";
     if($unique_mapper_found eq "true") {
 #	print "--------\n$seqnum\n";
+	$bitscore_f = 0;
+	$bitscore_r = 0;
 	if($paired eq "true") {
 	    $bitscore_f = 65;
 	    $bitscore_r = 129;
 	    if(!($rum_u_joined =~ /\S/)) {
+		if(!($rum_u_forward =~ /\S/) && !($rum_u_reverse =~ /\S/)) {
+		    $bitscore_r = $bitscore_r + 12;
+		    $bitscore_f = $bitscore_f + 12;
+		}
 		if($rum_u_forward =~ /\S/ && !($rum_u_reverse =~ /\S/)) {
 		    $bitscore_r = $bitscore_r + 4;
 		    $bitscore_f = $bitscore_f + 8;
@@ -161,6 +167,9 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$forward_read = reversecomplement($forward_read);
 		$bitscore_f = $bitscore_f + 16;
 		$bitscore_r = $bitscore_r + 32;
+		if(!($rum_u_reverse =~ /\S/)) {
+		    $bitscore_r = $bitscore_r + 16;
+		}
 	    }
 	    print "$forward_read\n";
 	    $prefix_offset_forward = 0;
@@ -240,6 +249,9 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$reverse_read = reversecomplement($reverse_read);
 		$bitscore_r = $bitscore_r + 16;
 		$bitscore_f = $bitscore_f + 32;
+		if(!($rum_u_forward =~ /\S/)) {
+		    $bitscore_f = $bitscore_f + 16;
+		}
 	    }
 	    print "$reverse_read\n";
 	    $prefix_offset_reverse = 0;
@@ -417,38 +429,53 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	} else {
 	    $start_reverse = "*";
 	}
-	if($rum_u_forward =~ /\S/ || $rum_u_joined =~ /\S/) {
-	    print "\t$ruf[1]\t$start_forward\t255\t$CIGAR_f";
-	} else {
-	    print "\t*\t0\t0\t*\t*\t0\t0\t$forward_read\t$forward_qual";
+	if(!($rum_u_forward =~ /\S/) && $rum_u_reverse =~ /\S/) {
+	    print "\t$rur[1]\t$start_reverse\t255\t*\t=\t$start_reverse\t0\t$forward_read\t$forward_qual";
 	}
-	print "\n";
-	if($rum_u_reverse =~ /\S/ || $rum_u_joined =~ /\S/) {
-	    print "seq.$seqnum";
-	    print "b\t$bitscore_r";
-	    print "\t$rur[1]\t$start_reverse\t255\t$CIGAR_r";
-	    print "\n";
-	} else {
-	    if($paired eq "true") {
-		print "seq.$seqnum";
-		print "b\t$bitscore_r";
-		print "\t*\t0\t0\t*\t*\t0\t0\t$reverse_read\t$reverse_qual";
+	$idist = 0;
+	if($rum_u_forward =~ /\S/ || $rum_u_joined =~ /\S/) {
+	    print "\t$ruf[1]\t$start_forward\t255\t$CIGAR_f\t=";
+	    if($rum_u_reverse =~ /\S/ && $paired eq "true") {
+		$idist = $end_reverse - $start_forward;
+		print "\t$start_reverse\t$idist\t$forwad_read\t$forward_qual";
+	    } else {
+		print "\t$start_forward\t0\t$forward_read\t$forward_qual";
 	    }
 	}
 	print "\n";
+	if($paired eq "true") {
+	    print "seq.$seqnum";
+	    print "b\t$bitscore_r";
+	}
+	if($paired eq "true" && !($rum_u_reverse =~ /\S/) && $rum_u_forward =~ /\S/) {
+	    print "\t$ruf[1]\t$start_forward\t255\t*\t=\t$start_forward\t0\t$reverse_read\t$reverse_qual";
+	}
+	if($rum_u_reverse =~ /\S/ || $rum_u_joined =~ /\S/) {
+	    print "\t$rur[1]\t$start_reverse\t255\t$CIGAR_r\t=";
+	    if($rum_u_forward =~ /\S/) {
+		$idist = -1 * $idist;
+		print "\t$start_forward\t$idist\t$reverse_read\t$reverse_qual";
+	    } else {
+		print "\t$start_reverse\t0\t$reverse_read\t$reverse_qual";		
+	    }
+	}
+	if($paired eq "true") {
+	    print "\n";
+	}
     }
     if($non_unique_mappers_found eq "true") {
 
     }    
     if($unique_mapper_found eq "false" && $non_unique_mappers_found eq "false") {
 	# neither forward nor reverse map
-	print "seq.$seqnum";
-	print "a\t$bitscore_f";	
-	print "\t*\t0\t0\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
-	if($paired eq "true") {
+	if($paired eq "false") {
 	    print "seq.$seqnum";
-	    print "b\t$bitscore_r";
-	    print "\t*\t0\t0\t*\t*\t0\t0\t$reverse_read\t$reverse_qual\n";
+	    print "a\t4\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
+	} else {
+	    print "seq.$seqnum";
+	    print "a\t77\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
+	    print "seq.$seqnum";
+	    print "a\t141\t*\t0\t255\t*\t*\t0\t0\t$reverse_read\t$reverse_qual\n";
 	}
     }
 }
