@@ -227,7 +227,7 @@ for($seqnum=1; $seqnum<=$num_seqs; $seqnum++) {
     if($paired_end eq "false") {
 	if($num_different_a > 1) { 
 	    foreach $key (keys %a_reads) {
-		$key =~ /^\t[^\t]+\t(.)\t/;
+		$key =~ /^[^\t]+\t(.)\t/;
 		$strand = $1;
 		$key =~ s/\t\+//;
 		$key =~ s/\t-//;
