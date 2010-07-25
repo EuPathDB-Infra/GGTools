@@ -77,11 +77,6 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	$reverse_qual = <QUALS>;
 	chomp($reverse_qual);
     }
-#    print "------\n$seqnum\n";
-#    print "forward_read = $forward_read\n";
-#    print "forward_qual = $forward_qual\n";
-#    print "reverse_read = $reverse_read\n";
-#    print "reverse_qual = $reverse_qual\n";
 
     $flag = 0;
     $rum_u_forward = "";
@@ -119,12 +114,10 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	}
     }
 
-    if($unique_mapper_found eq "false" && $non_unique_mappers_found eq "false") {
-	# handle case here where neither read mapped anywhere
-    }
-#    print "--------\n";
     if($unique_mapper_found eq "true") {
-#	print "--------\n$seqnum\n";
+
+	# SET THE BITSCORE
+
 	$bitscore_f = 0;
 	$bitscore_r = 0;
 	if($paired eq "true") {
@@ -151,7 +144,11 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $bitscore_f = $bitscore_f + 2;
 	    $bitscore_r = $bitscore_r + 2;
 	}
+
 	if($rum_u_forward =~ /\S/) {
+
+	    # FORWARD MAPPED AND NOT JOINED WITH REVERSE, GATHER INFO
+
 	    undef @piecelength;
 #	    print "rum_u_forward = $rum_u_forward\n\n";
 	    @ruf = split(/\t/,$rum_u_forward);
@@ -233,7 +230,11 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$CIGAR_f = $CIGAR_f . $right_clip_size_f . "S";
 	    }
 	}
+
 	if($rum_u_reverse =~ /\S/) {
+
+	    # REVERSE MAPPED, AND NOT JOINED WITH FORWARD, GATHER INFO
+
 	    undef @piecelength;
 #	    print "rum_u_reverse = $rum_u_reverse\n\n";
 	    @rur = split(/\t/,$rum_u_reverse);
@@ -319,7 +320,19 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    }
 	}
 	if($rum_u_joined =~ /\S/) {
-#	    print "rum_u_joined = $rum_u_joined\n";
+
+	    # FORWARD AND REVERSE MAPPED, AND THEY ARE JOINED, GATHER INFO
+
+	    print "---------------\nrum_u_joined = $rum_u_joined\n";
+	    undef @piecelength;
+	    @ruj = split(/\t/,$rum_u_joined);
+	    $ruj[4] =~ s/://g;
+	    @PL = split(/\+/,$ruj[4]);
+	    $piecelength[0] = length($PL[0]);
+	    for($pl=1; $pl<@PL; $pl++) {
+		$piecelength[$pl] = length($PL[$pl]) + $piecelength[$pl-1];
+	    }
+
 	    @ruj = split(/\t/,$rum_u_joined);
 	    if($ruj[3] eq "-") {
 		$upstream_read = $reverse_read;
@@ -356,6 +369,16 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$replace = $replace . "X";
 	    }
 	    $UR = $UR . $replace;
+
+	    $plen = $readlength - $prefix_offset_upstream - $suffix_offset_upstream;
+	    $pl=0;
+	    while($piecelength[$pl] + $prefix_offset_upstream < $readlength - $suffix_offset_upstream) {
+		$plen = $plen - ($piecelength[$pl+1] - $piecelength[$pl]);
+		$pl=$pl+2;
+	    }
+	    $upstream_spans = &getprefix($ruj[2], $plen);
+	    print "upstream_spans = $upstream_spans\n";
+
 	    if($ruj[3] eq "-") {
 		$downstream_read = reversecomplement($forward_read);
 		$bitscore_f = $bitscore_f + 16;
@@ -372,8 +395,6 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $count=0;
 	    $prefix_offset_downstream = 0;
 	    until($y =~ /$x$/) {
-#		print "x=$x\n";
-#		print "y=$y\n";
 		$x =~ s/.$//;
 		$count++;
 		$suffix_offset_downstream++;
@@ -395,29 +416,54 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$replace = $replace . "X";
 	    }
 	    $DR = $replace . $DR;
+
 	    $offset = length($ruj[4]) + $prefix_offset_upstream + $suffix_offset_downstream - length($DR);
-#	    print "\n$upstream_read\n\n";
 	    $OFFSET = $prefix_offset_upstream + $readlength - length($ruj[4]) - $suffix_offset_downstream;
 	    $P = "";
 	    for($i=0; $i<$OFFSET; $i++) {
 		$P = $P . " ";
 	    }
-#	    print $P;
-#	    print "$UR\n";
-#	    print $P;
+
+	    print "prefix_offset_downstream = $prefix_offset_downstream\n";
+	    print "suffix_offset_downstream = $suffix_offset_downstream\n";
+	    print "readlength = $readlength\n";
+	    if($OFFSET < 0) {
+		$OFFSET = 0;
+	    }
+	    print "OFFSET = $OFFSET\n";
+	    print "piecelength[0] = $piecelength[0]\n";
+
+	    $plen = $readlength - $prefix_offset_downstream - $suffix_offset_downstream;
+	    print "plen=$plen\n";
+	    $pl=0;
+	    while($piecelength[$pl] + $OFFSET <= $readlength - $suffix_offset_downstream && $pl < @piecelength-1) {
+		$plen = $plen - ($piecelength[$pl+1] - $piecelength[$pl]);
+		$pl=$pl+2;
+	    }
+	    print "plen=$plen\n";
+	    $downstream_spans = &getsuffix($ruj[2], $plen);
+	    print "downstream_spans = $downstream_spans\n";
+
+	    print "\n$upstream_read\n\n";
+	    print $P;
+	    print "$UR\n";
+	    print $P;
 	    for($i=0; $i<$prefix_offset_upstream; $i++) {
-#		print " ";
+		print " ";
 	    }
-#	    print "$ruj[4]\n";
+	    print "$ruj[4]\n";
 	    for($i=0; $i<$offset; $i++) {
-#		print " ";
+		print " ";
 	    }
-#	    print "$DR\n";
-#	    print "\n$downstream_read\n";
+	    print "$DR\n";
+	    print "\n$downstream_read\n";
+
 	}
 
 #	print "bitscore_f = $bitscore_f\n";
 #	print "bitscore_r = $bitscore_r\n";
+
+# COMPUTE IDIST
 
 	$idist = 0;
 	if(!($rum_u_joined =~ /\S/)) {
@@ -456,59 +502,136 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 
 # FORWARD:
 
-	print "seq.$seqnum";
-	print "a\t$bitscore_f";
+	$forward_record = "";
+	$forward_record = $forward_record . "seq.$seqnum";
+	$forward_record = $forward_record . "a\t$bitscore_f";
 
 	if(!($rum_u_forward =~ /\S/) && $rum_u_reverse =~ /\S/) { # forward unmapped, reverse mapped
-	    print "\t$rur[1]\t$start_reverse\t255\t*\t=\t$start_reverse\t0\t$forward_read\t$forward_qual";
+	    $forward_record = $forward_record . "\t$rur[1]\t$start_reverse\t255\t*\t=\t$start_reverse\t0\t$forward_read\t$forward_qual";
 	}
 	if($rum_u_forward =~ /\S/ || $rum_u_joined =~ /\S/) { # forward mapped
-	    print "\t$ruf[1]\t$start_forward\t255\t$CIGAR_f\t";
+	    $forward_record = $forward_record . "\t$ruf[1]\t$start_forward\t255\t$CIGAR_f\t";
 	    if($paired eq "true") {
 		if($rum_u_reverse =~ /\S/) { # paired and reverse mapped
-		    print "=\t$start_reverse\t$idist\t$forward_read\t$forward_qual";
+		    $forward_record = $forward_record . "=\t$start_reverse\t$idist\t$forward_read\t$forward_qual";
 		} else { # reverse didn't map
-		    print "=\t$start_forward\t0\t$forward_read\t$forward_qual";
+		    $forward_record = $forward_record . "=\t$start_forward\t0\t$forward_read\t$forward_qual";
 		}
 	    } else { # not paired end
-		print "*\t0\t0\t$forward_read\t$forward_qual";
+		$forward_record = $forward_record . "*\t0\t0\t$forward_read\t$forward_qual";
 	    }
 	}
-	print "\n";
+	$forward_record = $forward_record . "\n";
+#	print $forward_record;
 
 # REVERSE
 
 	if($paired eq "true") {
-	    print "seq.$seqnum";
-	    print "b\t$bitscore_r";
+	    $reverse_record = "";
+	    $reverse_record = $reverse_record . "seq.$seqnum";
+	    $reverse_record = $reverse_record . "b\t$bitscore_r";
 	    if(!($rum_u_reverse =~ /\S/) && $rum_u_forward =~ /\S/) {  # reverse unmapped, forward mapped
-		print "\t$ruf[1]\t$start_forward\t255\t*\t=\t$start_forward\t0\t$reverse_read\t$reverse_qual";
+		$reverse_record = $reverse_record . "\t$ruf[1]\t$start_forward\t255\t*\t=\t$start_forward\t0\t$reverse_read\t$reverse_qual";
 	    }
 	    if($rum_u_reverse =~ /\S/ || $rum_u_joined =~ /\S/) { # reverse mapped
-		print "\t$rur[1]\t$start_reverse\t255\t$CIGAR_r\t=";
+		$reverse_record = $reverse_record . "\t$rur[1]\t$start_reverse\t255\t$CIGAR_r\t=";
 		if($rum_u_forward =~ /\S/) { # forward mapped
 		    $idist = -1 * $idist;
-		    print "\t$start_forward\t$idist\t$reverse_read\t$reverse_qual";
+		    $reverse_record = $reverse_record . "\t$start_forward\t$idist\t$reverse_read\t$reverse_qual";
 		} else { # forward didn't map
-		    print "\t$start_reverse\t0\t$reverse_read\t$reverse_qual";		
+		    $reverse_record = $reverse_record . "\t$start_reverse\t0\t$reverse_read\t$reverse_qual";		
 		}
 	    }
-	    print "\n";
+	    $reverse_record = $reverse_record . "\n";
+#	    print $reverse_record;
 	}
     }
 
     if($unique_mapper_found eq "false" && $non_unique_mappers_found eq "false") {
 	# neither forward nor reverse map
 	if($paired eq "false") {
-	    print "seq.$seqnum";
-	    print "a\t4\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
+	    $record = "seq.$seqnum";
+	    $record = $record . "a\t4\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
+#	    print $record;
 	} else {
-	    print "seq.$seqnum";
-	    print "a\t77\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
-	    print "seq.$seqnum";
-	    print "a\t141\t*\t0\t255\t*\t*\t0\t0\t$reverse_read\t$reverse_qual\n";
+	    $record = "seq.$seqnum";
+	    $record = $record . "a\t77\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
+	    $record = $record . "seq.$seqnum";
+	    $record = $record . "b\t141\t*\t0\t255\t*\t*\t0\t0\t$reverse_read\t$reverse_qual\n";
+#	    print $record;
 	}
     }
+}
+
+sub getsuffix () {
+    ($spans, $suffixlength) = @_;
+
+    $prefixlength = &spansTotalLength($spans) - $suffixlength;
+    $newspans = "";
+    @OS = split(/, /, $spans);
+    $running_length=0;
+    for($os=0; $os<@OS; $os++) {
+	@B = split(/-/, $OS[$os]);
+	$running_length = $running_length + $B[1] - $B[0] + 1;
+	if($running_length >= $prefixlength) {
+	    $STRT = $B[1] - ($running_length - $prefixlength) + 1;
+	    $newspans = $STRT . "-" . $B[1];
+	    $BB = $B[1];
+	    $spans = $spans . ", ";
+	    $spans =~ s/^.*-$BB, //;
+	    if($spans =~ /\S/) {
+		$newspans = $newspans . ", " . $spans;
+	    }
+	    $newspans =~ s/^\s*,\s*//;
+	    $newspans =~ s/\s*,\s*$//;
+	    return $newspans;
+	}
+    }
+}
+
+sub getprefix () {
+    ($spans, $prefixlength) = @_;
+
+    print "spans = $spans\n";
+    print "prefixlength = $prefixlength\n";
+
+    $newspans = "";
+    @OS = split(/, /, $spans);
+    $running_length=0;
+    for($os=0; $os<@OS; $os++) {
+	@B = split(/-/, $OS[$os]);
+	$running_length = $running_length + $B[1] - $B[0] + 1;
+	print "running_length = $running_length\n";
+	if($running_length >= $prefixlength) {
+	    $END = $B[1] - ($running_length - $prefixlength);
+	    print "END = $END\n";
+	    if($newspans =~ /\S/) {
+		$newspans =  $newspans . ", " . $B[0] . "-" . $END;
+	    } else {
+		$newspans = $B[0] . "-" . $END;
+	    }
+	    $newspans =~ s/^\s*,\s*//;
+	    $newspans =~ s/\s*,\s*$//;
+	    return $newspans;
+	} else {
+	    if($newspans =~ /\S/) {
+		$newspans = $B[0] . "-" . $B[1];
+	    } else {
+		$newspans = $newspans . ", " . $B[0] . "-" . $B[1];
+	    }
+	}
+    }
+}
+
+sub spansTotalLength () {
+    ($spans) = @_;
+    @a = split(/, /,$spans);
+    $length = 0;
+    for($i=0; $i<@a; $i++) {
+	@b = split(/-/,$a[$i]);
+	$length = $length + $b[1] - $b[0] + 1;
+    }
+    return $length;
 }
 
 sub reversecomplement () {
@@ -548,3 +671,89 @@ sub reversecomplement () {
 
 #seq.5a  chr7    52636876-52636975       CAAAATCCCTGCCTTACCTGAGCCGACTGACCCTGCCACCACCTAGCCTGGCCAGCTGTGTCCTCCAAGCCGAGGTCAATGGCCAGCAGGGCATGCAGCC
 #seq.5b  chr7    52636995-52637094       AGTTGAGGAGCATAAGACATAGTGGGAAGGCCCAGAGCCCAGGCCTGTGATCAGGCAGGGCTGTTAAGAAGGCCAAAAAGTCCCTGTCCAGGTCCCAGCC
+
+sub getforwardinfo () {
+
+    undef @piecelength;
+#    print "rum_u_forward = $rum_u_forward\n\n";
+    @ruf = split(/\t/,$rum_u_forward);
+    $ruf[4] =~ s/://g;
+    @PL = split(/\+/,$ruf[4]);
+    $piecelength[0] = length($PL[0]);
+    for($pl=1; $pl<@PL; $pl++) {
+	$piecelength[$pl] = length($PL[$pl]) + $piecelength[$pl-1];
+    }
+    $ruf[4] =~ s/\+//g;
+    $rum_u_forward_length = length($ruf[4]);
+    if($ruf[3] eq "-") {
+	$forward_read = &reversecomplement($forward_read);
+	$bitscore_f = $bitscore_f + 16;
+	$bitscore_r = $bitscore_r + 32;
+	if(!($rum_u_reverse =~ /\S/)) {
+	    $bitscore_r = $bitscore_r + 16;
+	}
+    }
+#    print "$forward_read\n";
+    $prefix_offset_forward = 0;
+    if($rum_u_forward_length < $readlength) {
+	$x = $forward_read;
+	$y = $ruf[4];
+	until($x =~ /^$y/) {
+	    $x =~ s/^.//;
+	    $prefix_offset_forward++;
+#	    print " ";
+	}
+    }
+#    print "$ruf[4]\n\n";
+    $CIGAR_f = "";
+    $insertions_finished = 0;
+    if($prefix_offset_forward > 0) {
+	$CIGAR_f = $prefix_offset_forward . "S";
+    }
+    @aspans = split(/, /,$ruf[2]);
+    @C1 = split(/-/,$aspans[0]);
+    $L = $C1[1] - $C1[0] + 1;
+    $running_length = 0;
+    # code for insertions follows
+    if($running_length+$L > $piecelength[$insertions_finished*2]) {
+	$pref_length = $piecelength[$insertions_finished*2] - $running_length;
+	$insertion_length = $piecelength[$insertions_finished*2+1] - $piecelength[$insertions_finished*2];
+	$suff_length = $piecelength[$insertions_finished*2+2] - $piecelength[$insertions_finished*2+1];
+	$CIGAR_f = $CIGAR_f . $pref_length . "M" . $insertion_length . "I" . $suff_length . "M";
+	$running_length = $running_length + $insertion_length;
+	$insertions_finished++;
+    } else {
+	$CIGAR_f = $CIGAR_f . $L . "M";
+    }
+    $running_length = $running_length + $L;
+    for($i=1; $i<@aspans; $i++) {
+	@C2 = split(/-/,$aspans[$i]);
+	$skipped = $C2[0] - $C1[1] - 1;
+	if($skipped >= 15) {
+	    $CIGAR_f = $CIGAR_f . $skipped . "N";
+	} else {
+	    $CIGAR_f = $CIGAR_f . $skipped . "D";
+	}
+	$L = $C2[1] - $C2[0] + 1;
+	# code for insertions follows
+	if($running_length+$L > $piecelength[$insertions_finished*2]) {
+	    $pref_length = $piecelength[$insertions_finished*2] - $running_length;
+	    $insertion_length = $piecelength[$insertions_finished*2+1] - $piecelength[$insertions_finished*2];
+	    $suff_length = $running_length + $L - $piecelength[$insertions_finished*2+1];
+	    $CIGAR_f = $CIGAR_f . $pref_length . "M" . $insertion_length . "I" . $suff_length . "M";
+	    $running_length = $running_length + $insertion_length;
+	    $insertions_finished++;
+	} else {
+	    $CIGAR_f = $CIGAR_f . $L . "M";
+	}
+	$running_length = $running_length + $L;
+	$C1[0] = $C2[0];
+	$C1[1] = $C2[1];
+    }
+    $right_clip_size_f = $readlength - $running_length - $prefix_offset_forward;
+    if($right_clip_size_f > 0) {
+	$CIGAR_f = $CIGAR_f . $right_clip_size_f . "S";
+    }
+}
+
+
