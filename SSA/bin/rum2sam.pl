@@ -194,13 +194,21 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$UR =~ s/.$//;
 		$replace = $replace . "X";
 	    }
-	    $UR = $UR . $replace;
+#	    $UR = $UR . $replace;
 
 	    $plen = $readlength - $prefix_offset_upstream - $suffix_offset_upstream;
 	    $pl=0;
+	    $RC = 0;
 	    while($piecelength[$pl] + $prefix_offset_upstream < $readlength - $suffix_offset_upstream) {
 		$plen = $plen - ($piecelength[$pl+1] - $piecelength[$pl]);
+		substr($UR, $piecelength[$pl]+$RC, 0, "+");
+		$RC++;
+		substr($UR, $piecelength[$pl+1]+$RC, 0, "+");
+		$RC++;
 		$pl=$pl+2;
+	    }
+	    for($i=0; $i<$prefix_offset_upstream; $i++) {
+		$UR =~ s/^.//;
 	    }
 	    $upstream_spans = &getprefix($ruj[2], $plen);
 #	    print "upstream_spans = $upstream_spans\n";
@@ -241,7 +249,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$DR =~ s/^.//;
 		$replace = $replace . "X";
 	    }
-	    $DR = $replace . $DR;
+#	    $DR = $replace . $DR;
 
 	    $offset = length($ruj[4]) + $prefix_offset_upstream + $suffix_offset_downstream - length($DR);
 	    $OFFSET = $prefix_offset_upstream + $readlength - length($ruj[4]) - $suffix_offset_downstream;
@@ -255,8 +263,13 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 
 	    $plen = $readlength - $prefix_offset_downstream - $suffix_offset_downstream;
 	    $pl=0;
+	    $RC = 0;
 	    while($piecelength[$pl] + $OFFSET <= $readlength - $suffix_offset_downstream && $pl < @piecelength-1) {
 		$plen = $plen - ($piecelength[$pl+1] - $piecelength[$pl]);
+		substr($DR, $piecelength[$pl]+$RC, 0, "+");
+		$RC++;
+		substr($DR, $piecelength[$pl+1]+$RC, 0, "+");
+		$RC++;
 		$pl=$pl+2;
 	    }
 	    $downstream_spans = &getsuffix($ruj[2], $plen);
@@ -291,8 +304,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    $rvr =~ s/.$//;
 		}
 
-		$rum_u_forward = $seqnum . "a\t$ruj[1]\t" . $upstream_spans . "\t+\t" . $fwr;
-		$rum_u_reverse = $seqnum . "b\t$ruj[1]\t" . $downstream_spans . "\t+\t" . $rvr;
+		$rum_u_forward = $seqnum . "a\t$ruj[1]\t" . $upstream_spans . "\t+\t" . $UR;
+		$rum_u_reverse = $seqnum . "b\t$ruj[1]\t" . $downstream_spans . "\t+\t" . $DR;
 	    }
 	    if($ruj[3] eq "-") {
 		$fwr = &reversecomplement($forward_read);
@@ -335,10 +348,12 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $rum_u_forward_length = length($ruf[4]);
 	    if($ruf[3] eq "-") {
 		$forward_read = reversecomplement($forward_read);
-		$bitscore_f = $bitscore_f + 16;
-		$bitscore_r = $bitscore_r + 32;
-		if(!($rum_u_reverse =~ /\S/)) {
-		    $bitscore_r = $bitscore_r + 16;
+		if(!($rum_u_joined =~ /\S/)) {
+		    $bitscore_f = $bitscore_f + 16;
+		    $bitscore_r = $bitscore_r + 32;
+		    if(!($rum_u_reverse =~ /\S/)) {
+			$bitscore_r = $bitscore_r + 16;
+		    }
 		}
 	    }
 #	    print "forward_read = $forward_read\n";
@@ -423,10 +438,12 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $rum_u_reverse_length = length($rur[4]);
 	    if($rur[3] eq "+") {
 		$reverse_read = reversecomplement($reverse_read);
-		$bitscore_r = $bitscore_r + 16;
-		$bitscore_f = $bitscore_f + 32;
-		if(!($rum_u_forward =~ /\S/)) {
-		    $bitscore_f = $bitscore_f + 16;
+		if(!($rum_u_joined =~ /\S/)) {
+		    $bitscore_r = $bitscore_r + 16;
+		    $bitscore_f = $bitscore_f + 32;
+		    if(!($rum_u_forward =~ /\S/)) {
+			$bitscore_f = $bitscore_f + 16;
+		    }
 		}
 	    }
 #	    print "$reverse_read\n";
@@ -706,98 +723,3 @@ sub reversecomplement () {
     }
     return $rev;
 }
-
-
-# seq.1a  99      chrM:1-16299_strand=+   5920    46      100M    =       6068    248     CACTACCAGTGCTAGCCGCAGGCATTACTATACTACTAACAGACCGCAACCTAAACACAACTTTCTTTGATCCCGCTGGAGGAGGGGACCCAATTCTCTA    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa    XT:A:U  NM:i:0  SM:i:23 AM:i:23 X0:i:1  X1:i:1  XM:i:0  XO:i:0  XG:i:0  MD:Z:100        XA:Z:chr2:1-181748087_strand=+,-22444476,100M,1;
-
-# seq.1b  147     chrM:1-16299_strand=+   6068    46      100M    =       5920    -248    CCTCCCAGGATTTGGAATTATTTCACATGGAGTTACTTACTACTCCGGAAAAAAAGAACCTTTCGGCTATATAGGAATAGTATGAGCAATAATGTCTATT    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa    XT:A:U  NM:i:1  SM:i:23 AM:i:23 X0:i:1  X1:i:1  XM:i:1  XO:i:0  XG:i:0  MD:Z:29T70      XA:Z:chr2:1-181748087_strand=+,+22444328,100M,2;
-
-
-#seq.5a  chr7    52636876-52636975       CAAAATCCCTGCCTTACCTGAGCCGACTGACCCTGCCACCACCTAGCCTGGCCAGCTGTGTCCTCCAAGCCGAGGTCAATGGCCAGCAGGGCATGCAGCC
-#seq.5b  chr7    52636995-52637094       AGTTGAGGAGCATAAGACATAGTGGGAAGGCCCAGAGCCCAGGCCTGTGATCAGGCAGGGCTGTTAAGAAGGCCAAAAAGTCCCTGTCCAGGTCCCAGCC
-
-sub getforwardinfo () {
-
-    undef @piecelength;
-#    print "rum_u_forward = $rum_u_forward\n\n";
-    @ruf = split(/\t/,$rum_u_forward);
-    $ruf[4] =~ s/://g;
-    @PL = split(/\+/,$ruf[4]);
-    $piecelength[0] = length($PL[0]);
-    for($pl=1; $pl<@PL; $pl++) {
-	$piecelength[$pl] = length($PL[$pl]) + $piecelength[$pl-1];
-    }
-    $ruf[4] =~ s/\+//g;
-    $rum_u_forward_length = length($ruf[4]);
-    if($ruf[3] eq "-") {
-	$forward_read = &reversecomplement($forward_read);
-	$bitscore_f = $bitscore_f + 16;
-	$bitscore_r = $bitscore_r + 32;
-	if(!($rum_u_reverse =~ /\S/)) {
-	    $bitscore_r = $bitscore_r + 16;
-	}
-    }
-#    print "$forward_read\n";
-    $prefix_offset_forward = 0;
-    if($rum_u_forward_length < $readlength) {
-	$x = $forward_read;
-	$y = $ruf[4];
-	until($x =~ /^$y/) {
-	    $x =~ s/^.//;
-	    $prefix_offset_forward++;
-#	    print " ";
-	}
-    }
-#    print "$ruf[4]\n\n";
-    $CIGAR_f = "";
-    $insertions_finished = 0;
-    if($prefix_offset_forward > 0) {
-	$CIGAR_f = $prefix_offset_forward . "S";
-    }
-    @aspans = split(/, /,$ruf[2]);
-    @C1 = split(/-/,$aspans[0]);
-    $L = $C1[1] - $C1[0] + 1;
-    $running_length = 0;
-    # code for insertions follows
-    if($running_length+$L > $piecelength[$insertions_finished*2]) {
-	$pref_length = $piecelength[$insertions_finished*2] - $running_length;
-	$insertion_length = $piecelength[$insertions_finished*2+1] - $piecelength[$insertions_finished*2];
-	$suff_length = $piecelength[$insertions_finished*2+2] - $piecelength[$insertions_finished*2+1];
-	$CIGAR_f = $CIGAR_f . $pref_length . "M" . $insertion_length . "I" . $suff_length . "M";
-	$running_length = $running_length + $insertion_length;
-	$insertions_finished++;
-    } else {
-	$CIGAR_f = $CIGAR_f . $L . "M";
-    }
-    $running_length = $running_length + $L;
-    for($i=1; $i<@aspans; $i++) {
-	@C2 = split(/-/,$aspans[$i]);
-	$skipped = $C2[0] - $C1[1] - 1;
-	if($skipped >= 15) {
-	    $CIGAR_f = $CIGAR_f . $skipped . "N";
-	} else {
-	    $CIGAR_f = $CIGAR_f . $skipped . "D";
-	}
-	$L = $C2[1] - $C2[0] + 1;
-	# code for insertions follows
-	if($running_length+$L > $piecelength[$insertions_finished*2]) {
-	    $pref_length = $piecelength[$insertions_finished*2] - $running_length;
-	    $insertion_length = $piecelength[$insertions_finished*2+1] - $piecelength[$insertions_finished*2];
-	    $suff_length = $running_length + $L - $piecelength[$insertions_finished*2+1];
-	    $CIGAR_f = $CIGAR_f . $pref_length . "M" . $insertion_length . "I" . $suff_length . "M";
-	    $running_length = $running_length + $insertion_length;
-	    $insertions_finished++;
-	} else {
-	    $CIGAR_f = $CIGAR_f . $L . "M";
-	}
-	$running_length = $running_length + $L;
-	$C1[0] = $C2[0];
-	$C1[1] = $C2[1];
-    }
-    $right_clip_size_f = $readlength - $running_length - $prefix_offset_forward;
-    if($right_clip_size_f > 0) {
-	$CIGAR_f = $CIGAR_f . $right_clip_size_f . "S";
-    }
-}
-
-
