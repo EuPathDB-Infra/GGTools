@@ -24,7 +24,7 @@ open(INFILE, $ARGV[0]);
 while($line = <INFILE>) {
     chomp($line);
     if($line =~ /^>/) {
-        $line =~ s/.*UserTrack_3545_. range=//;
+        $line =~ s/.*UserTrack_3545_.*range=//;
         $line =~ s/ 5'pad=0 3'pad=0//;
         $line =~ s/ repeatMasking=none//;
         $line =~ s/ /_/g;
