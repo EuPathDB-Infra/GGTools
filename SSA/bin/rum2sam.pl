@@ -524,12 +524,12 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $end_reverse = "*";
 	}
 	if($rum_u_forward =~ /\S/ && !($rum_u_reverse =~ /\S/)) {
-	    $start_forward = $start_reverse;
-	    $end_forward = $start_reverse;
-	}
-	if($rum_u_reverse =~ /\S/ && !($rum_u_forward =~ /\S/)) {
 	    $start_reverse = $start_forward;
 	    $end_reverse = $start_forward;
+	}
+	if($rum_u_reverse =~ /\S/ && !($rum_u_forward =~ /\S/)) {
+	    $start_forward = $start_reverse;
+	    $end_forward = $start_reverse;
 	}
 	if($rum_u_forward =~ /\S/ && $rum_u_reverse =~ /\S/) {
 	    if($ruf[3] eq "+") {
@@ -565,7 +565,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    }
 	}
 	$forward_record = $forward_record . "\n";
-	print $forward_record;
+	print SAM $forward_record;
+#	print $forward_record;
 
 # REVERSE
 
@@ -585,7 +586,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		}
 	    }
 	    $reverse_record = $reverse_record . "\n";
-	    print $reverse_record;
+	    print SAM $reverse_record;
+#	    print $reverse_record;
 	}
     }
 
@@ -594,13 +596,13 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	if($paired eq "false") {
 	    $record = "seq.$seqnum";
 	    $record = $record . "a\t4\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
-	    print $record;
+	    print SAM $record;
 	} else {
 	    $record = "seq.$seqnum";
 	    $record = $record . "a\t77\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
 	    $record = $record . "seq.$seqnum";
 	    $record = $record . "b\t141\t*\t0\t255\t*\t*\t0\t0\t$reverse_read\t$reverse_qual\n";
-	    print $record;
+	    print SAM $record;
 	}
     }
 }
