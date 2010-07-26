@@ -391,6 +391,43 @@ while($FLAG == 1) {
 			($merged_spans, $merged_seq) = merge($bspans, $aspans, $bseq2, $aseq2);
 		    }
 		    if(!($merged_spans =~ /\S/)) {
+			@AS = split(/-/,$aspans);
+			$AS[0]++;
+			$aspans_temp = $AS[0] . "-" . $AS[1]; 
+			$aseq2_temp = $aseq2;
+			$aseq2_temp =~ s/^.//;
+			($merged_spans, $merged_seq) = merge($bspans, $aspans_temp, $bseq2, $aseq2_temp);
+		    }
+		    if(!($merged_spans =~ /\S/)) {
+			@AS = split(/-/,$aspans);
+			$AS[0]++;
+			$AS[0]++;
+			$aspans_temp = $AS[0] . "-" . $AS[1]; 
+			$aseq2_temp = $aseq2;
+			$aseq2_temp =~ s/^.//;
+			$aseq2_temp =~ s/^.//;
+			($merged_spans, $merged_seq) = merge($bspans, $aspans_temp, $bseq2, $aseq2_temp);
+		    }
+		    if(!($merged_spans =~ /\S/)) {
+			@AS = split(/-/,$aspans);
+			$AS[1]--;
+			$aspans_temp = $AS[0] . "-" . $AS[1]; 
+			$aseq2_temp = $aseq2;
+			$aseq2_temp =~ s/.$//;
+			($merged_spans, $merged_seq) = merge($bspans, $aspans_temp, $bseq2, $aseq2_temp);
+		    }
+		    if(!($merged_spans =~ /\S/)) {
+			@AS = split(/-/,$aspans);
+			$AS[1]--;
+			$AS[1]--;
+			$aspans_temp = $AS[0] . "-" . $AS[1]; 
+			$aseq2_temp = $aseq2;
+			$aseq2_temp =~ s/.$//;
+			$aseq2_temp =~ s/.$//;
+			($merged_spans, $merged_seq) = merge($bspans, $aspans_temp, $bseq2, $aseq2_temp);
+		    }
+
+		    if(!($merged_spans =~ /\S/)) {
 			@Fspans = split(/, /,$aspans);
 			@T = split(/-/, $Fspans[0]);
 			$aspans3 = $aspans;
@@ -469,7 +506,9 @@ while($FLAG == 1) {
 			}
 		    }
 		    $seq_j = addJunctionsToSeq($merged_seq, $merged_spans);
-		    print OUTFILE1 "$seqnum\t$chra\t$merged_spans\t$seq_j\t$astrand\n";
+		    if($seq_j =~ /\S/ && $merged_spans =~ /^\d+.*-.*\d+$/) {
+			print OUTFILE1 "$seqnum\t$chra\t$merged_spans\t$seq_j\t$astrand\n";
+		    }
 		    $Eflag =1;
 		}
 	    }
