@@ -10,6 +10,7 @@ if(@ARGV < 5) {
 Usage: rum2sam.pl <rum unique file> <rum nu file> <reads file> <quals file> <sam outfile> [options]
 
 <reads file> and <qual file> are the files coming from parse2fasta.pl and fastq2qualities.pl
+if you don't have the qualities just put 'none' for the <quals file> argument.
 
 ";
 }
@@ -18,6 +19,10 @@ $rum_unique_file = $ARGV[0];
 $rum_nu_file = $ARGV[1];
 $reads_file = $ARGV[2];
 $qual_file = $ARGV[3];
+$quals = "true";
+if($ARGV[3] =~ /none/ || $ARGV[3] =~ /.none./) {
+    $quals = "false";
+}
 $sam_outfile = $ARGV[4];
 
 open(INFILE, $reads_file);
@@ -28,6 +33,12 @@ $firstseqnum = $1;
 $line = <INFILE>;
 chomp($line);
 $readlength = length($line);
+if($quals eq "false") {
+    $QUAL = "";
+    for($i=0; $i<$readlength; $i++) {
+	$QUAL = $QUAL . "I";
+    }
+}
 $line = <INFILE>;
 chomp($line);
 $line =~ /seq.\d+(.)/;
@@ -57,7 +68,9 @@ $bitflag[10] = "the read is either a PCR duplicate or an optical duplicate";
 open(RUMU, $rum_unique_file);
 open(RUMNU, $rum_nu_file);
 open(READS, $reads_file);
-open(QUALS, $qual_file);
+if($quals eq "true") {
+    open(QUALS, $qual_file);
+}
 open(SAM, ">$sam_outfile");
 
 for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
@@ -69,13 +82,18 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	$reverse_read = <READS>;
 	chomp($reverse_read);
     }
-    $forward_qual = <QUALS>;
-    $forward_qual = <QUALS>;
-    chomp($forward_qual);
-    if($paired eq "true") {
-	$reverse_qual = <QUALS>;
-	$reverse_qual = <QUALS>;
-	chomp($reverse_qual);
+    if($quals eq "true") {
+	$forward_qual = <QUALS>;
+	$forward_qual = <QUALS>;
+	chomp($forward_qual);
+	if($paired eq "true") {
+	    $reverse_qual = <QUALS>;
+	    $reverse_qual = <QUALS>;
+	    chomp($reverse_qual);
+	}
+    } else {
+	$forward_qual = $QUAL;
+	$reverse_qual = $QUAL;
     }
 
     $flag = 0;
@@ -191,25 +209,28 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $UR = $upstream_read;
 	    $replace = "";
 	    for($i=0; $i<$suffix_offset_upstream; $i++) {
-		$UR =~ s/.$//;
+		$UR2 =~ s/.$//;
 		$replace = $replace . "X";
 	    }
-#	    $UR = $UR . $replace;
+	    $UR2 = $UR;
+	    $UR = $UR . $replace;
 
 	    $plen = $readlength - $prefix_offset_upstream - $suffix_offset_upstream;
 	    $pl=0;
 	    $RC = 0;
 	    while($piecelength[$pl] + $prefix_offset_upstream < $readlength - $suffix_offset_upstream) {
 		$plen = $plen - ($piecelength[$pl+1] - $piecelength[$pl]);
-		substr($UR, $piecelength[$pl]+$RC, 0, "+");
+		substr($UR2, $piecelength[$pl]+$RC, 0, "+");
 		$RC++;
-		substr($UR, $piecelength[$pl+1]+$RC, 0, "+");
+		substr($UR2, $piecelength[$pl+1]+$RC, 0, "+");
 		$RC++;
 		$pl=$pl+2;
 	    }
 	    for($i=0; $i<$prefix_offset_upstream; $i++) {
-		$UR =~ s/^.//;
+		$UR2 =~ s/^.//;
 	    }
+#	    print "plen = $plen\n";
+#	    print "ruj[2] = $ruj[2]\n";
 	    $upstream_spans = &getprefix($ruj[2], $plen);
 #	    print "upstream_spans = $upstream_spans\n";
 
@@ -249,10 +270,17 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$DR =~ s/^.//;
 		$replace = $replace . "X";
 	    }
-#	    $DR = $replace . $DR;
+	    $DR2 = $DR;
+	    $DR = $replace . $DR;
+
+#	    print "prefix_offset_upstream = $prefix_offset_upstream\n";
+#	    print "sufffix_offset_downstream = $suffix_offset_downstream\n";
+#	    print "rum_u_joined = $rum_u_joined\n";
 
 	    $offset = length($ruj[4]) + $prefix_offset_upstream + $suffix_offset_downstream - length($DR);
 	    $OFFSET = $prefix_offset_upstream + $readlength - length($ruj[4]) - $suffix_offset_downstream;
+#	    print "offset = $offset\n";
+#	    print "OFFSET = $OFFSET\n";
 	    $P = "";
 	    for($i=0; $i<$OFFSET; $i++) {
 		$P = $P . " ";
@@ -262,19 +290,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    }
 
 	    $plen = $readlength - $prefix_offset_downstream - $suffix_offset_downstream;
-	    $pl=0;
-	    $RC = 0;
-	    while($piecelength[$pl] + $OFFSET <= $readlength - $suffix_offset_downstream && $pl < @piecelength-1) {
-		$plen = $plen - ($piecelength[$pl+1] - $piecelength[$pl]);
-		substr($DR, $piecelength[$pl]+$RC, 0, "+");
-		$RC++;
-		substr($DR, $piecelength[$pl+1]+$RC, 0, "+");
-		$RC++;
-		$pl=$pl+2;
-	    }
-	    $downstream_spans = &getsuffix($ruj[2], $plen);
 
-#	    print "\n$upstream_read\n\n";
+# 	    print "\n$upstream_read\n\n";
 #	    print $P;
 #	    print "$UR\n";
 #	    print $P;
@@ -287,6 +304,18 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 #	    }
 #	    print "$DR\n";
 #	    print "\n$downstream_read\n";
+
+	    $RC = 0;
+	    while($piecelength[$pl] >= $offset + $prefix_offset_downstream && $pl < @piecelength-1) {
+		$plen = $plen - ($piecelength[$pl+1] - $piecelength[$pl]);
+		substr($DR2, $piecelength[$pl]-$offset+$RC, 0, "+");
+		$RC++;
+		substr($DR2, $piecelength[$pl+1]-$offset+$RC, 0, "+");
+		$RC++;
+		$pl=$pl+2;
+	    }
+
+	    $downstream_spans = &getsuffix($ruj[2], $plen);
 
 	    if($ruj[3] eq "+") {
 		$fwr = $forward_read;
@@ -304,8 +333,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    $rvr =~ s/.$//;
 		}
 
-		$rum_u_forward = $seqnum . "a\t$ruj[1]\t" . $upstream_spans . "\t+\t" . $UR;
-		$rum_u_reverse = $seqnum . "b\t$ruj[1]\t" . $downstream_spans . "\t+\t" . $DR;
+		$rum_u_forward = $seqnum . "a\t$ruj[1]\t" . $upstream_spans . "\t+\t" . $UR2;
+		$rum_u_reverse = $seqnum . "b\t$ruj[1]\t" . $downstream_spans . "\t+\t" . $DR2;
 	    }
 	    if($ruj[3] eq "-") {
 		$fwr = &reversecomplement($forward_read);
@@ -323,8 +352,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    $rvr =~ s/.$//;
 		}
 
-		$rum_u_forward = $seqnum . "a\t$ruj[1]\t" . $downstream_spans . "\t-\t" . $fwr;
-		$rum_u_reverse = $seqnum . "b\t$ruj[1]\t" . $upstream_spans . "\t-\t" . $rvr;
+		$rum_u_forward = $seqnum . "a\t$ruj[1]\t" . $downstream_spans . "\t-\t" . $DR2;
+		$rum_u_reverse = $seqnum . "b\t$ruj[1]\t" . $upstream_spans . "\t-\t" . $UR2;
 	    }
 
 	}
@@ -335,7 +364,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 
 	    undef @piecelength;
 #	    if($rum_u_joined =~ /\S/) {
-#		print "rum_u_forward = $rum_u_forward\n\n";
+# 		print "rum_u_forward = $rum_u_forward\n\n";
 #	    }
 	    @ruf = split(/\t/,$rum_u_forward);
 	    $ruf[4] =~ s/://g;
@@ -358,6 +387,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    }
 #	    print "forward_read = $forward_read\n";
 	    $prefix_offset_forward = 0;
+#	    print "rum_u_forward_length = $rum_u_forward_length\n";
 	    if($rum_u_forward_length < $readlength) {
 		$x = $forward_read;
 		$y = $ruf[4];
@@ -367,6 +397,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 #		    print " ";
 		}
 	    }
+
+#	    print "prefix_offset_forward = $prefix_offset_forward\n";
 
 #	    print "$ruf[4]\n\n";
 	    $CIGAR_f = "";
@@ -582,8 +614,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    }
 	}
 	$forward_record = $forward_record . "\n";
-	print SAM $forward_record;
-#	print $forward_record;
+#	print SAM $forward_record;
+	print $forward_record;
 
 # REVERSE
 
@@ -603,8 +635,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		}
 	    }
 	    $reverse_record = $reverse_record . "\n";
-	    print SAM $reverse_record;
-#	    print $reverse_record;
+#	    print SAM $reverse_record;
+	    print $reverse_record;
 	}
     }
 
@@ -613,13 +645,15 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	if($paired eq "false") {
 	    $record = "seq.$seqnum";
 	    $record = $record . "a\t4\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
-	    print SAM $record;
+#	    print SAM $record;
+	    print $record;
 	} else {
 	    $record = "seq.$seqnum";
 	    $record = $record . "a\t77\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
 	    $record = $record . "seq.$seqnum";
 	    $record = $record . "b\t141\t*\t0\t255\t*\t*\t0\t0\t$reverse_read\t$reverse_qual\n";
-	    print SAM $record;
+#	    print SAM $record;
+	    print $record;
 	}
     }
 }
@@ -634,7 +668,7 @@ sub getsuffix () {
     for($os=0; $os<@OS; $os++) {
 	@B = split(/-/, $OS[$os]);
 	$running_length = $running_length + $B[1] - $B[0] + 1;
-	if($running_length >= $prefixlength) {
+	if($running_length > $prefixlength) {
 	    $STRT = $B[1] - ($running_length - $prefixlength) + 1;
 	    $newspans = $STRT . "-" . $B[1];
 	    $BB = $B[1];
@@ -676,9 +710,9 @@ sub getprefix () {
 	    return $newspans;
 	} else {
 	    if($newspans =~ /\S/) {
-		$newspans = $B[0] . "-" . $B[1];
-	    } else {
 		$newspans = $newspans . ", " . $B[0] . "-" . $B[1];
+	    } else {
+		$newspans = $B[0] . "-" . $B[1];
 	    }
 	}
     }
