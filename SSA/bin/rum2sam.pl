@@ -379,10 +379,10 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $L = $C1[1] - $C1[0] + 1;
 	    $running_length = 0;
 	    # code for insertions follows
-	    if($running_length+$L > $piecelength[$insertions_finished*2]) {
-		$pref_length = $piecelength[$insertions_finished*2] - $running_length;
-		$insertion_length = $piecelength[$insertions_finished*2+1] - $piecelength[$insertions_finished*2];
-		$suff_length = $piecelength[$insertions_finished*2+2] - $piecelength[$insertions_finished*2+1];
+	    if($L > $piecelength[0]) {
+		$pref_length = $piecelength[0] - $running_length;
+		$insertion_length = $piecelength[1] - $piecelength[0];
+		$suff_length = $L - $piecelength[0];
 		$CIGAR_f = $CIGAR_f . $pref_length . "M" . $insertion_length . "I" . $suff_length . "M";
 		$running_length = $running_length + $insertion_length;
 		$insertions_finished++;
@@ -403,9 +403,9 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		if($running_length+$L > $piecelength[$insertions_finished*2]) {
 		    $pref_length = $piecelength[$insertions_finished*2] - $running_length;
 		    $insertion_length = $piecelength[$insertions_finished*2+1] - $piecelength[$insertions_finished*2];
+		    $running_length = $running_length + $insertion_length;
 		    $suff_length = $running_length + $L - $piecelength[$insertions_finished*2+1];
 		    $CIGAR_f = $CIGAR_f . $pref_length . "M" . $insertion_length . "I" . $suff_length . "M";
-		    $running_length = $running_length + $insertion_length;
 		    $insertions_finished++;
 		} else {
 		    $CIGAR_f = $CIGAR_f . $L . "M";
@@ -470,10 +470,10 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $running_length = 0;
 	    # code for insertions follows
 #	    print "piecelength[$insertions_finished*2] = $piecelength[$insertions_finished*2]\n";
-	    if($running_length+$L > $piecelength[$insertions_finished*2]) {
-		$pref_length = $piecelength[$insertions_finished*2] - $running_length;
-		$insertion_length = $piecelength[$insertions_finished*2+1] - $piecelength[$insertions_finished*2];
-		$suff_length = $piecelength[$insertions_finished*2+2] - $piecelength[$insertions_finished*2+1];
+	    if($L > $piecelength[0]) {
+		$pref_length = $piecelength[0] - $running_length;
+		$insertion_length = $piecelength[1] - $piecelength[0];
+		$suff_length = $L - $piecelength[0];
 		$CIGAR_r = $CIGAR_r . $pref_length . "M" . $insertion_length . "I" . $suff_length . "M";
 		$running_length = $running_length + $insertion_length;
 		$insertions_finished++;
@@ -495,9 +495,9 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		if($running_length+$L > $piecelength[$insertions_finished*2]) {
 		    $pref_length = $piecelength[$insertions_finished*2] - $running_length;
 		    $insertion_length = $piecelength[$insertions_finished*2+1] - $piecelength[$insertions_finished*2];
+		    $running_length = $running_length + $insertion_length;
 		    $suff_length = $running_length + $L - $piecelength[$insertions_finished*2+1];
 		    $CIGAR_r = $CIGAR_r . $pref_length . "M" . $insertion_length . "I" . $suff_length . "M";
-		    $running_length = $running_length + $insertion_length;
 		    $insertions_finished++;
 		} else {
 		    $CIGAR_r = $CIGAR_r . $L . "M";
