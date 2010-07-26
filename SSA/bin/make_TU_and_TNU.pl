@@ -204,7 +204,7 @@ while(1 == 1) {
 		    if($ss[0] >= $min_overlap) {
 			$seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 			print OUTFILE1 "seq.$seqnum_prev";
-			print OUTFILE1 "a\t$CHR\t$ss[1]\t$seq_new\t$ss[2]\n";
+			print OUTFILE1 "a\t$CHR\t$ss[1]\t$seq_new\t$a[2]\n";
 		    }
 		    else {
 			$uflag = 0;
@@ -495,11 +495,19 @@ while(1 == 1) {
 				@ss = split(/\t/,$str1);
 				$seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 				print OUTFILE1 "seq.$seqnum_prev";
-				print OUTFILE1 "a\t$ss[0]\t$ss[1]\t$seq_new\t$ss[2]\n";
+				if($swapped eq "true") {
+				    print OUTFILE1 "a\t$ss[0]\t$ss[1]\t$seq_new\t$bstrand\n";
+				} else {
+				    print OUTFILE1 "a\t$ss[0]\t$ss[1]\t$seq_new\t$astrand\n";
+				}
 				@ss = split(/\t/,$str2);
 				$seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 				print OUTFILE1 "seq.$seqnum_prev";
-				print OUTFILE1 "b\t$ss[0]\t$ss[1]\t$seq_new\t$ss[2]\n";
+				if($swapped eq "true") {
+				    print OUTFILE1 "b\t$ss[0]\t$ss[1]\t$seq_new\t$bstrand\n";
+				} else {
+				    print OUTFILE1 "b\t$ss[0]\t$ss[1]\t$seq_new\t$astrand\n";
+				}
 			    }
 			    else {
 				$nointersection = 1;
@@ -521,7 +529,11 @@ while(1 == 1) {
 			if($size >= $min_overlap) {
 			    @ss = split(/\t/,$str);
 			    $seq_new = addJunctionsToSeq($ss[2], $ss[1]);
-			    print OUTFILE1 "seq.$seqnum_prev\t$ss[0]\t$ss[1]\t$seq_new\t$ss[2]\n";
+			    if($swapped eq "true") {
+				print OUTFILE1 "seq.$seqnum_prev\t$ss[0]\t$ss[1]\t$seq_new\t$bstrand\n";
+			    } else {
+				print OUTFILE1 "seq.$seqnum_prev\t$ss[0]\t$ss[1]\t$seq_new\t$astrand\n";
+			    }
 			}
 			else {
 			    $nointersection = 1;
