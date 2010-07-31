@@ -45,23 +45,25 @@ open(INFILE, $ARGV[0]) or die "\nError: unable to open file '$ARGV[0]' for readi
 $readlength = 0;
 $cnt = 0;
 while($line = <INFILE>) {
+    $length = 0;
     if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
 	chomp($line);
 	@a = split(/\t/,$line);
 	$span = $a[2];
-	if(!($span =~ /,/)) {
-	    $cnt++;
-	    @b = split(/-/,$span);
-	    $length = $b[1] - $b[0] + 1;
-	    if($length > $readlength) {
-		$readlength = $length;
-		$cnt = 0;
-	    }
-	    if($cnt > 50000) { # it checked 50,000 lines without finding anything larger than the last time
-		# readlength was changed, so it's most certainly found the max.
-		# Went through this to avoid the user having to input the readlength.
-		last;
-	    }
+	@SPANS = split(/, /, $span);
+	$cnt++;
+	for($i=0; $i<@SPANS; $i++) {
+	    @b = split(/-/,$SPANS[$i]);
+	    $length = $length + $b[1] - $b[0] + 1;
+	}
+	if($length > $readlength) {
+	    $readlength = $length;
+	    $cnt = 0;
+	}
+	if($cnt > 50000) { # it checked 50,000 lines without finding anything larger than the last time
+	    # readlength was changed, so it's most certainly found the max.
+	    # Went through this to avoid the user having to input the readlength.
+	    last;
 	}
     }
 }
@@ -69,43 +71,48 @@ close(INFILE);
 open(INFILE, $ARGV[1]) or die "\nError: unable to open file '$ARGV[1]' for reading\n\n";
 $cnt = 0;
 while($line = <INFILE>) {
+    $length = 0;
     if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
 	chomp($line);
 	@a = split(/\t/,$line);
 	$span = $a[2];
-	if(!($span =~ /,/)) {
-	    $cnt++;
-	    @b = split(/-/,$span);
-	    $length = $b[1] - $b[0] + 1;
-	    if($length > $readlength) {
-		$readlength = $length;
-		$cnt = 0;
-	    }
-	    if($cnt > 50000) {
-		last;
-	    }
+	@SPANS = split(/, /, $span);
+	$cnt++;
+	for($i=0; $i<@SPANS; $i++) {
+	    @b = split(/-/,$SPANS[$i]);
+	    $length = $length + $b[1] - $b[0] + 1;
+	}
+	if($length > $readlength) {
+	    $readlength = $length;
+	    $cnt = 0;
+	}
+	if($cnt > 50000) {
+	    last;
 	}
     }
 }
 close(INFILE);
+
 open(INFILE, $ARGV[2]) or die "\nError: unable to open file '$ARGV[2]' for reading\n\n";
 $cnt = 0;
 while($line = <INFILE>) {
+    $length = 0;
     if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
 	chomp($line);
 	@a = split(/\t/,$line);
 	$span = $a[2];
-	if(!($span =~ /,/)) {
-	    $cnt++;
-	    @b = split(/-/,$span);
-	    $length = $b[1] - $b[0] + 1;
-	    if($length > $readlength) {
-		$readlength = $length;
-		$cnt = 0;
-	    }
-	    if($cnt > 50000) {
-		last;
-	    }
+	@SPANS = split(/, /, $span);
+	$cnt++;
+	for($i=0; $i<@SPANS; $i++) {
+	    @b = split(/-/,$SPANS[$i]);
+	    $length = $length + $b[1] - $b[0] + 1;
+	}
+	if($length > $readlength) {
+	    $readlength = $length;
+	    $cnt = 0;
+	}
+	if($cnt > 50000) {
+	    last;
 	}
     }
 }
@@ -113,21 +120,23 @@ close(INFILE);
 open(INFILE, $ARGV[3]) or die "\nError: unable to open file '$ARGV[3]' for reading\n\n";
 $cnt = 0;
 while($line = <INFILE>) {
+    $length = 0;
     if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
 	chomp($line);
 	@a = split(/\t/,$line);
 	$span = $a[2];
-	if(!($span =~ /,/)) {
-	    $cnt++;
-	    @b = split(/-/,$span);
-	    $length = $b[1] - $b[0] + 1;
-	    if($length > $readlength) {
-		$readlength = $length;
-		$cnt = 0;
-	    }
-	    if($cnt > 50000) {
-		last;
-	    }
+	@SPANS = split(/, /, $span);
+	$cnt++;
+	for($i=0; $i<@SPANS; $i++) {
+	    @b = split(/-/,$SPANS[$i]);
+	    $length = $length + $b[1] - $b[0] + 1;
+	}
+	if($length > $readlength) {
+	    $readlength = $length;
+	    $cnt = 0;
+	}
+	if($cnt > 50000) {
+	    last;
 	}
     }
 }
@@ -311,7 +320,7 @@ while($FLAG == 1 || $FLAG2 == 1) {
 	$hash1{$id}[0] = $hash1{$id}[0] + 0;
 	$hash2{$id}[0] = $hash2{$id}[0] + 0;
 	if(($blat_ambiguous_mappers_a{$id}+0 > 0) && ($hash1{$id}[0]+0 == 1) && ($hash1{$id}[1] =~ /seq.\d+b/)) {
-	    # ambiguous foward in in BlatNU, single reverse in BowtieUnique.  See if there is
+	    # ambiguous forward in in BlatNU, single reverse in BowtieUnique.  See if there is
             # a consistent pairing so we can keep the pair, otherwise this read is considered unmappable
             # (not to be confused with ambiguous)
 	    $line1 = $hash1{$id}[1];
@@ -322,7 +331,11 @@ while($FLAG == 1 || $FLAG2 == 1) {
 	    $numjoined=0;
 	    for($ii=0; $ii<@a3; $ii++) {
 		$line2 = $a3[$ii];
-		$joined = joinifpossible($line1, $line2);
+		if($line1 =~ /\-$/) {
+		    $joined = joinifpossible($line1, $line2);
+		} else {
+		    $joined = joinifpossible($line2, $line1);
+		}
 		if($joined =~ /\S/) {
 		    $numjoined++;
 		    $joinedsave = $joined;
@@ -347,7 +360,11 @@ while($FLAG == 1 || $FLAG2 == 1) {
 	    $numjoined=0;
 	    for($ii=0; $ii<@a3; $ii++) {
 		$line2 = $a3[$ii];
-		$joined = joinifpossible($line1, $line2);
+		if($line1 =~ /-$/) {
+		    $joined = joinifpossible($line2, $line1);
+		} else {
+		    $joined = joinifpossible($line1, $line2);
+		}
 		if($joined =~ /\S/) {
 		    $numjoined++;
 		    $joinedsave = $joined;
@@ -492,6 +509,7 @@ while($FLAG == 1 || $FLAG2 == 1) {
 		}
 # if they overlap, can't merge properly if there's an insertion, so chop it out,
 # save it and put it back in before printing the next two if's do the chopping...
+		$aseq=~ s/://g;
 		if($aseq =~ /\+/) {
 		    $aseq =~ /(.*)(\+.*\+)(.*)/;
 		    $astem = $1;
@@ -502,6 +520,7 @@ while($FLAG == 1 || $FLAG2 == 1) {
 			print STDERR "Something is wrong, here 1.07\n";
 		    }
 		}
+		$bseq=~ s/://g;
 		if($bseq =~ /\+/) {
 		    $bseq =~ /(.*)(\+.*\+)(.*)/;
 		    $bstem = $1;
@@ -630,8 +649,8 @@ close(INFILE);
 close(OUTFILE);
 
 sub joinifpossible () {
-    ($line1, $line2) = @_;
-    @a = split(/\t/,$line1);
+    ($LINE1, $LINE2) = @_;
+    @a = split(/\t/,$LINE1);
     $aspans = $a[2];
     $a[2] =~ /^(\d+)[^\d]/;
     $astart = $1;
@@ -643,7 +662,7 @@ sub joinifpossible () {
     $seqnum = $a[0];
     $seqnum =~ s/a$//;
     $seqnum =~ s/b$//;
-    @a = split(/\t/,$line2);
+    @a = split(/\t/,$LINE2);
     $bspans = $a[2];
     $a[2] =~ /^(\d+)[^\d]/;
     $bstart = $1;
@@ -656,20 +675,12 @@ sub joinifpossible () {
     if($astrand ne $bstrand) {
 	return "";
     }
-    if(($chra eq $chrb) && ($aend < $bstart-1) && ($bstart - $aend < $max_distance_between_paired_reads)) {
-	if($line1 =~ /a\t/) {
-	    $returnstring = $returnstring . "$line1\n$line2\n";
+    if(($chra eq $chrb) && ($astrand eq $bstrand) && ($aend < $bstart-1) && ($bstart - $aend < $max_distance_between_paired_reads)) {
+	if($LINE1 =~ /a\t/) {
+	    $returnstring = $returnstring . "$LINE1\n$LINE2\n";
 	}
 	else {
-	    $returnstring = $returnstring . "$line2\n$line1\n";
-	}
-    }
-    if(($chra eq $chrb) && ($bend < $astart-1) && ($astart - $bend < $max_distance_between_paired_reads)) {
-	if($line1 =~ /a\t/) {
-	    $returnstring = $returnstring . "$line1\n$line2\n";
-	}
-	else {
-	    $returnstring = $returnstring . "$line2\n$line1\n";
+	    $returnstring = $returnstring . "$LINE2\n$LINE1\n";
 	}
     }
 # if they overlap, can't merge properly if there's an insertion, so chop it out,
@@ -695,7 +706,7 @@ sub joinifpossible () {
 	}
     }
     $dflag = 0;
-    if(($chra eq $chrb) && ($aend >= $bstart-1) && ($astart <= $bstart) && ($aend <= $bend)) {
+    if(($chra eq $chrb) && ($aend >= $bstart-1) && ($astart <= $bstart) && ($aend <= $bend) && ($astrand eq $bstrand)) {
 	# they overlap and forward is to left of reverse
 	$spans_merged = merge($aspans,$bspans);
 	$merged_length = spansTotalLength($spans_merged);
@@ -724,34 +735,7 @@ sub joinifpossible () {
 	$returnstring = $returnstring . "$seqnum\t$chra\t$spans_merged\t$seq_j\t$astrand\n";
 	$dflag = 1;
     }
-    if(($chra eq $chrb) && ($bend >= $astart-1) && ($bstart <= $astart) && ($bend <= $aend) && ($dflag == 0)) {
-	# they overlap and reverse is to left of forward
-	$spans_merged = merge($bspans,$aspans);
-	$merged_length = spansTotalLength($spans_merged);
-	$bseq =~ s/://g;
-	$seq_merged = $bseq;
-	@s = split(//,$bseq);
-	$asize = $merged_length - @s;
-	$aseq =~ s/://g;
-	@s = split(//,$aseq);
-	$add = "";
-	for($i=@s-1; $i>=@s-$asize; $i--) {
-	    $add = $s[$i] . $add;
-	}
-	$seq_merged = $seq_merged . $add;
-	if($a_insertion =~ /\S/) { # put back the insertions, if any...
-	    $seq_merged =~ s/$apost/$a_insertion$apost/;
-	}
-	if($b_insertion =~ /\S/) {
-	    $str_temp = $b_insertion;
-	    $str_temp =~ s/\+/\\+/g;
-	    if(!($seq_merged =~ /$bstem$str_temp/)) {
-		$seq_merged =~ s/$bstem/$bstem$b_insertion/;
-	    }
-	}
-	$seq_j = addJunctionsToSeq($seq_merged, $spans_merged);
-	$returnstring = $returnstring . "$seqnum\t$chra\t$spans_merged\t$seq_j\t$astrand\n";
-    }
+
     return $returnstring;
 }
 

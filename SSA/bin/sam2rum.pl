@@ -38,6 +38,11 @@ while($line =~ /^@/) {
 until($line eq '') {
     chomp($line);
     @a = split(/\t/,$line);
+    if($a[11] =~ /OL:A:T/) {
+	$joined = "true";
+    } else {
+	$joined = "false";
+    }
     $seq = $a[9];
     $bitstring = $a[1];
     for($j=0; $j<10; $j++) {
@@ -149,23 +154,29 @@ until($line eq '') {
 	    $forward_end = $1;
 	    if($strand eq "+") {
 		if(!($forward_spans =~ /\S/) && $reverse_spans =~ /\S/) {
-		    $reverse_seq_with_junctions = addJunctionsToSeq($reverse_seq, $reverse_spans);		    
+		    $reverse_seq_with_junctions = addJunctionsToSeq($reverse_seq, $reverse_spans);
 		    if($reverse_seqname =~ /\S/) {
 			print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
 		    }
 		} elsif($forward_spans =~ /\S/ && !($reverse_spans =~ /\S/)) {
-		    $forward_seq_with_junctions = addJunctionsToSeq($forward_seq, $forward_spans);		    
+		    $forward_seq_with_junctions = addJunctionsToSeq($forward_seq, $forward_spans);
 		    if($forward_seqname =~ /\S/) {
 			print "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
 		    }
 		} elsif($forward_end + 1 < $reverse_start || $forward_chr ne $reverse_chr) {
 		    $forward_seq_with_junctions = addJunctionsToSeq($forward_seq, $forward_spans);
 		    $reverse_seq_with_junctions = addJunctionsToSeq($reverse_seq, $reverse_spans);
-		    if($forward_seqname =~ /\S/) {
-			print "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
-		    }
-		    if($reverse_seqname =~ /\S/) {
-			print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+		    if($joined eq "false") {
+			if($forward_seqname =~ /\S/) {
+			    print "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
+			}
+			if($reverse_seqname =~ /\S/) {
+			    print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+			}
+		    } else {
+			$Sname = $forward_seqname;
+			$Sname =~ s/a//;
+			print "$Sname\t$forward_chr\t$forward_spans, $reverse_spans\t$strand\t$forward_seq_with_junctions:$reverse_seq_with_junctions\n";
 		    }
 		} elsif($forward_spans =~ /\S/ && $reverse_spans =~ /\S/) {
 		    ($merged_spans, $merged_seq) = merge($forward_spans, $reverse_spans, $forward_seq, $reverse_seq);
@@ -177,23 +188,29 @@ until($line eq '') {
 
 	    if($strand eq "-") {
 		if(!($forward_spans =~ /\S/) && $reverse_spans =~ /\S/) {
-		    $reverse_seq_with_junctions = addJunctionsToSeq($reverse_seq, $reverse_spans);		    
+		    $reverse_seq_with_junctions = addJunctionsToSeq($reverse_seq, $reverse_spans);
 		    if($reverse_seqname =~ /\S/) {
 			print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
 		    }
 		} elsif($forward_spans =~ /\S/ && !($reverse_spans =~ /\S/)) {
-		    $forward_seq_with_junctions = addJunctionsToSeq($forward_seq, $forward_spans);		    
+		    $forward_seq_with_junctions = addJunctionsToSeq($forward_seq, $forward_spans);
 		    if($forward_seqname =~ /\S/) {
 			print "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
 		    }
 		} elsif($reverse_end + 1 < $forward_start || $forward_chr ne $reverse_chr) {
 		    $forward_seq_with_junctions = addJunctionsToSeq($forward_seq, $forward_spans);
 		    $reverse_seq_with_junctions = addJunctionsToSeq($reverse_seq, $reverse_spans);
-		    if($forward_seqname =~ /\S/) {
-			print "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
-		    }
-		    if($reverse_seqname =~ /\S/) {
-			print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+		    if($joined eq "false") {
+			if($forward_seqname =~ /\S/) {
+			    print "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
+			}
+			if($reverse_seqname =~ /\S/) {
+			    print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+			}
+		    } else {
+			$Sname = $forward_seqname;
+			$Sname =~ s/a//;
+			print "$Sname\t$forward_chr\t$reverse_spans, $forward_spans\t$strand\t$reverse_seq_with_junctions:$forward_seq_with_junctions\n";
 		    }
 		} elsif($forward_spans =~ /\S/ && $reverse_spans =~ /\S/) {
 		    ($merged_spans, $merged_seq) = merge($reverse_spans, $forward_spans, $reverse_seq, $forward_seq);
@@ -246,8 +263,9 @@ sub merge () {
 	$Rstarts[$i1] = $T[0];
 	$Rends[$i1] = $T[1];
     }
+
     if($num_F > 1 && ($Fends[$num_F-1]-$Fstarts[$num_F-1]) <= 5) {
-	if($Fstarts[0] <= $Rstarts[0] && $Rends[$num_R-1] <= $Fends[$num_F-1]) {
+	if($Fstarts[0] <= $Rstarts[0] && $Rends[$num_R-1] < $Fends[$num_F-1]) {
 	    $fspans =~ s/, (\d+)-(\d+)$//;
 	    $length_diff = $2 - $1 + 1;
 	    for($i1=0; $i1<$length_diff; $i1++) {
@@ -261,11 +279,11 @@ sub merge () {
 	}
     }
     if($num_F > 1 && ($Fends[0]-$Fstarts[0]) <= 5) {
-	if($Fstarts[0] <= $Rstarts[0] && $Rends[$num_R-1] <= $Fends[$num_F-1]) {
-	    $fspans =~ s/^(\d+)-(\d+), //;
+	if($Rstarts[0] < $Fstarts[0] && $Rends[$num_R-1] >= $Fends[$num_F-1]) {
+	    $rspans =~ s/^(\d+)-(\d+), //;
 	    $length_diff = $2 - $1 + 1;
 	    for($i1=0; $i1<$length_diff; $i1++) {
-		$seq1 =~ s/^.//;
+		$seq2 =~ s/^.//;
 	    }
 	    ($merged, $merged_seq) = merge($fspans, $rspans, $seq1, $seq2);
 	    if(!($merged =~ /\S/)) {
@@ -287,10 +305,12 @@ sub merge () {
 	$merged = $fspans . ", " . $rspans;
 	return ($merged, $seq);
     }
+    # the following makes an array of alternating starts and ends for the forward read
     for($i1=0; $i1<$num_F; $i1++) {
 	$Farray[2*$i1] = $Fstarts[$i1];
 	$Farray[2*$i1+1] = $Fends[$i1];
     }
+    # and for the reverse read
     for($i1=0; $i1<$num_R; $i1++) {
 	$Rarray[2*$i1] = $Rstarts[$i1];
 	$Rarray[2*$i1+1] = $Rends[$i1];
@@ -303,6 +323,7 @@ sub merge () {
     for($i1=0; $i1<@Rarray; $i1=$i1+2) {
 	$Rlength = $Rlength + $Rarray[$i1+1] - $Rarray[$i1] + 1;
     }
+    # the following finds the first forward segment which overlaps the first reverse segment
     $i1=0;
     $flag1 = 0;
     until($i1>=@Farray || ($Farray[$i1] <= $Rarray[0] && $Rarray[0] <= $Farray[$i1+1])) {
@@ -339,7 +360,38 @@ sub merge () {
 	}
 	$suffix_length = $merged_length - $Flength;
 	$offset = $Rlength - $suffix_length;
-	$suffix = substr($seq2, $offset, $merged_length);
+	$suffix = "";
+	for($i1=0; $i1<$suffix_length; $i1++) {
+	    $seq2 =~ s/(.)$//;
+	    $base = $1;
+	    if($base ne "+") {
+		$suffix = $base . $suffix;
+	    } else {
+		$suffix = "+" . $suffix;
+		$seq2 =~ s/(.)$//;
+		$base = $1;		
+		until($base eq "+") {
+		    $suffix = $base . $suffix;
+		    $seq2 =~ s/(.)$//;
+		    $base = $1;		
+		}
+		$suffix = "+" . $suffix;
+		$i1--;
+	    }
+	}
+	$seq2 =~ s/(.)$//;
+	$base = $1;
+	if($base eq "+") {
+	    $suffix = "+" . $suffix;
+	    $seq2 =~ s/(.)$//;
+	    $base = $1;		
+	    until($base eq "+") {
+		$suffix = $base . $suffix;
+		$seq2 =~ s/(.)$//;
+		$base = $1;		
+	    }
+	    $suffix = "+" . $suffix;
+	}
 	$merged =~ s/\s*,\s*$//;
 	$merged =~ s/^\s*,\s*//;
 	$merged_seq = $seq1 . $suffix;

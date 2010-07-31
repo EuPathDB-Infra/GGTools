@@ -374,7 +374,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
     $sname[0] = "seq." . $seq_count . "a";
     $sname[1] = "seq." . $seq_count . "b";
 
-    for($t=0; $t<2; $t++) {  # $t=0 for the 'a' (forwad) reads, $t=1 for the 'b' (reverse) reads
+    for($t=0; $t<2; $t++) {  # $t=0 for the 'a' (forward) reads, $t=1 for the 'b' (reverse) reads
 	$cnt2=0;
 	$N = @{$blathits{$sname[$t]}};
 	for($i1=0; $i1<$N; $i1++) {
@@ -462,7 +462,8 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	for($c=0; $c<$N; $c++) {
 	    $key = $read_mapping_to_genome_blatoutput[$t][$c];
 	    @a4 = split(/\t/,$key);
-	    if($a4[3] > $max_length - 5 && $a4[8] <= $maxkey_nummismatch + 2) {
+#	    if($a4[3] > $max_length - 5 && $a4[8] <= $maxkey_nummismatch + 2) {
+	    if($a4[3] > $max_length - 1 && $a4[8] <= $maxkey_nummismatch + 2) {
 		if($sname[$t] =~ /a/) {
 		    $seq = getsequence($a4[6], $a4[9], $a4[4], $seqa);
 		}
@@ -629,8 +630,8 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	for($i=0; $i<$numa; $i++) {
 	    @B1 = split(/\t/, $read_mapping_to_genome_pairing_candidate[0][$i]);
 	    $achr = $B1[1];
-	    $astrand = $B1[4];
 	    @AR = split(/\t/,$read_mapping_to_genome_coords[0][$i]);
+	    $astrand = $AR[4];
 	    $aseq = $AR[3];
 	    @aexons = split(/, /,$B1[2]);
 	    undef @astarts;
@@ -645,8 +646,8 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	    for($j=0; $j<$numb; $j++) {
 		@B1 = split(/\t/, $read_mapping_to_genome_pairing_candidate[1][$j]);
 		$bchr = $B1[1];
-		$bstrand = $B1[4];
 		@BR = split(/\t/,$read_mapping_to_genome_coords[1][$j]);
+		$bstrand = $BR[4];
 		$bseq = $BR[3];
 		@bexons = split(/, /,$B1[2]);
 		undef @bstarts;
@@ -660,17 +661,18 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 		$bend = $bends[$e-1];
 		if($achr eq $bchr) {
 		    $ostrand = $astrand;  # "o" for "original"
-		    if($astrand eq "+" && $bstrand eq "-" && ($aend < $bstart-1) && ($bstart - $aend <= $max_distance_between_paired_reads)) {
+		    if($astrand eq "+" && $bstrand eq "+" && ($aend < $bstart-1) && ($bstart - $aend <= $max_distance_between_paired_reads)) {
 			$consistent_mappers{"$read_mapping_to_genome_coords[0][$i]\n$read_mapping_to_genome_coords[1][$j]"}++;
 		    }
-		    if($astrand eq "-" && $bstrand eq "+" && ($bend < $astart-1) && ($astart - $bend <= $max_distance_between_paired_reads)) {
+		    if($astrand eq "-" && $bstrand eq "-" && ($bend < $astart-1) && ($astart - $bend <= $max_distance_between_paired_reads)) {
 			$consistent_mappers{"$read_mapping_to_genome_coords[0][$i]\n$read_mapping_to_genome_coords[1][$j]"}++;
 		    }
-		    if(($astrand eq "-") && ($bstrand eq "+") && ($bend >= $astart - 1) && ($astart >= $bstart) && ($aend >= $bend)) {
+		    $swaphack = "false";
+		    if(($astrand eq "-") && ($bstrand eq "-") && ($bend >= $astart - 1) && ($astart >= $bstart) && ($aend >= $bend)) {
 			# this is a hack to switch the a and b reads so the following if can take care of both cases
-			$cstrand = $astrand;
-			$astrand = $bstrand;
-			$bstrand = $cstrand;
+			$swaphack = "true";
+			$astrand = "+";
+			$bstrand = "+";
 			$cstart = $astart;
 			$astart = $bstart;
 			$bstart = $cstart;
@@ -687,7 +689,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			$aseq = $bseq;
 			$bseq = $cseq;
 		    }
-		    if(($astrand eq "+") && ($bstrand eq "-") && ($aend == $bstart-1)) {
+		    if(($astrand eq "+") && ($bstrand eq "+") && ($aend == $bstart-1)) {
 			$num_exons_merged = @astarts + @bstarts - 1;
 			undef @mergedstarts;
 			undef @mergedends;
@@ -719,11 +721,11 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			$merged_seq = $aseq . $bseq;
 			$consistent_mappers{"seq.$seq_count\t$achr\t$merged_spans\t$merged_seq\t$ostrand"}++;
 		    }
-		    if(($astrand eq "+") && ($bstrand eq "-") && ($aend >= $bstart) && ($bstart >= $astart) && ($bend >= $aend)) {
+		    if(($astrand eq "+") && ($bstrand eq "+") && ($aend >= $bstart) && ($bstart >= $astart) && ($bend >= $aend)) {
 			$f = 0;
 			$consistent = 1;
 			$flag = 0;
-			while($flag == 0 && $f < @astarts) {
+			while($flag == 0 && $f < @astarts) { # this checks for a valid overlap
 			    if($bstart >= $astarts[$f] && $bstart <= $aends[$f]) {
 				$first_overlap_exon = $f;  # this index is relative to the a read
 				$flag = 1;
@@ -732,18 +734,61 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 				$f++;
 			    }
 			}
-			$f = @bstarts-1;
+			if($flag == 0) { # didn't find a valid overlap, so will check if removing
+			                 # the first base of the reverse read will help
+			    $bstart++;
+			    $bstarts[0]++;
+			    $bseq =~ s/^(.)//;
+			    $base_hold = $1;
+			    $f = 0;
+			    while($flag == 0 && $f < @astarts) {
+				if($bstart >= $astarts[$f] && $bstart <= $aends[$f]) {
+				    $first_overlap_exon = $f;  # this index is relative to the a read
+				    $flag = 1;
+				}
+				else {
+				    $f++;
+				}
+			    }
+			    if($flag == 0) {
+				$bstart--;
+				$bstarts[0]--;
+				$bseq = $base_hold . $bseq;
+			    }
+			}
 			if($flag != 1) {
 			    $consistent = 0;
 			}
-			$flag = 0;
-			while($flag == 0 && $f >= 0) {
+			$f = @bstarts-1;
+			while($flag == 0 && $f >= 0) { # try the other direction
 			    if($aend >= $bstarts[$f] && $aend <= $bends[$f]) {
 				$last_overlap_exon = $f;  # this index is relative to the b read
 				$flag = 1;
 			    }
 			    else {
 				$f--;
+			    }
+			}
+			if($flag == 0) { # didn't find a valid overlap, so will check if removing
+			                 # the last base of the forward read will help
+			    $aend--;
+			    $aends[@astarts-1]--;
+			    $aseq =~ s/(.)$//;
+			    $base_hold = $1;
+			    $f = @bstarts-1;
+			    while($flag == 0 && $f >= 0) {
+				if($aend >= $bstarts[$f] && $aend <= $bends[$f]) {
+				    $last_overlap_exon = $f;  # this index is relative to the b read
+				    $flag = 1;
+				}
+				else {
+				    $f--;
+				}
+			    }
+			    if($flag ==0) {
+				$aend++;
+				$aends[@astarts-1]++;
+				$aseq = $aseq . $base_hold;
 			    }
 			}
 			if($flag != 1) {
@@ -770,6 +815,10 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			}
 			if($consistent == 1) {
 			    $NN = @astarts;
+			    $alength=0;
+			    for($e=0; $e<@astarts; $e++) {
+				$alength = $alength + $aends[$e] - $astarts[$e] + 1;
+			    }
 			    $MM = @bstarts;
 			    $aseq =~ s/://g;
 			    $bseq =~ s/://g;
@@ -796,6 +845,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 				$merged_length = $merged_length + $mergedends[$e]-$mergedstarts[$e]+1;
 				$merged_spans = $merged_spans . ", $mergedstarts[$e]-$mergedends[$e]";
 			    }
+			    # now gotta put back any insertions into the merged...
 			    $aseq_temp = $aseq;
 			    $aseq_temp =~ s/\+.*\+//g;
 			    @s1 = split(//,$aseq_temp);
@@ -811,18 +861,29 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			    for($p=$aseqlength+$bseqlength-$merged_length; $p<@s2; $p++) {
 				$merged_seq = $merged_seq . $s2[$p]
 			    }
-			    $str_temp = $ins . $bpostfix;
-			    $str_temp =~ s/\+/\\+/g;
-			    if(!($merged_seq =~ /$str_temp/)) {
-				$merged_seq =~ s/$bpostfix$/$ins$bpostfix/;
+			    # the following if makes sure it's not done twice in the overlap
+			    # because they can disagree there and cause havoc
+			    $postfix_length = length($bpostfix);
+			    if($postfix_length <= $merged_length - $alength) {
+				$str_temp = $ins . $bpostfix;
+				$str_temp =~ s/\+/\\+/g;
+				if(!($merged_seq =~ /$str_temp/)) {
+				    $merged_seq =~ s/$bpostfix$/$ins$bpostfix/;
+				}
 			    }
-			    $consistent_mappers{"seq.$seq_count\t$achr\t$merged_spans\t$merged_seq\t$ostrand"}++;
+			$consistent_mappers{"seq.$seq_count\t$achr\t$merged_spans\t$merged_seq\t$ostrand"}++;
+			}
+			if($swaphack eq "true") {
+			    $astrand = "-";
 			}
 		    }
 		}
 	    }
 	}
 
+
+# OK, WE'VE COMPILED A LIST OF ALL CONSISTENT FORWARD/REVERSE PAIRS, WE NOW
+# COUNT THEM AND EVALUATE THEM
 
 	$max_spans_length = 0;
 	foreach $key (keys %consistent_mappers) {
@@ -852,7 +913,6 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 		$num_consistent_mappers++;
 	    }
 	}
-
 	if($num_consistent_mappers == 1) {
 	    foreach $key (keys %consistent_mappers2) {
 		@A = split(/\n/,$key);
@@ -1170,9 +1230,23 @@ sub intersect () {
 	}
 	@s = split(//,$seq);
 	$newseq = "";
-	for($i=$prefix_size; $i<$prefix_size + $maxspanlength; $i++) {
+
+	$ADD = 0;
+	for($i=$prefix_size; $i<$prefix_size + $maxspanlength + $ADD; $i++) {
+	    if($s[$i] eq "+") {
+		$newseq = $newseq . $s[$i];
+		$i++;
+		$ADD++;
+		until($s[$i] eq "+") {
+		    $newseq = $newseq . $s[$i];
+		    $i++;
+		    $ADD++;
+		}
+		$ADD++;
+	    }
 	    $newseq = $newseq . $s[$i];
 	}
+
 	$flag = 0;
 	$i=0;
 	@b = split(/-/,$a[0]);

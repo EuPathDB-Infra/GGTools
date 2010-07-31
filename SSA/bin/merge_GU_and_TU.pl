@@ -280,6 +280,7 @@ while($FLAG == 1) {
 	# MUST DO 15 CASES IN TOTAL:
 	# THREE CASES:
 	if($hash1{$id}[0] == 0) {
+	    # no genome mapper, so there must be a transcriptome mapper
 	    if($hash2{$id}[0] == -1) {
 		print OUTFILE1 "$hash2{$id}[1]\n";
 	    }
@@ -291,6 +292,7 @@ while($FLAG == 1) {
 	}
 	# THREE CASES
 	if($hash2{$id}[0] == 0) {
+	    # no transcriptome mapper, so there must be a genome mapper
 	    if($hash1{$id}[0] == -1) {
 		print OUTFILE1 "$hash1{$id}[1]\n";
 	    }
@@ -302,6 +304,7 @@ while($FLAG == 1) {
 	}
 	# ONE CASE
 	if($hash1{$id}[0] == -1 && $hash2{$id}[0] == -1) {
+	    # genome mapper and transcriptome mapper, and both joined
 	    undef @spans;
 	    @a1 = split(/\t/,$hash1{$id}[1]);
 	    @a2 = split(/\t/,$hash2{$id}[1]);
@@ -320,8 +323,10 @@ while($FLAG == 1) {
 	}
 	# ONE CASE
 	if($hash1{$id}[0] == 1 && $hash2{$id}[0] == 1) {
+	    # genome mapper and transcriptome mapper, and both single read mapping
 	    # If single-end then this is the only case where $hash1{$id}[0] > 0 and $hash2{$id}[0] > 0
 	    if((($hash1{$id}[1] =~ /seq.\d+a/) && ($hash2{$id}[1] =~ /seq.\d+a/)) || (($hash1{$id}[1] =~ /seq.\d+b/) && ($hash2{$id}[1] =~ /seq.\d+b/))) {
+		# both forward mappers, or both reverse mappers
 		undef @spans;
 		@a1 = split(/\t/,$hash1{$id}[1]);
 		@a2 = split(/\t/,$hash2{$id}[1]);
@@ -342,6 +347,7 @@ while($FLAG == 1) {
 		}
 	    }
 	    if((($hash1{$id}[1] =~ /seq.\d+a/) && ($hash2{$id}[1] =~ /seq.\d+b/)) || (($hash1{$id}[1] =~ /seq.\d+b/) && ($hash2{$id}[1] =~ /seq.\d+a/))) {
+		# one forward and one reverse
 		@a = split(/\t/,$hash1{$id}[1]);
 		$aspans = $a[2];
 		$a[2] =~ /^(\d+)[^\d]/;
@@ -351,10 +357,39 @@ while($FLAG == 1) {
 		$chra = $a[1];
 		$aseq = $a[3];
 		$seqnum = $a[0];
-		$seqnum =~ s/a$//;
-		$seqnum =~ s/b$//;
+		$atype = "";
+		if($seqnum =~ s/a$//) {
+		    $atype = "forward";
+		}
+		if($seqnum =~ s/b$//) {
+		    $atype = "reverse";
+		}
 		$astrand = $a[4];
+		if($atype eq "forward") {
+		    if($astrand eq "+") {
+			$forward_strand = "+";
+		    }
+		    if($astrand eq "-") {
+			$forward_strand = "-";
+		    }
+		} else {
+		    if($bstrand eq "+") {
+			$forward_strand = "+";
+		    }
+		    if($bstrand eq "-") {
+			$forward_strand = "-";
+		    }
+		}
+
 		@a = split(/\t/,$hash2{$id}[1]);
+		$btype = "";
+		if($a[0] =~ /a$/) {
+		    $btype = "forward";
+		}
+		if($a[0] =~ /b$/) {
+		    $btype = "reverse";
+		}
+
 		$bspans = $a[2];
 		$a[2] =~ /^(\d+)[^\d]/;
 		$bstart = $1;
@@ -363,8 +398,27 @@ while($FLAG == 1) {
 		$chrb = $a[1];
 		$bseq = $a[3];
 		$bstrand = $a[4];
+		if($btype eq "forward") {
+		    if($bstrand eq "+") {
+			$forward_strand = "+";
+		    }
+		    if($bstrand eq "-") {
+			$forward_strand = "-";
+		    }
+		} else {
+		    if($astrand eq "+") {
+			$forward_strand = "+";
+		    }
+		    if($astrand eq "-") {
+			$forward_strand = "-";
+		    }
+		}
+
  # the next two if's take care of the case that there is no overlap, one read lies entirely downstream of the other
-		if(($astrand eq $bstrand) && ($chra eq $chrb) && ($aend < $bstart-1) && ($bstart - $aend < $max_distance_between_paired_reads)) {
+
+		
+		
+		if((($astrand eq "+" && $bstrand eq "+" && $atype eq "forward" && $btype eq "reverse") || ($astrand eq "-" && $bstrand eq "-" && $atype eq "reverse" && $btype eq "forward")) && ($chra eq $chrb) && ($aend < $bstart-1) && ($bstart - $aend < $max_distance_between_paired_reads)) {
 		    if($hash1{$id}[1] =~ /a\t/) {
 			print OUTFILE1 "$hash1{$id}[1]\n$hash2{$id}[1]\n";
 		    }
@@ -372,7 +426,7 @@ while($FLAG == 1) {
 			print OUTFILE1 "$hash2{$id}[1]\n$hash1{$id}[1]\n";
 		    }
 		}
-		if(($chra eq $chrb) && ($bend < $astart-1) && ($astart - $bend < $max_distance_between_paired_reads)) {
+		if((($astrand eq "-" && $bstrand eq "-" && $atype eq "forward" && $btype eq "reverse") || ($astrand eq "+" && $bstrand eq "+" && $atype eq "reverse" && $btype eq "forward")) && ($chra eq $chrb) && ($bend < $astart-1) && ($astart - $bend < $max_distance_between_paired_reads)) {
 		    if($hash1{$id}[1] =~ /a\t/) {
 			print OUTFILE1 "$hash1{$id}[1]\n$hash2{$id}[1]\n";
 		    }
@@ -381,13 +435,16 @@ while($FLAG == 1) {
 		    }
 		}
 		$Eflag =0;
+
 		if(($astrand eq $bstrand) && ($chra eq $chrb) && (($aend >= $bstart-1) && ($astart <= $bstart)) || (($bend >= $astart-1) && ($bstart <= $astart))) {
+
 		    $aseq2 = $aseq;
 		    $aseq2 =~ s/://g;
 		    $bseq2 = $bseq;
 		    $bseq2 =~ s/://g;
-		    ($merged_spans, $merged_seq) = merge($aspans, $bspans, $aseq2, $bseq2);
-		    if(!($merged_spans =~ /\S/)) {
+		    if($atype eq "forward" && $astrand eq "+" || $atype eq "reverse" && $astrand eq "-") {
+			($merged_spans, $merged_seq) = merge($aspans, $bspans, $aseq2, $bseq2);
+		    } else {
 			($merged_spans, $merged_seq) = merge($bspans, $aspans, $bseq2, $aseq2);
 		    }
 		    if(!($merged_spans =~ /\S/)) {
@@ -396,17 +453,31 @@ while($FLAG == 1) {
 			$aspans_temp = $AS[0] . "-" . $AS[1]; 
 			$aseq2_temp = $aseq2;
 			$aseq2_temp =~ s/^.//;
-			($merged_spans, $merged_seq) = merge($bspans, $aspans_temp, $bseq2, $aseq2_temp);
+			if($atype eq "forward" && $astrand eq "+" || $atype eq "reverse" && $astrand eq "-") {
+			    ($merged_spans, $merged_seq) = merge($aspans_temp, $bspans, $aseq2_temp, $bseq2);
+			} else {
+			    ($merged_spans, $merged_seq) = merge($bspans, $aspans_temp, $bseq2, $aseq2_temp);
+			}
 		    }
 		    if(!($merged_spans =~ /\S/)) {
-			@AS = split(/-/,$aspans);
 			$AS[0]++;
+			$aspans_temp = $AS[0] . "-" . $AS[1]; 
+			$aseq2_temp =~ s/^.//;
+			if($atype eq "forward" && $astrand eq "+" || $atype eq "reverse" && $astrand eq "-") {
+			    ($merged_spans, $merged_seq) = merge($aspans_temp, $bspans, $aseq2_temp, $bseq2);
+			} else {
+			    ($merged_spans, $merged_seq) = merge($bspans, $aspans_temp, $bseq2, $aseq2_temp);
+			}
+		    }
+		    if(!($merged_spans =~ /\S/)) {
 			$AS[0]++;
 			$aspans_temp = $AS[0] . "-" . $AS[1]; 
-			$aseq2_temp = $aseq2;
 			$aseq2_temp =~ s/^.//;
-			$aseq2_temp =~ s/^.//;
-			($merged_spans, $merged_seq) = merge($bspans, $aspans_temp, $bseq2, $aseq2_temp);
+			if($atype eq "forward" && $astrand eq "+" || $atype eq "reverse" && $astrand eq "-") {
+			    ($merged_spans, $merged_seq) = merge($aspans_temp, $bspans, $aseq2_temp, $bseq2);
+			} else {
+			    ($merged_spans, $merged_seq) = merge($bspans, $aspans_temp, $bseq2, $aseq2_temp);
+			}
 		    }
 		    if(!($merged_spans =~ /\S/)) {
 			@AS = split(/-/,$aspans);
@@ -414,17 +485,31 @@ while($FLAG == 1) {
 			$aspans_temp = $AS[0] . "-" . $AS[1]; 
 			$aseq2_temp = $aseq2;
 			$aseq2_temp =~ s/.$//;
-			($merged_spans, $merged_seq) = merge($bspans, $aspans_temp, $bseq2, $aseq2_temp);
+			if($atype eq "forward" && $astrand eq "+" || $atype eq "reverse" && $astrand eq "-") {
+			    ($merged_spans, $merged_seq) = merge($aspans_temp, $bspans, $aseq2_temp, $bseq2);
+			} else {
+			    ($merged_spans, $merged_seq) = merge($bspans, $aspans_temp, $bseq2, $aseq2_temp);
+			}
 		    }
 		    if(!($merged_spans =~ /\S/)) {
-			@AS = split(/-/,$aspans);
-			$AS[1]--;
 			$AS[1]--;
 			$aspans_temp = $AS[0] . "-" . $AS[1]; 
-			$aseq2_temp = $aseq2;
 			$aseq2_temp =~ s/.$//;
+			if($atype eq "forward" && $astrand eq "+" || $atype eq "reverse" && $astrand eq "-") {
+			    ($merged_spans, $merged_seq) = merge($aspans_temp, $bspans, $aseq2_temp, $bseq2);
+			} else {
+			    ($merged_spans, $merged_seq) = merge($bspans, $aspans_temp, $bseq2, $aseq2_temp);
+			}
+		    }
+		    if(!($merged_spans =~ /\S/)) {
+			$AS[1]--;
+			$aspans_temp = $AS[0] . "-" . $AS[1]; 
 			$aseq2_temp =~ s/.$//;
-			($merged_spans, $merged_seq) = merge($bspans, $aspans_temp, $bseq2, $aseq2_temp);
+			if($atype eq "forward" && $astrand eq "+" || $atype eq "reverse" && $astrand eq "-") {
+			    ($merged_spans, $merged_seq) = merge($aspans_temp, $bspans, $aseq2_temp, $bseq2);
+			} else {
+			    ($merged_spans, $merged_seq) = merge($bspans, $aspans_temp, $bseq2, $aseq2_temp);
+			}
 		    }
 
 		    if(!($merged_spans =~ /\S/)) {
@@ -442,8 +527,9 @@ while($FLAG == 1) {
 				$aseq3 =~ s/^.//;
 			    }
 			}
-			($merged_spans, $merged_seq) = merge($aspans3, $bspans, $aseq3, $bseq3);
-			if(!($merged_spans =~ /\S/)) {
+			if($atype eq "forward" && $astrand eq "+" || $atype eq "reverse" && $astrand eq "-") {
+			    ($merged_spans, $merged_seq) = merge($aspans3, $bspans, $aseq3, $bseq3);
+			} else {
 			    ($merged_spans, $merged_seq) = merge($bspans, $aspans3, $bseq3, $aseq3);
 			}
 			if(!($merged_spans =~ /\S/)) {
@@ -460,8 +546,9 @@ while($FLAG == 1) {
 				    $aseq4 =~ s/.$//;
 				}
 			    }
-			    ($merged_spans, $merged_seq) = merge($aspans4, $bspans, $aseq4, $bseq4);
-			    if(!($merged_spans =~ /\S/)) {
+			    if($atype eq "forward" && $astrand eq "+" || $atype eq "reverse" && $astrand eq "-") {
+				($merged_spans, $merged_seq) = merge($aspans4, $bspans, $aseq4, $bseq4);
+			    } else {
 				($merged_spans, $merged_seq) = merge($bspans, $aspans4, $bseq4, $aseq4);
 			    }
 			}
@@ -481,8 +568,9 @@ while($FLAG == 1) {
 				$bseq3 =~ s/^.//;
 			    }
 			}
-			($merged_spans, $merged_seq) = merge($aspans, $bspans3, $aseq3, $bseq3);
-			if(!($merged_spans =~ /\S/)) {
+			if($atype eq "forward" && $astrand eq "+" || $atype eq "reverse" && $astrand eq "-") {
+			    ($merged_spans, $merged_seq) = merge($aspans, $bspans3, $aseq3, $bseq3);
+			} else {
 			    ($merged_spans, $merged_seq) = merge($bspans3, $aspans, $bseq3, $aseq3);
 			}
 			if(!($merged_spans =~ /\S/)) {
@@ -499,13 +587,15 @@ while($FLAG == 1) {
 				    $bseq4 =~ s/.$//;
 				}
 			    }
-			    ($merged_spans, $merged_seq) = merge($aspans, $bspans4, $aseq4, $bseq4);
-			    if(!($merged_spans =~ /\S/)) {
+			    if($atype eq "forward" && $astrand eq "+" || $atype eq "reverse" && $astrand eq "-") {
+				($merged_spans, $merged_seq) = merge($aspans, $bspans4, $aseq4, $bseq4);
+			    } else {
 				($merged_spans, $merged_seq) = merge($bspans4, $aspans, $bseq4, $aseq4);
 			    }
 			}
 		    }
 		    $seq_j = addJunctionsToSeq($merged_seq, $merged_spans);
+
 		    if($seq_j =~ /\S/ && $merged_spans =~ /^\d+.*-.*\d+$/) {
 			print OUTFILE1 "$seqnum\t$chra\t$merged_spans\t$seq_j\t$astrand\n";
 		    }
@@ -715,117 +805,128 @@ sub addJunctionsToSeq () {
 }
 
 sub merge () {
-    ($fspans, $rspans, $seq1, $seq2) = @_;
+    ($upstreamspans, $downstreamspans, $seq1, $seq2) = @_;
 
     undef %HASH;
-    undef @Farray;
-    undef @Rarray;
-    undef @Fspans;
-    undef @Rspans;
-    undef @Fstarts;
-    undef @Rstarts;
-    undef @Fends;
-    undef @Rends;
+    undef @Uarray;
+    undef @Darray;
+    undef @Upstreamspans;
+    undef @Downstreamspans;
+    undef @Ustarts;
+    undef @Dstarts;
+    undef @Uends;
+    undef @Dends;
     undef @T;
 
-    @Fspans = split(/, /,$fspans);
-    @Rspans = split(/, /,$rspans);
-    $num_F = @Fspans;
-    $num_R = @Rspans;
-    for($i1=0; $i1<$num_F; $i1++) {
-	@T = split(/-/, $Fspans[$i1]);
-	$Fstarts[$i1] = $T[0];
-	$Fends[$i1] = $T[1];
+    @Upstreamspans = split(/, /,$upstreamspans);
+    @Downstreamspans = split(/, /,$downstreamspans);
+    $num_u = @Upstreamspans;
+    $num_d = @Downstreamspans;
+    for($i1=0; $i1<$num_u; $i1++) {
+	@T = split(/-/, $Upstreamspans[$i1]);
+	$Ustarts[$i1] = $T[0];
+	$Uends[$i1] = $T[1];
     }
-    for($i1=0; $i1<$num_R; $i1++) {
-	@T = split(/-/, $Rspans[$i1]);
-	$Rstarts[$i1] = $T[0];
-	$Rends[$i1] = $T[1];
+    for($i1=0; $i1<$num_d; $i1++) {
+	@T = split(/-/, $Downstreamspans[$i1]);
+	$Dstarts[$i1] = $T[0];
+	$Dends[$i1] = $T[1];
     }
-    if($num_F > 1 && ($Fends[$num_F-1]-$Fstarts[$num_F-1]) <= 5) {
-	if($Fstarts[0] <= $Rstarts[0] && $Rends[$num_R-1] <= $Fends[$num_F-1]) {
-	    $fspans =~ s/, (\d+)-(\d+)$//;
+# the last few bases of the upstream read might be misaligned downstream of the entire
+# downstream read, the following chops them off and tries again
+
+    if($num_u > 1 && ($Uends[$num_u-1]-$Ustarts[$num_u-1]) <= 5) {
+	if($Dends[$num_d-1] < $Uends[$num_u-1]) {
+	    $upstreamspans =~ s/, (\d+)-(\d+)$//;
 	    $length_diff = $2 - $1 + 1;
 	    for($i1=0; $i1<$length_diff; $i1++) {
 		$seq1 =~ s/.$//;
 	    }
-	    ($merged, $merged_seq) = merge($fspans, $rspans, $seq1, $seq2);
-	    if(!($merged =~ /\S/)) {
-		($merged, $merged_seq) = merge($rspans, $fspans, $seq2, $seq1);		
-	    }
+	    ($merged, $merged_seq) = merge($upstreamspans, $downstreamspans, $seq1, $seq2);
 	    return ($merged, $merged_seq);
 	}
     }
-    if($num_F > 1 && ($Fends[0]-$Fstarts[0]) <= 5) {
-	if($Fstarts[0] <= $Rstarts[0] && $Rends[$num_R-1] <= $Fends[$num_F-1]) {
-	    $fspans =~ s/^(\d+)-(\d+), //;
+# similarly, the first few bases of the downstream read might be misaligned upstream of the entire
+# upstream read, the following chops them off and tries again
+
+    if($num_u > 1 && ($Dends[0]-$Dstarts[0]) <= 5) {
+	if($Dstarts[0] < $Ustarts[0]) {
+	    $downstreamspans =~ s/^(\d+)-(\d+), //;
 	    $length_diff = $2 - $1 + 1;
 	    for($i1=0; $i1<$length_diff; $i1++) {
-		$seq1 =~ s/^.//;
+		$seq2 =~ s/^.//;
 	    }
-	    ($merged, $merged_seq) = merge($fspans, $rspans, $seq1, $seq2);
-	    if(!($merged =~ /\S/)) {
-		($merged, $merged_seq) = merge($rspans, $fspans, $seq2, $seq1);		
-	    }
+	    ($merged, $merged_seq) = merge($upstreamspans, $downstreamspans, $seq1, $seq2);
 	    return ($merged, $merged_seq);
 	}
     }
 
-    if($Fends[$num_F-1] == $Rstarts[0]-1) {
-	$fspans =~ s/-\d+$//;
-	$rspans =~ s/^\d+-//;
+# next two if statements take care of the case where they do not overlap
+
+    if($Uends[$num_u-1] == $Dstarts[0]-1) {
+	$upstreamspans =~ s/-\d+$//;
+	$downstreamspans =~ s/^\d+-//;
 	$seq = $seq1 . $seq2;
-	$merged = $fspans . "-" . $rspans;
+	$merged = $upstreamspans . "-" . $downstreamspans;
 	return ($merged, $seq);
     }
-    if($Fends[$num_F-1] < $Rstarts[0]-1) {
+    if($Uends[$num_u-1] < $Dstarts[0]-1) {
 	$seq = $seq1 . $seq2;
-	$merged = $fspans . ", " . $rspans;
+	$merged = $upstreamspans . ", " . $downstreamspans;
 	return ($merged, $seq);
     }
-    for($i1=0; $i1<$num_F; $i1++) {
-	$Farray[2*$i1] = $Fstarts[$i1];
-	$Farray[2*$i1+1] = $Fends[$i1];
+
+# now going to do a bunch of checks that these reads coords are consistent with 
+# them really being overlapping
+
+# the following merges the upstream starts and ends into one array
+    for($i1=0; $i1<$num_u; $i1++) {
+	$Uarray[2*$i1] = $Ustarts[$i1];
+	$Uarray[2*$i1+1] = $Uends[$i1];
     }
-    for($i1=0; $i1<$num_R; $i1++) {
-	$Rarray[2*$i1] = $Rstarts[$i1];
-	$Rarray[2*$i1+1] = $Rends[$i1];
+# the following merges the downstream starts and ends into one array
+    for($i1=0; $i1<$num_d; $i1++) {
+	$Darray[2*$i1] = $Dstarts[$i1];
+	$Darray[2*$i1+1] = $Dends[$i1];
     }
     $Flength = 0;
     $Rlength = 0;
-    for($i1=0; $i1<@Farray; $i1=$i1+2) {
-	$Flength = $Flength + $Farray[$i1+1] - $Farray[$i1] + 1;
+    for($i1=0; $i1<@Uarray; $i1=$i1+2) {
+	$Flength = $Flength + $Uarray[$i1+1] - $Uarray[$i1] + 1;
     }
-    for($i1=0; $i1<@Rarray; $i1=$i1+2) {
-	$Rlength = $Rlength + $Rarray[$i1+1] - $Rarray[$i1] + 1;
+    for($i1=0; $i1<@Darray; $i1=$i1+2) {
+	$Rlength = $Rlength + $Darray[$i1+1] - $Darray[$i1] + 1;
     }
     $i1=0;
     $flag1 = 0;
-    until($i1>=@Farray || ($Farray[$i1] <= $Rarray[0] && $Rarray[0] <= $Farray[$i1+1])) {
+# try to find a upstream span that contains the start of the downstream read
+    until($i1>=@Uarray || ($Uarray[$i1] <= $Darray[0] && $Darray[0] <= $Uarray[$i1+1])) {
 	$i1 = $i1+2;
     } 
-    if($i1>=@Farray) {
+    if($i1>=@Uarray) { # didn't find one...
 	$flag1 = 1;
     }
-    $Fhold = $Farray[$i1];
-    for($j1=$i1+1; $j1<@Farray-1; $j1++) {
-	if($Farray[$j1] != $Rarray[$j1-$i1]) {
+    $Fhold = $Uarray[$i1];
+# the following checks the spans in the overlap have the same starts and ends
+    for($j1=$i1+1; $j1<@Uarray-1; $j1++) {
+	if($Uarray[$j1] != $Darray[$j1-$i1]) {
 	    $flag1 = 1;
 	} 
     }
-    $Rhold = $Rarray[@Farray-1-$i1];
-    if(!($Farray[@Farray-1] >= $Rarray[@Farray-$i1-2] && $Farray[@Farray-1] <= $Rarray[@Farray-$i1-1])) {
+    $Rhold = $Darray[@Uarray-1-$i1];
+# make sure the end of the upstream ends in a span of the downstream   
+    if(!($Uarray[@Uarray-1] >= $Darray[@Uarray-$i1-2] && $Uarray[@Uarray-1] <= $Darray[@Uarray-$i1-1])) {
 	$flag1 = 1;
     }
     $merged="";
-    $Rarray[0] = $Fhold;
-    $Farray[@Farray-1] = $Rhold;
-    if($flag1 == 0) {
-	for($i1=0; $i1<@Farray-1; $i1=$i1+2) {
-	    $HASH{"$Farray[$i1]-$Farray[$i1+1]"}++;
+    $Darray[0] = $Fhold;
+    $Uarray[@Uarray-1] = $Rhold;
+    if($flag1 == 0) { # everything is kosher, going to proceed to merge
+	for($i1=0; $i1<@Uarray-1; $i1=$i1+2) {
+	    $HASH{"$Uarray[$i1]-$Uarray[$i1+1]"}++;
 	}
-	for($i1=0; $i1<@Rarray-1; $i1=$i1+2) {
-	    $HASH{"$Rarray[$i1]-$Rarray[$i1+1]"}++;
+	for($i1=0; $i1<@Darray-1; $i1=$i1+2) {
+	    $HASH{"$Darray[$i1]-$Darray[$i1+1]"}++;
 	}
 	$merged_length=0;
 	foreach $key (sort {$a<=>$b} keys %HASH) {

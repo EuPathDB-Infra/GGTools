@@ -15,8 +15,15 @@ consistent pairs together.
 $|=1;
 open(INFILE, $ARGV[0]);
 $seqnum_prev = 0;
-open(OUTFILE1, ">RUM_sorted_temp1");
-open(OUTFILE2, ">RUM_unsorted_temp1");
+$temp1sortedfile = $ARGV[0] . "_sorted_temp1";
+$temp1unsortedfile = $ARGV[0] . "_unsorted_temp1";
+$temp2sortedfile = $ARGV[0] . "_sorted_temp2";
+$temp2unsortedfile = $ARGV[0] . "_unsorted_temp2";
+$temp3sortedfile = $ARGV[0] . "_sorted_temp3";
+$temp3unsortedfile = $ARGV[0] . "_unsorted_temp3";
+
+open(OUTFILE1, ">$temp1sortedfile");
+open(OUTFILE2, ">$temp1unsortedfile");
 while($line = <INFILE>) {
     $line =~ /^seq.(\d+)/;
     $seqnum = $1;
@@ -36,10 +43,10 @@ $num_merges = 0;
 $still_unsorted_flag = 1;
 while($still_unsorted_flag == 1) {
     $still_unsorted_flag = 0;
-    open(INFILE, "RUM_unsorted_temp1");
+    open(INFILE, "$temp1unsortedfile");
     $seqnum_prev = 0;
-    open(OUTFILE1, ">RUM_sorted_temp2");
-    open(OUTFILE2, ">RUM_unsorted_temp2");
+    open(OUTFILE1, ">$temp2sortedfile");
+    open(OUTFILE2, ">$temp2unsortedfile");
     while($line = <INFILE>) {
 	$line =~ /^seq.(\d+)/;
 	$seqnum = $1;
@@ -54,19 +61,19 @@ while($still_unsorted_flag == 1) {
     close(OUTFILE1);
     close(OUTFILE2);
     close(INFILE);
-    `mv RUM_unsorted_temp2 RUM_unsorted_temp1`;
+    `mv $temp2unsortedfile $temp1unsortedfile`;
     merge();
     $num_merges++;
 }
 $sortedfile = $ARGV[1];
-`mv RUM_sorted_temp1 $sortedfile`;
-unlink("RUM_unsorted_temp1");
+`mv $temp1sortedfile $sortedfile`;
+unlink("$temp1unsortedfile");
 print "number of merges required to sort '$ARGV[0]': $num_merges\n";
 
 sub merge () {
-    open(INFILE1, "RUM_sorted_temp1");
-    open(INFILE2, "RUM_sorted_temp2");
-    open(OUTFILE, ">RUM_sorted_temp3");
+    open(INFILE1, "$temp1sortedfile");
+    open(INFILE2, "$temp2sortedfile");
+    open(OUTFILE, ">$temp3sortedfile");
     $flag = 0;
     $line1 = <INFILE1>;
     chomp($line1);
@@ -113,6 +120,6 @@ sub merge () {
 	    $flag = 1;
 	}
     }
-    `mv RUM_sorted_temp3 RUM_sorted_temp1`;
-    unlink("RUM_sorted_temp2");
+    `mv $temp3sortedfile $temp1sortedfile`;
+    unlink("$temp2sortedfile");
 }

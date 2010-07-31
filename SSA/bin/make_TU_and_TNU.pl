@@ -8,9 +8,9 @@ $|=1;
 if(@ARGV < 5) {
     print STDERR 
 "
-Usage: make_TU_and_TNU.pl <input_filename> <tu_filename> <tnu_filename> <type> [options]
+Usage: make_TU_and_TNU.pl <bowtie file> <tu_filename> <tnu_filename> <type> [options]
 
-  Where: <input_filename> is the file output from sort_bowtie.pl
+  Where: <bowtie file> is the file output from bowtie
 
          <gene_annot_file> is the file of gene models.
 
@@ -255,7 +255,7 @@ while(1 == 1) {
 		    }
 		    $bstart = $bstarts[0];
 		    $bend = $bends[$e-1];
-		    if($achr eq $bchr) {
+		    if($achr eq $bchr && $astrand eq $bstrand) {
 			if($astrand eq "+" && $bstrand eq "+" && ($aend < $bstart-1) && ($bstart - $aend <= $max_distance_between_paired_reads)) {
 			    $consistent_mappers{"$a_read_mapping_to_genome[$i]\n$b_read_mapping_to_genome[$j]"}++;
 			}
@@ -451,6 +451,7 @@ while(1 == 1) {
 			$num_absingle++;
 			@a = split(/\t/,$A[0]);
 			$spans1[$ccnt] = $a[1];
+			$STRAND = $a[2];
 			if($ccnt == 0) {
 			    $firstseq = $a[3];
 			}
@@ -459,6 +460,7 @@ while(1 == 1) {
 			$num_absplit++;
 			@a = split(/\t/,$A[0]);
 			$spans1[$ccnt] = $a[1];
+			$STRAND = $a[2];
 			if($ccnt == 0) {
 			    $firstseq1 = $a[3];
 			}
@@ -495,19 +497,12 @@ while(1 == 1) {
 				@ss = split(/\t/,$str1);
 				$seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 				print OUTFILE1 "seq.$seqnum_prev";
-				if($swapped eq "true") {
-				    print OUTFILE1 "a\t$ss[0]\t$ss[1]\t$seq_new\t$bstrand\n";
-				} else {
-				    print OUTFILE1 "a\t$ss[0]\t$ss[1]\t$seq_new\t$astrand\n";
-				}
+				print OUTFILE1 "a\t$ss[0]\t$ss[1]\t$seq_new\t$STRAND\n";
+
 				@ss = split(/\t/,$str2);
 				$seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 				print OUTFILE1 "seq.$seqnum_prev";
-				if($swapped eq "true") {
-				    print OUTFILE1 "b\t$ss[0]\t$ss[1]\t$seq_new\t$bstrand\n";
-				} else {
-				    print OUTFILE1 "b\t$ss[0]\t$ss[1]\t$seq_new\t$astrand\n";
-				}
+				print OUTFILE1 "b\t$ss[0]\t$ss[1]\t$seq_new\t$STRAND\n";
 			    }
 			    else {
 				$nointersection = 1;
@@ -530,9 +525,9 @@ while(1 == 1) {
 			    @ss = split(/\t/,$str);
 			    $seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 			    if($swapped eq "true") {
-				print OUTFILE1 "seq.$seqnum_prev\t$ss[0]\t$ss[1]\t$seq_new\t$bstrand\n";
+				print OUTFILE1 "seq.$seqnum_prev\t$ss[0]\t$ss[1]\t$seq_new\t-\n";
 			    } else {
-				print OUTFILE1 "seq.$seqnum_prev\t$ss[0]\t$ss[1]\t$seq_new\t$astrand\n";
+				print OUTFILE1 "seq.$seqnum_prev\t$ss[0]\t$ss[1]\t$seq_new\t+\n";
 			    }
 			}
 			else {

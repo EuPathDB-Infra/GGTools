@@ -65,9 +65,33 @@ $bitflag[8] = "the alignment is not primary";
 $bitflag[9] = "the read fails platform/vendor quality checks";
 $bitflag[10] = "the read is either a PCR duplicate or an optical duplicate";
 
-open(RUMU, $rum_unique_file);
-open(RUMNU, $rum_nu_file);
-open(READS, $reads_file);
+open(RUMU, $rum_unique_file) or die "\nError: cannot open the file '$rum_unique_file' for reading\n\n";
+open(RUMNU, $rum_nu_file) or die "\nError: cannot open the file '$rum_nu_file' for reading\n\n";
+open(READS, $reads_file) or die "\nError: cannot open the file '$reads_file' for reading\n\n";
+
+# checkin that the first line in RUMU really looks like it should:
+$line = <RUMU>;
+close(RUMU);
+@a = split(/\t/,$line);
+$flag = 0;
+if(!($a[0] =~ /^seq.\d+[ab]?/)) {
+    $flag = 1;
+}
+if($a[2] =~ /[^\d-, ]/) {
+    $flag = 1;
+}
+if(!($a[3] eq "+" || $a[3] eq "-")) {
+    $flag = 1;
+}
+if(!($a[4] =~ /^[ACGTN:+]+$/)) {
+    $flag = 1;
+}
+if($flag == 1) {
+    die "\nError: the first line of the file '$rum_unique_file' is misformatted,\nit does not look like a RUM output file.\n";
+}
+close(RUMU);
+open(RUMU, $rum_unique_file) or die "\nError: cannot open the file '$rum_unique_file' for reading\n\n";
+
 if($quals eq "true") {
     open(QUALS, $qual_file);
 }
@@ -163,10 +187,10 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $bitscore_r = $bitscore_r + 2;
 	}
 
+	$joined = "false";
 	if($rum_u_joined =~ /\S/) {
-
 	    # FORWARD AND REVERSE MAPPED, AND THEY ARE JOINED, GATHER INFO
-
+	    $joined = "true";
 #	    print "---------------\nrum_u_joined = $rum_u_joined\n";
 	    undef @piecelength;
 	    @ruj = split(/\t/,$rum_u_joined);
@@ -176,7 +200,6 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    for($pl=1; $pl<@PL; $pl++) {
 		$piecelength[$pl] = length($PL[$pl]) + $piecelength[$pl-1];
 	    }
-
 	    @ruj = split(/\t/,$rum_u_joined);
 	    if($ruj[3] eq "-") {
 		$upstream_read = $reverse_read;
@@ -191,11 +214,24 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $L = length($x);
 	    $count=0;
 	    $suffix_offset_upstream = 0;
-	    until($y =~ /^$x/) {
-		$x =~ s/^.//;
-		$count++;
-		$prefix_offset_upstream++;
-		if($L - $count < 15) {
+	    $LEN = 0;
+	    $LENflag = 0;
+	    $LEN_current_best=0;
+	    while($LENflag == 0) {
+		$LENflag = 1;
+		until($y =~ /^$x/) {
+		    $x =~ s/^.//;
+		    $count++;
+		    $prefix_offset_upstream++;
+		}
+		$LEN = $L - $count;
+		if($LEN >= $LEN_current_best) {
+		    $suffix_offset_upstream_current_best = $suffix_offset_upstream;
+		    $prefix_offset_upstream_current_best = $prefix_offset_upstream;
+		    $LEN_current_best = $LEN;
+		}
+		if($LEN < $readlength / 2) {
+		    $LENflag = 0;
 		    $x = $upstream_read;
 		    $suffix_offset_upstream++;
 		    for($j=0; $j<$suffix_offset_upstream; $j++) {
@@ -204,12 +240,19 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    $prefix_offset_upstream = 0;
 		    $count = 0;
 		    $L = length($x);
+		    if($L < 1) {
+			last;
+		    }
 		}
-	    }	    
+	    }
+
+	    $prefix_offset_upstream = $prefix_offset_upstream_current_best;
+	    $suffix_offset_upstream = $suffix_offset_upstream_current_best;
+    
 	    $UR = $upstream_read;
 	    $replace = "";
 	    for($i=0; $i<$suffix_offset_upstream; $i++) {
-		$UR2 =~ s/.$//;
+		$UR =~ s/.$//;
 		$replace = $replace . "X";
 	    }
 	    $UR2 = $UR;
@@ -218,21 +261,40 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $plen = $readlength - $prefix_offset_upstream - $suffix_offset_upstream;
 	    $pl=0;
 	    $RC = 0;
+	    $matchlength = $piecelength[0];
+#	    print "suffix_offset_upstream = $suffix_offset_upstream\n";
+#	    print "UR2 = $UR2\n";
 	    while($piecelength[$pl] + $prefix_offset_upstream < $readlength - $suffix_offset_upstream) {
 		$plen = $plen - ($piecelength[$pl+1] - $piecelength[$pl]);
-		substr($UR2, $piecelength[$pl]+$RC, 0, "+");
+		if($piecelength[$pl+1] > $readlength) { # insertion went past the end of the read,
+		                                        # so overcorrected, this fixes that
+		    $plen = $plen + ($piecelength[$pl+1] - $readlength);
+		}
+		substr($UR2, $piecelength[$pl]+$RC+$prefix_offset_upstream, 0, "+");
 		$RC++;
-		substr($UR2, $piecelength[$pl+1]+$RC, 0, "+");
+		$XX = $piecelength[$pl+1]+$RC+$prefix_offset_upstream;
+		$YY = length($UR2);
+		if($XX <= $YY) {
+		    substr($UR2, $piecelength[$pl+1]+$RC+$prefix_offset_upstream, 0, "+");
+		} else { # individual alignments don't have insertions at the ends,
+                         # so removing it because it'll mess things up downstream
+		    if($UR2 =~ s/\+([^\+]+)$//) {
+			$suffix_offset_upstream = $suffix_offset_upstream + length($1);
+		    }
+		}
+		if($UR2 =~ s/\+([^\+]+)\+$//) { # just in case there's still an insertion at the end...
+		    $suffix_offset_upstream = $suffix_offset_upstream + length($1);
+		}
 		$RC++;
 		$pl=$pl+2;
+		$matchlength = $matchlength + $piecelength[$pl] - $piecelength[$pl-1];
 	    }
+#	    print "UR2 = $UR2\n";
+#	    print "suffix_offset_upstream = $suffix_offset_upstream\n";
 	    for($i=0; $i<$prefix_offset_upstream; $i++) {
 		$UR2 =~ s/^.//;
 	    }
-#	    print "plen = $plen\n";
-#	    print "ruj[2] = $ruj[2]\n";
 	    $upstream_spans = &getprefix($ruj[2], $plen);
-#	    print "upstream_spans = $upstream_spans\n";
 
 	    if($ruj[3] eq "-") {
 		$downstream_read = reversecomplement($forward_read);
@@ -249,11 +311,24 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $L = length($x);
 	    $count=0;
 	    $prefix_offset_downstream = 0;
-	    until($y =~ /$x$/) {
-		$x =~ s/.$//;
-		$count++;
-		$suffix_offset_downstream++;
-		if($L - $count < 15) {
+	    $LEN = 0;
+	    $LENflag = 0;
+	    $LEN_current_best=0;
+	    while($LENflag == 0) {
+		$LENflag = 1;
+		until($y =~ /$x$/ || length($x)==0) {
+		    $x =~ s/.$//;
+		    $count++;
+		    $suffix_offset_downstream++;
+		}
+		$LEN = $L - $count;
+		if($LEN >= $LEN_current_best) {
+		    $suffix_offset_downstream_current_best = $suffix_offset_downstream;
+		    $prefix_offset_downstream_current_best = $prefix_offset_downstream;
+		    $LEN_current_best = $LEN;
+		}
+		if($LEN < $readlength / 2) {
+		    $LENflag = 0;
 		    $x = $downstream_read;
 		    $prefix_offset_downstream++;
 		    for($j=0; $j<$prefix_offset_downstream; $j++) {
@@ -262,8 +337,15 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    $suffix_offset_downstream = 0;
 		    $count = 0;
 		    $L = length($x);
+		    if($L < 1) {
+			last;
+		    }
 		}
-	    }	    
+	    }
+
+	    $prefix_offset_downstream = $prefix_offset_downstream_current_best;
+	    $suffix_offset_downstream = $suffix_offset_downstream_current_best;
+
 	    $DR = $downstream_read;
 	    $replace = "";
 	    for($i=0; $i<$prefix_offset_downstream; $i++) {
@@ -272,24 +354,20 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    }
 	    $DR2 = $DR;
 	    $DR = $replace . $DR;
-
-#	    print "prefix_offset_upstream = $prefix_offset_upstream\n";
-#	    print "sufffix_offset_downstream = $suffix_offset_downstream\n";
-#	    print "rum_u_joined = $rum_u_joined\n";
+#	    print "DR2=$DR2\n";
 
 	    $offset = length($ruj[4]) + $prefix_offset_upstream + $suffix_offset_downstream - length($DR);
-	    $OFFSET = $prefix_offset_upstream + $readlength - length($ruj[4]) - $suffix_offset_downstream;
-#	    print "offset = $offset\n";
-#	    print "OFFSET = $OFFSET\n";
+
+	    $OFFSET = $readlength - length($ruj[4]) - $suffix_offset_downstream;
 	    $P = "";
-	    for($i=0; $i<$OFFSET; $i++) {
-		$P = $P . " ";
-	    }
 	    if($OFFSET < 0) {
 		$OFFSET = 0;
 	    }
-
+	    for($i=0; $i<$OFFSET; $i++) {
+		$P = $P . " ";
+	    }
 	    $plen = $readlength - $prefix_offset_downstream - $suffix_offset_downstream;
+#	    print "plen=$plen\n";
 
 # 	    print "\n$upstream_read\n\n";
 #	    print $P;
@@ -297,60 +375,78 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 #	    print $P;
 #	    for($i=0; $i<$prefix_offset_upstream; $i++) {
 #		print " ";
-#	    }
+#	     }
 #	    print "$ruj[4]\n";
 #	    for($i=0; $i<$offset; $i++) {
 #		print " ";
 #	    }
 #	    print "$DR\n";
-#	    print "\n$downstream_read\n";
+#	    print "\n$downstream_read\n\n";
+
+
+
+#	    print "piecelength[0] = $piecelength[0]\n";
+#	    print "piecelength[1] = $piecelength[1]\n";
+#	    print "piecelength[2] = $piecelength[2]\n";
+#	    print "piecelength[3] = $piecelength[3]\n";
+#	    print "piecelength[4] = $piecelength[4]\n";
 
 	    $RC = 0;
-	    while($piecelength[$pl] >= $offset + $prefix_offset_downstream && $pl < @piecelength-1) {
-		$plen = $plen - ($piecelength[$pl+1] - $piecelength[$pl]);
-		substr($DR2, $piecelength[$pl]-$offset+$RC, 0, "+");
-		$RC++;
-		substr($DR2, $piecelength[$pl+1]-$offset+$RC, 0, "+");
-		$RC++;
-		$pl=$pl+2;
+	    $pl=0;
+#	    print "offset=$offset\n";
+#	    print "prefix_offset_downstream=$prefix_offset_downstream\n";
+#	    print "prefix_offset_upstream=$prefix_offset_upstream\n";
+	    until($piecelength[$pl] > $offset + $prefix_offset_downstream || $pl >= @piecelength) {
+		$pl++;
+	    }
+#	    print "pl=$pl\n";
+	    # the first three if's here deal with the case that there's an insertion right at 
+	    # the begginging of the downstream read, either starting at the start of the read,
+	    # or ending just before it, or overlapping the end.
+	    if($pl == 0 && $piecelength[0] == $offset) {
+		substr($DR2, $piecelength[$pl+1]-$piecelength[$pl], 0, "+");
+		$DR2 = "+" . $DR2;
+	    } elsif(($pl == 1 && $piecelength[1] == $offset) || ($pl >= @piecelength)) {
+		# do nothing
+	    }
+	    elsif($pl % 2 == 1) {
+		substr($DR2, $piecelength[$pl]-$offset+$RC-$prefix_offset_downstream+$prefix_offset_upstream, 0, "+");
+		$pl--;
+		$DR2 = "+" . $DR2;
+	    } else {
+#		print "pl=$pl\n";
+#		print "DR2=$DR2\n";
+		while($piecelength[$pl] >= $offset + $prefix_offset_downstream -$prefix_offset_upstream && $pl < @piecelength-1) {
+		    $plen = $plen - ($piecelength[$pl+1] - $piecelength[$pl]);
+#		    print "x:plen=$plen\n";
+		    $ABC = $piecelength[$pl]-$offset+$RC-$prefix_offset_downstream+$prefix_offset_upstream;
+		    $XYZ = $piecelength[$pl+1]-$offset+$RC-$prefix_offset_downstream+$prefix_offset_upstream;
+		    substr($DR2, $piecelength[$pl]-$offset+$RC-$prefix_offset_downstream+$prefix_offset_upstream, 0, "+");
+		    $RC++;
+		    substr($DR2, $piecelength[$pl+1]-$offset+$RC-$prefix_offset_downstream+$prefix_offset_upstream, 0, "+");
+		    $RC++;
+		    $pl=$pl+2;
+		}
+	    }
+	    $DR2 =~ s/^\+([^\+]+)\+//; # individual alignments don't have insertions at the ends,
+	                               # so removing it because it'll mess things up downstream
+	    $prefix_offset_downstream = $prefix_offset_downstream + length($1);
+#	    print "plen=$plen\n";
+	    $plen = $plen - length($1);
+#	    print "plen=$plen\n";
+
+	    for($i=0; $i<$suffix_offset_downstream; $i++) {
+		$DR2 =~ s/.$//;
 	    }
 
 	    $downstream_spans = &getsuffix($ruj[2], $plen);
 
 	    if($ruj[3] eq "+") {
-		$fwr = $forward_read;
-		for($i=0; $i<$prefix_offset_upstream; $i++) {
-		    $fwr =~ s/^.//;
-		}
-		for($i=0; $i<$suffix_offset_upstream; $i++) {
-		    $fwr =~ s/.$//;
-		}
-		$rvr = &reversecomplement($reverse_read);
-		for($i=0; $i<$prefix_offset_downstream; $i++) {
-		    $rvr =~ s/^.//;
-		}
-		for($i=0; $i<$suffix_offset_downstream; $i++) {
-		    $rvr =~ s/.$//;
-		}
 
 		$rum_u_forward = $seqnum . "a\t$ruj[1]\t" . $upstream_spans . "\t+\t" . $UR2;
 		$rum_u_reverse = $seqnum . "b\t$ruj[1]\t" . $downstream_spans . "\t+\t" . $DR2;
 	    }
 	    if($ruj[3] eq "-") {
-		$fwr = &reversecomplement($forward_read);
-		for($i=0; $i<$prefix_offset_downstream; $i++) {
-		    $fwr =~ s/^.//;
-		}
-		for($i=0; $i<$suffix_offset_downstream; $i++) {
-		    $fwr =~ s/.$//;
-		}
-		$rvr = $reverse_read;
-		for($i=0; $i<$prefix_offset_upstream; $i++) {
-		    $rvr =~ s/^.//;
-		}
-		for($i=0; $i<$suffix_offset_upstream; $i++) {
-		    $rvr =~ s/.$//;
-		}
 
 		$rum_u_forward = $seqnum . "a\t$ruj[1]\t" . $downstream_spans . "\t-\t" . $DR2;
 		$rum_u_reverse = $seqnum . "b\t$ruj[1]\t" . $upstream_spans . "\t-\t" . $UR2;
@@ -360,7 +456,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 
 	if($rum_u_forward =~ /\S/) {
 
-	    # FORWARD MAPPED AND NOT JOINED WITH REVERSE, GATHER INFO
+	    # COLLECT INFO FROM FORWARD RUM RECORD
+	    # note: this might be a joined read for which the surrogate forward was created above
 
 	    undef @piecelength;
 #	    if($rum_u_joined =~ /\S/) {
@@ -370,6 +467,10 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $ruf[4] =~ s/://g;
 	    @PL = split(/\+/,$ruf[4]);
 	    $piecelength[0] = length($PL[0]);
+	    $insertions_total_length = 0;
+	    for($pl=1; $pl<@PL; $pl=$pl+2) {
+		$insertions_total_length = $insertions_total_length + length($PL[$pl]);
+	    }
 	    for($pl=1; $pl<@PL; $pl++) {
 		$piecelength[$pl] = length($PL[$pl]) + $piecelength[$pl-1];
 	    }
@@ -385,22 +486,26 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    }
 		}
 	    }
-#	    print "forward_read = $forward_read\n";
-	    $prefix_offset_forward = 0;
-#	    print "rum_u_forward_length = $rum_u_forward_length\n";
-	    if($rum_u_forward_length < $readlength) {
-		$x = $forward_read;
-		$y = $ruf[4];
-		until($x =~ /^$y/) {
-		    $x =~ s/^.//;
-		    $prefix_offset_forward++;
-#		    print " ";
+	    if($rum_u_joined =~ /\S/) {
+		if($ruf[3] eq "+") {
+		    $prefix_offset_forward = $prefix_offset_upstream;
+		    $suffix_offset_forward = $suffix_offset_upstream;
+		} else {
+		    $prefix_offset_forward = $prefix_offset_downstream;
+		    $suffix_offset_forward = $suffix_offset_downstream;
+		}
+	    } else {
+		$prefix_offset_forward = 0;
+		if($rum_u_forward_length < $readlength) {
+		    $x = $forward_read;
+		    $y = $ruf[4];
+		    until($x =~ /^$y/) {
+			$x =~ s/^.//;
+			$prefix_offset_forward++;
+		    }
 		}
 	    }
 
-#	    print "prefix_offset_forward = $prefix_offset_forward\n";
-
-#	    print "$ruf[4]\n\n";
 	    $CIGAR_f = "";
 	    $insertions_finished = 0;
 	    if($prefix_offset_forward > 0) {
@@ -446,14 +551,22 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$C1[0] = $C2[0];
 		$C1[1] = $C2[1];
 	    }
+
 	    $right_clip_size_f = $readlength - $running_length - $prefix_offset_forward;
 	    if($right_clip_size_f > 0) {
-		$CIGAR_f = $CIGAR_f . $right_clip_size_f . "S";
+		if($rum_u_forward =~ /\+$/) {
+		    $CIGAR_f = $CIGAR_f . $right_clip_size_f . "I";
+		} else {
+		    $CIGAR_f = $CIGAR_f . $right_clip_size_f . "S";
+		}
 	    }
 	}
+
+
 	if($rum_u_reverse =~ /\S/) {
 
-	    # REVERSE MAPPED, AND NOT JOINED WITH FORWARD, GATHER INFO
+	    # COLLECT INFO FROM REVERSE RUM RECORD
+	    # note: this might be a joined read for which the surrogate forward was created above
 
 	    undef @piecelength;
 #	    if($rum_u_joined =~ /\S/) {
@@ -463,6 +576,10 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $rur[4] =~ s/://g;
 	    @PL = split(/\+/,$rur[4]);
 	    $piecelength[0] = length($PL[0]);
+	    $insertions_total_length = 0;
+	    for($pl=1; $pl<@PL; $pl=$pl+2) {
+		$insertions_total_length = $insertions_total_length + length($PL[$pl]);
+	    }
 	    for($pl=1; $pl<@PL; $pl++) {
 		$piecelength[$pl] = length($PL[$pl]) + $piecelength[$pl-1];
 	    }
@@ -478,15 +595,26 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    }
 		}
 	    }
+
 #	    print "$reverse_read\n";
-	    $prefix_offset_reverse = 0;
-	    if($rum_u_reverse_length < $readlength) {
-		$x = $reverse_read;
-		$y = $rur[4];
-		until($x =~ /^$y/) {
-		    $x =~ s/^.//;
-		    $prefix_offset_reverse++;
+	    if($rum_u_joined =~ /\S/) {
+		if($ruf[3] eq "+") {
+		    $prefix_offset_reverse = $prefix_offset_downstream;
+		    $suffix_offset_reverse = $suffix_offset_downstream;
+		} else {
+		    $prefix_offset_reverse = $prefix_offset_upstream;
+		    $suffix_offset_reverse = $suffix_offset_upstream;
+		}
+	    } else {
+		$prefix_offset_reverse = 0;
+		if($rum_u_reverse_length < $readlength) {
+		    $x = $reverse_read;
+		    $y = $rur[4];
+		    until($x =~ /^$y/) {
+			$x =~ s/^.//;
+			$prefix_offset_reverse++;
 #		    print " ";
+		    }
 		}
 	    }
 #	    print "$rur[4]\n\n";
@@ -512,7 +640,9 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    } else {
 		$CIGAR_r = $CIGAR_r . $L . "M";
 	    }
+#	    print "running_length = $running_length\n";
 	    $running_length = $running_length + $L;
+#	    print "running_length = $running_length\n";
 	    for($i=1; $i<@bspans; $i++) {
 		@C2 = split(/-/,$bspans[$i]);
 		$skipped = $C2[0] - $C1[1] - 1;
@@ -538,9 +668,16 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$C1[0] = $C2[0];
 		$C1[1] = $C2[1];
 	    }
+#	    print "readlength = $readlength\n";
+#	    print "running_length = $running_length\n";
+#	    print "prefix_offset_reverse = $prefix_offset_reverse\n";
 	    $right_clip_size_r = $readlength - $running_length - $prefix_offset_reverse;
 	    if($right_clip_size_r > 0) {
-		$CIGAR_r = $CIGAR_r . $right_clip_size_r . "S";
+		if($rum_u_reverse =~ /\+$/) {
+		    $CIGAR_r = $CIGAR_r . $right_clip_size_r . "I";
+		} else {
+		    $CIGAR_r = $CIGAR_r . $right_clip_size_r . "S";
+		}
 	    }
 	}
 
@@ -613,6 +750,11 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$forward_record = $forward_record . "*\t0\t0\t$forward_read\t$forward_qual";
 	    }
 	}
+	if($joined eq "true") {
+	    $forward_record = $forward_record . "\tOL:A:T";
+	} else {
+	    $forward_record = $forward_record . "\tOL:A:F";
+	}
 	$forward_record = $forward_record . "\n";
 #	print SAM $forward_record;
 	print $forward_record;
@@ -633,6 +775,11 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		} else { # forward didn't map
 		    $reverse_record = $reverse_record . "\t$start_reverse\t0\t$reverse_read\t$reverse_qual";		
 		}
+	    }
+	    if($joined eq "true") {
+		$reverse_record = $reverse_record . "\tOL:A:T";
+	    } else {
+		$reverse_record = $reverse_record . "\tOL:A:F";
 	    }
 	    $reverse_record = $reverse_record . "\n";
 #	    print SAM $reverse_record;
@@ -687,19 +834,14 @@ sub getsuffix () {
 sub getprefix () {
     ($spans, $prefixlength) = @_;
 
-#    print "spans = $spans\n";
-#    print "prefixlength = $prefixlength\n";
-
     $newspans = "";
     @OS = split(/, /, $spans);
     $running_length=0;
     for($os=0; $os<@OS; $os++) {
 	@B = split(/-/, $OS[$os]);
 	$running_length = $running_length + $B[1] - $B[0] + 1;
-#	print "running_length = $running_length\n";
 	if($running_length >= $prefixlength) {
 	    $END = $B[1] - ($running_length - $prefixlength);
-#	    print "END = $END\n";
 	    if($newspans =~ /\S/) {
 		$newspans =  $newspans . ", " . $B[0] . "-" . $END;
 	    } else {
