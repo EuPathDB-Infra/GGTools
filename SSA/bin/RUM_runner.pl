@@ -2,7 +2,7 @@ $date = `date`;
 
 if(@ARGV == 1 && @ARGV[0] eq "config") {
     die "
-The folliwing describes the configuration file:
+The following describes the configuration file:
 Note: All entries can be absolute path, or relative path to where the RUM_runner.pl script is.
 
 1) gene annotation file, can be relative path to where the RUM_runner.pl script is, or absolute path
@@ -32,19 +32,19 @@ if(@ARGV < 5) {
 Usage: RUM_runner.pl <configfile> <reads file(s)> <output dir> <num chunks>
                      <name> [options]
 
-<reads file(s)>:  For unpaired data, the single file of reads.
-                  For paired data either: 
-                        - The files of forward and reverse reads, separated
-                          by three commas ',,,'.
-                        - One file formatted using parse2fasta.pl.
-                  Files can be either fasta or fastq.
+<reads file(s)> :  For unpaired data, the single file of reads.
+                   For paired data either: 
+                      - The files of forward and reverse reads, separated
+                        by three commas ',,,'.
+                      - One file formatted using parse2fasta.pl.
+                   Files can be either fasta or fastq.
 
-      <num chunks> is the number of pieces to break the job into.  Use one
+<num chunks>    :  The number of pieces to break the job into.  Use one
                    chunk unless you are on a cluster, or have multiple
                    processors with lots of RAM.
 
-      <name> is a string that will identify this run - use only alphanumeric
-             and underscores, no whitespace or other characters.
+<name>          :  A string that will identify this run - use only alphanumeric
+                   and underscores, no whitespace or other characters.
 
 Options: -single    : Data is single-end (default is paired-end).
          -fast      : Run with blat params that run about 3 times faster but
@@ -173,7 +173,7 @@ if(@ARGV > 5) {
 	    $optionrecognized = 1;
 	}
 	if($optionrecognized == 0) {
-	    print "\nERROR: option $ARGV[$i] not recognized.\n\n";
+	    print STDERR "\nERROR: option $ARGV[$i] not recognized.\n\n";
 	    exit();
 	}
     }
@@ -186,21 +186,30 @@ if($kill eq "true") {
     for($i=0; $i<@candidates; $i++) {
 	if($candidates[$i] =~ /^\s*(\d+)\s.*(\s|\/)$outdir\/pipeline.\d+.sh/) {
 	    $pid = $1;
-	    print "killing $pid\n";
-	    `kill $pid`;
+	    print STDERR "killing $pid\n";
+	    `kill -9 $pid`;
 	}
     }
     for($i=0; $i<@candidates; $i++) {
 	if($candidates[$i] =~ /^\s*(\d+)\s.*(\s|\/)$outdir(\s|\/)/) {
 	    if(!($candidates[$i] =~ /pipeline.\d+.sh/)) {
 		$pid = $1;
-		print "killing $pid\n";
-		`kill $pid`;
+		print STDERR "killing $pid\n";
+		`kill -9 $pid`;
 	    }
 	}
     }
     exit();
 }
+
+print STDERR "\n\n -----------------------------------------------------------------------------\n";
+print STDERR     "| Welcome to the RUM distiller: a pipeline for RNA-Seq alignment and analysis |\n";
+print STDERR     " -----------------------------------------------------------------------------\n\n";
+sleep(2);
+print STDERR "Please wait while I check that everything is in order.\n\n";
+sleep(2);
+print STDERR "This could take a few minutes.\n\n";
+sleep(2);
 
 $check = `ps x | grep RUM_runner.pl`;
 @a = split(/\n/,$check);
@@ -409,10 +418,12 @@ if($chipseq eq "false") {
 if($fasta_already_fragmented eq "false") {
     $x = breakup_fasta($readsfile, $numchunks);
 }
-print "fasta_already_fragmented = $fasta_already_fragmented\n";
-print "numchunks = $numchunks\n";
-print "readsfile = $readsfile\n";
-print "paired_end = $paired_end\n";
+print STDERR "Reads fasta file already fragmented: $fasta_already_fragmented\n";
+print STDERR "Number of Chunks: $numchunks\n";
+print STDERR "Reads File: $readsfile\n";
+print STDERR "Paired End: $paired_end\n";
+
+print STDERR "\nEverything seems okay, I am going to fire off the job.\n\n";
 
 for($i=1; $i<=$numchunks; $i++) {
     $pipeline_file = $pipeline_template;
@@ -477,6 +488,13 @@ for($i=1; $i<=$numchunks; $i++) {
     else {
 	system("/bin/bash $output_dir/$outfile &");
     }
+    print STDERR "Chunk $i initiated\n";
+}
+if($numchunks > 1) {
+    print STDERR "\nAll chunks initiated, now the long wait...\n";
+    print STDERR "I'm going to watch for all chunks to finish, then I will merge everything...\n\n";
+} else {
+    print STDERR "\nThe job has been initiated, now the long wait...\n";
 }
 
 $doneflag = 0;
@@ -498,6 +516,10 @@ while($doneflag == 0) {
 	sleep(30);
     }
 }
+
+print STDERR "All chunks have finished, now to move on to the merging,\n";
+print STDERR "creating the coverage plot and the quantified values, etc..\n\n";
+
 $date = `date`;
 print LOGFILE "finished creating RUM_Unique.*/RUM_NU.*: $date\n";
 $x = `cp $output_dir/RUM_Unique.1 $output_dir/RUM_Unique`;
@@ -539,6 +561,7 @@ else {
     system("/bin/bash $output_dir/$str");
 }
 
+print STDERR "\nWorking, now another long wait...\n\n";
 $doneflag = 0;
 while($doneflag == 0) {
     $doneflag = 1;
@@ -556,12 +579,18 @@ while($doneflag == 0) {
     }
 }
 
+print STDERR "\nOkay, all finished.\n\n";
+
 $date = `date`;
 print LOGFILE "pipeline finished: $date\n";
 close(LOGFILE);
 
 sub breakup_fasta () {
     ($fastafile, $numpieces) = @_;
+
+    print STDERR "Preparing to break up the reads file.\n\n";
+    sleep(2);
+
     open(INFILE, $fastafile);
     $filesize = `wc -l $fastafile`;
     chomp($filesize);
@@ -579,6 +608,9 @@ sub breakup_fasta () {
 	$piecesize++;
     }
     $bflag = 0;
+
+    print STDERR "Breaking up the reads file...\n\n";
+
     for($i=1; $i<$numpieces; $i++) {
 	$outfilename = $fastafile . "." . $i;
 	open(OUTFILE, ">$outfilename");
