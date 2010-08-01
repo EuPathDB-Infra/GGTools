@@ -8,7 +8,7 @@ $|=1;
 if(@ARGV < 5) {
     print STDERR 
 "
-Usage: make_TU_and_TNU.pl <bowtie file> <tu_filename> <tnu_filename> <type> [options]
+Usage: make_TU_and_TNU.pl <bowtie file> <gene_annot_file> <tu_filename> <tnu_filename> <type> [options]
 
   Where: <bowtie file> is the file output from bowtie
 
@@ -82,12 +82,13 @@ $line = <INFILE>;
 close(INFILE);
 chomp($line);
 @a = split(/\t/,$line);
-$readlength = length($a[3]);
+$readlength = length($a[4]);
 if($readlength < 80) {
     $min_overlap = 35;
 } else {
     $min_overlap = 45;
 }
+
 if($min_overlap >= .8 * $readlength) {
     $min_overlap = int(.6 * $readlength);
 }
@@ -223,6 +224,7 @@ while(1 == 1) {
 	    undef @spans_t;
 	    undef %CHRS;
 	}
+
 	if($numa > 0 && $numb > 0 && $numa * $numb < 1000000) {
 	    for($i=0; $i<$numa; $i++) {
 		@B1 = split(/\t/, $a_read_mapping_to_genome[$i]);
@@ -255,6 +257,7 @@ while(1 == 1) {
 		    }
 		    $bstart = $bstarts[0];
 		    $bend = $bends[$e-1];
+
 		    if($achr eq $bchr && $astrand eq $bstrand) {
 			if($astrand eq "+" && $bstrand eq "+" && ($aend < $bstart-1) && ($bstart - $aend <= $max_distance_between_paired_reads)) {
 			    $consistent_mappers{"$a_read_mapping_to_genome[$i]\n$b_read_mapping_to_genome[$j]"}++;
@@ -265,6 +268,7 @@ while(1 == 1) {
 			$swapped = "false";
 			if(($astrand eq "-") && ($bstrand eq "-") && ($bend >= $astart - 1) && ($astart >= $bstart) && ($aend >= $bend)) {
 			    # this is a hack to switch the a and b reads so the following if can take care of both cases
+
 			    $swapped = "true";
 			    $astrand = "+";
 			    $bstrand = "+";
@@ -417,6 +421,7 @@ while(1 == 1) {
 	    foreach $key (keys %consistent_mappers) {
 		$num_consistent_mappers++;
 	    }
+
 	    if($num_consistent_mappers == 1) {
 		foreach $key (keys %consistent_mappers) {
 		    @A = split(/\n/,$key);
@@ -444,14 +449,17 @@ while(1 == 1) {
 		undef @spans1;
 		undef @spans2;
 		undef %CHRS;
+		undef %STRANDhash;
+		$numstrands = 0;
 		foreach $key (keys %consistent_mappers) {
+
 		    @A = split(/\n/,$key);
 		    $CHRS{$a[0]}++;
 		    if(@A == 1) {
 			$num_absingle++;
 			@a = split(/\t/,$A[0]);
 			$spans1[$ccnt] = $a[1];
-			$STRAND = $a[2];
+			$STRANDhash{$a[2]}++;
 			if($ccnt == 0) {
 			    $firstseq = $a[3];
 			}
@@ -460,7 +468,7 @@ while(1 == 1) {
 			$num_absplit++;
 			@a = split(/\t/,$A[0]);
 			$spans1[$ccnt] = $a[1];
-			$STRAND = $a[2];
+			$STRANDhash{$a[2]}++;
 			if($ccnt == 0) {
 			    $firstseq1 = $a[3];
 			}
@@ -472,13 +480,17 @@ while(1 == 1) {
 		    }
 		    $ccnt++;
 		}
+		foreach $strandkey (keys %STRANDhash) {
+		    $numstrands++;
+		    $STRAND = $strandkey;
+		}
 		$nchrs = 0;
 		foreach $ky (keys %CHRS) {
 		    $nchrs++;
 		    $CHR = $ky;
 		}
 		$nointersection = 0;
-		if($num_absingle == 0 && $num_absplit > 0 && $nchrs == 1) {
+		if($num_absingle == 0 && $num_absplit > 0 && $nchrs == 1 && $numstrands == 1) {
 		    $str1 = intersect(\@spans1, $firstseq1);
 		    $str2 = intersect(\@spans2, $firstseq2);
 		    if($str1 ne "NONE" && $str2 ne "NONE") {
@@ -516,7 +528,7 @@ while(1 == 1) {
 			$nointersection = 1;
 		    }
 		}
-		if($num_absingle > 0 && $num_absplit == 0 && $nchrs == 1) {
+		if($num_absingle > 0 && $num_absplit == 0 && $nchrs == 1 && $numstrands == 1) {
 		    $str = intersect(\@spans1, $firstseq);
 		    if($str ne "NONE") {
 			$str =~ s/^(\d+)\t/$CHR\t/;
@@ -524,11 +536,7 @@ while(1 == 1) {
 			if($size >= $min_overlap) {
 			    @ss = split(/\t/,$str);
 			    $seq_new = addJunctionsToSeq($ss[2], $ss[1]);
-			    if($swapped eq "true") {
-				print OUTFILE1 "seq.$seqnum_prev\t$ss[0]\t$ss[1]\t$seq_new\t-\n";
-			    } else {
-				print OUTFILE1 "seq.$seqnum_prev\t$ss[0]\t$ss[1]\t$seq_new\t+\n";
-			    }
+			    print OUTFILE1 "seq.$seqnum_prev\t$ss[0]\t$ss[1]\t$seq_new\t$STRAND\n";
 			}
 			else {
 			    $nointersection = 1;
@@ -538,7 +546,7 @@ while(1 == 1) {
 			$nointersection = 1;
 		    }
 		}
-		if(($nointersection == 1) || ($nchrs > 1) || ($num_absingle > 0 && $num_absplit > 0)) {
+		if(($nointersection == 1) || ($nchrs > 1) || ($num_absingle > 0 && $num_absplit > 0) || ($numstrands > 1)) {
 		    foreach $key (keys %consistent_mappers) {
 			@A = split(/\n/,$key);
 			for($n=0; $n<@A; $n++) {
