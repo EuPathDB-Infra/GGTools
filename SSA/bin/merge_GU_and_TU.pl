@@ -72,48 +72,50 @@ for($i=7; $i<@ARGV; $i++) {
 }
 
 open(INFILE, $infile4) or die "\nERROR: Cannot open file '$infile4' for reading\n";
+$readlength = 0;
 $cnt = 0;
 while($line = <INFILE>) {
+    $length = 0;
     if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
 	chomp($line);
 	@a = split(/\t/,$line);
 	$span = $a[2];
-	if(!($span =~ /,/)) {
-	    $cnt++;
-	    @b = split(/-/,$span);
-	    $length = $b[1] - $b[0] + 1;
-	    if($length > $readlength) {
-		$readlength = $length;
-		$cnt = 0;
-	    }
-	    if($cnt > 50000) { # it checked 50,000 lines without finding anything larger than the last time
-		# readlength was changed, so it's most certainly found the max.
-		# Went through this to avoid the user having to input the readlength.
-		last;
-	    }
+	@SPANS = split(/, /, $span);
+	$cnt++;
+	for($i=0; $i<@SPANS; $i++) {
+	    @b = split(/-/,$SPANS[$i]);
+	    $length = $length + $b[1] - $b[0] + 1;
+	}
+	if($length > $readlength) {
+	    $readlength = $length;
+	    $cnt = 0;
+	}
+	if($cnt > 50000) {
+	    last;
 	}
     }
 }
-$cnt = 0;
+close(INFILE);
 open(INFILE, $infile3) or die "\nERROR: Cannot open file '$infile3' for reading\n";
+$cnt = 0;
 while($line = <INFILE>) {
+    $length = 0;
     if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
 	chomp($line);
 	@a = split(/\t/,$line);
 	$span = $a[2];
-	if(!($span =~ /,/)) {
-	    $cnt++;
-	    @b = split(/-/,$span);
-	    $length = $b[1] - $b[0] + 1;
-	    if($length > $readlength) {
-		$readlength = $length;
-		$cnt = 0;
-	    }
-	    if($cnt > 50000) { # it checked 50,000 lines without finding anything larger than the last time
-		# readlength was changed, so it's most certainly found the max.
-		# Went through this to avoid the user having to input the readlength.
-		last;
-	    }
+	@SPANS = split(/, /, $span);
+	$cnt++;
+	for($i=0; $i<@SPANS; $i++) {
+	    @b = split(/-/,$SPANS[$i]);
+	    $length = $length + $b[1] - $b[0] + 1;
+	}
+	if($length > $readlength) {
+	    $readlength = $length;
+	    $cnt = 0;
+	}
+	if($cnt > 50000) {
+	    last;
 	}
     }
 }
