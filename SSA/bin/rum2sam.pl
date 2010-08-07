@@ -11,15 +11,52 @@ Usage: rum2sam.pl <rum unique file> <rum nu file> <reads file> <quals file> <sam
 
 <reads file> and <qual file> are the files coming from parse2fasta.pl and fastq2qualities.pl
 
+Options:
+
+   -suppress1  : Don't report records if neither forward nor reverse map
+   -suppress2  : Don't report records of non-mapper, even if their pair mapped
+   -suppress3  : Don't report records unless both forward and reverse mapped
+
 If you don't have the qualities just put 'none' for the <quals file> argument.
 
-If you don't have the non-unique file, just put 'none' for the <rum nu file> argument.
+If you don't have the rum unique file, just put 'none' for the <rum unique file> argument.
+
+If you don't have the rum nu file, just put 'none' for the <rum nu file> argument.
 
 ";
 }
 
+$suppress1 = "false";
+$suppress2 = "false";
+$suppress3 = "false";
+
+for($i=5; $i<@ARGV; $i++) {
+    $optionrecognized = 0;
+    if($ARGV[$i] eq "-suppress1") {
+	$suppress1 = "true";
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-suppress2") {
+	$suppress2 = "true";
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-suppress3") {
+	$suppress3 = "true";
+	$optionrecognized = 1;
+    }
+    if($optionrecognized == 0) {
+	die "\nERROR: option '$ARGV[$i]' not recognized\n";
+    }
+}
+
+
 $rum_unique_file = $ARGV[0];
 $rum_nu_file = $ARGV[1];
+$uniquers = "true";
+if($ARGV[0] =~ /none/ || $ARGV[0] =~ /.none./) {
+    $uniquers = "false";
+}
+
 $non_uniquers = "true";
 if($ARGV[1] =~ /none/ || $ARGV[1] =~ /.none./) {
     $non_uniquers = "false";
@@ -73,34 +110,60 @@ $bitflag[8] = "the alignment is not primary";
 $bitflag[9] = "the read fails platform/vendor quality checks";
 $bitflag[10] = "the read is either a PCR duplicate or an optical duplicate";
 
-open(RUMU, $rum_unique_file) or die "\nError: cannot open the file '$rum_unique_file' for reading\n\n";
+if($uniquers eq "true") {
+    open(RUMU, $rum_unique_file) or die "\nError: cannot open the file '$rum_unique_file' for reading\n\n";
+}
 if($non_uniquers eq "true") {
     open(RUMNU, $rum_nu_file) or die "\nError: cannot open the file '$rum_nu_file' for reading\n\n";
 }
 open(READS, $reads_file) or die "\nError: cannot open the file '$reads_file' for reading\n\n";
 
 # checking that the first line in RUMU really looks like it should:
-$line = <RUMU>;
-close(RUMU);
-@a = split(/\t/,$line);
-$flag = 0;
-if(!($a[0] =~ /^seq.\d+[ab]?/)) {
-    $flag = 1;
+
+if($uniquers eq "true") {
+    $line = <RUMU>;
+    close(RUMU);
+    @a = split(/\t/,$line);
+    $flag = 0;
+    if(!($a[0] =~ /^seq.\d+[ab]?/)) {
+	$flag = 1;
+    }
+    if($a[2] =~ /[^\d-, ]/) {
+	$flag = 1;
+    }
+    if(!($a[3] eq "+" || $a[3] eq "-")) {
+	$flag = 1;
+    }
+    if(!($a[4] =~ /^[ACGTN:+]+$/)) {
+	$flag = 1;
+    }
+    if($flag == 1) {
+	die "\nError: the first line of the file '$rum_unique_file' is misformatted,\nit does not look like a RUM output file.\n";
+    }
+    open(RUMU, $rum_unique_file) or die "\nError: cannot open the file '$rum_unique_file' for reading\n\n";
 }
-if($a[2] =~ /[^\d-, ]/) {
-    $flag = 1;
+if($non_uniquers eq "true") {
+    $line = <RUMNU>;
+    close(RUMNU);
+    @a = split(/\t/,$line);
+    $flag = 0;
+    if(!($a[0] =~ /^seq.\d+[ab]?/)) {
+	$flag = 1;
+    }
+    if($a[2] =~ /[^\d-, ]/) {
+	$flag = 1;
+    }
+    if(!($a[3] eq "+" || $a[3] eq "-")) {
+	$flag = 1;
+    }
+    if(!($a[4] =~ /^[ACGTN:+]+$/)) {
+	$flag = 1;
+    }
+    if($flag == 1) {
+	die "\nError: the first line of the file '$rum_unique_file' is misformatted,\nit does not look like a RUM output file.\n";
+    }
+    open(RUMNU, $rum_nu_file) or die "\nError: cannot open the file '$rum_unique_file' for reading\n\n";
 }
-if(!($a[3] eq "+" || $a[3] eq "-")) {
-    $flag = 1;
-}
-if(!($a[4] =~ /^[ACGTN:+]+$/)) {
-    $flag = 1;
-}
-if($flag == 1) {
-    die "\nError: the first line of the file '$rum_unique_file' is misformatted,\nit does not look like a RUM output file.\n";
-}
-close(RUMU);
-open(RUMU, $rum_unique_file) or die "\nError: cannot open the file '$rum_unique_file' for reading\n\n";
 
 if($quals eq "true") {
     open(QUALS, $qual_file);
@@ -117,10 +180,12 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
     $forward_read = <READS>;
     $forward_read = <READS>;
     chomp($forward_read);
+    $forward_read_hold = $forward_read;
     if($paired eq "true") {
 	$reverse_read = <READS>;
 	$reverse_read = <READS>;
 	chomp($reverse_read);
+	$reverse_read_hold = $reverse_read;
     }
     if($quals eq "true") {
 	$forward_qual = <QUALS>;
@@ -144,7 +209,11 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
     $FORWARD[0] = "";
     $REVERSE[0] = "";
     $JOINED[0] = "";
-    $flag = 0;
+    if($uniquers eq "true") {
+	$flag = 0;
+    } else {
+	$flag = 1;
+    }
     while($flag == 0) {
 	$line = <RUMU>;
 	chomp($line);
@@ -239,6 +308,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    }
 	}
     }
+
     if($unique_mapper_found eq "true" || $non_unique_mappers_found eq "true") {
 	for($mapper=0; $mapper<$num_mappers; $mapper++) {
 	    $rum_u_forward = $FORWARD[$mapper];
@@ -279,7 +349,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    if($rum_u_joined =~ /\S/) {
 		# FORWARD AND REVERSE MAPPED, AND THEY ARE JOINED, GATHER INFO
 		$joined = "true";
-	    print "---------------\nrum_u_joined = $rum_u_joined\n";
+# 		print "---------------\nrum_u_joined = $rum_u_joined\n";
 		undef @piecelength;
 		@ruj = split(/\t/,$rum_u_joined);
 		$ruj[4] =~ s/://g;
@@ -290,9 +360,9 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		}
 		@ruj = split(/\t/,$rum_u_joined);
 		if($ruj[3] eq "-") {
-		    $upstream_read = $reverse_read;
+		    $upstream_read = $reverse_read_hold;
 		} else {
-		    $upstream_read = $forward_read;
+		    $upstream_read = $forward_read_hold;
 		}
 		$x = $upstream_read;
 		$ruj[4] =~ s/://g;
@@ -318,7 +388,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 			$prefix_offset_upstream_current_best = $prefix_offset_upstream;
 			$LEN_current_best = $LEN;
 		    }
-		    if($LEN < $readlength / 2) {
+		    if($LEN < $readlength) {
 			$LENflag = 0;
 			$x = $upstream_read;
 			$suffix_offset_upstream++;
@@ -350,8 +420,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$pl=0;
 		$RC = 0;
 		$matchlength = $piecelength[0];
-#	    print "suffix_offset_upstream = $suffix_offset_upstream\n";
-#	    print "UR2 = $UR2\n";
+
 		while($piecelength[$pl] + $prefix_offset_upstream < $readlength - $suffix_offset_upstream) {
 		    $plen = $plen - ($piecelength[$pl+1] - $piecelength[$pl]);
 		    if($piecelength[$pl+1] > $readlength) { # insertion went past the end of the read,
@@ -377,19 +446,18 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    $pl=$pl+2;
 		    $matchlength = $matchlength + $piecelength[$pl] - $piecelength[$pl-1];
 		}
-#	    print "UR2 = $UR2\n";
-#	    print "suffix_offset_upstream = $suffix_offset_upstream\n";
+
 		for($i=0; $i<$prefix_offset_upstream; $i++) {
 		    $UR2 =~ s/^.//;
 		}
 		$upstream_spans = &getprefix($ruj[2], $plen);
 		
 		if($ruj[3] eq "-") {
-		    $downstream_read = reversecomplement($forward_read);
+		    $downstream_read = reversecomplement($forward_read_hold);
 		    $bitscore_f = $bitscore_f + 16;
 		    $bitscore_r = $bitscore_r + 32;
 		} else {
-		    $downstream_read = reversecomplement($reverse_read);
+		    $downstream_read = reversecomplement($reverse_read_hold);
 		    $bitscore_r = $bitscore_r + 16;
 		    $bitscore_f = $bitscore_f + 32;
 		}
@@ -402,9 +470,10 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$LEN = 0;
 		$LENflag = 0;
 		$LEN_current_best=0;
+		$tried_mismatch = "false";
 		while($LENflag == 0) {
 		    $LENflag = 1;
-		    until($y =~ /$x$/ || length($x)==0) {
+		    until(($y =~ /$x$/ && !($x =~ /^\./))|| length($x)==0) {
 			$x =~ s/.$//;
 			$count++;
 			$suffix_offset_downstream++;
@@ -415,7 +484,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 			$prefix_offset_downstream_current_best = $prefix_offset_downstream;
 			$LEN_current_best = $LEN;
 		    }
-		    if($LEN < $readlength / 2) {
+		    if($LEN < $readlength) {
 			$LENflag = 0;
 			$x = $downstream_read;
 			$prefix_offset_downstream++;
@@ -430,6 +499,35 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 			}
 		    }
 		}
+		$max_length_of_alignment = $readlength - $suffix_offset_downstream_current_best;
+		if(length($ruj[4]) < $max_length_of_alignment) {
+		    $max_length_of_alignment = length($ruj[4]);
+		}
+		$x = $downstream_read;
+		for($j=0; $j<$suffix_offset_downstream_current_best; $j++) {
+		    $x =~ s/.$//;
+		}		
+		$removed_extra = 0;
+		until(length($x) <= $max_length_of_alignment) {
+		    $x =~ s/^.//;
+		    $removed_extra++;
+		}
+		$y = substr($ruj[4], -1*length($x));
+		$random_walk = 0;
+		$current_max = 0;
+		$current_max_arg = length($x)+1;
+		for($i=length($x)-1; $i>=0; $i--) {
+		    if(substr($x,$i,1) eq substr($y,$i,1)) {
+			$random_walk++;
+		    } else {
+			$random_walk--;
+		    }
+		    if($random_walk > $current_max) {
+			$current_max = $random_walk;
+			$current_max_arg = $i;
+		    }
+		}
+		$prefix_offset_downstream_current_best = $removed_extra + $current_max_arg;
 		
 		$prefix_offset_downstream = $prefix_offset_downstream_current_best;
 		$suffix_offset_downstream = $suffix_offset_downstream_current_best;
@@ -442,7 +540,6 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		}
 		$DR2 = $DR;
 		$DR = $replace . $DR;
-#	    print "DR2=$DR2\n";
 		
 		$offset = length($ruj[4]) + $prefix_offset_upstream + $suffix_offset_downstream - length($DR);
 		
@@ -455,73 +552,55 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    $P = $P . " ";
 		}
 		$plen = $readlength - $prefix_offset_downstream - $suffix_offset_downstream;
-#	    print "plen=$plen\n";
 		
- 	    print "\n$upstream_read\n\n";
-	    print $P;
-	    print "$UR\n";
-	    print $P;
-	    for($i=0; $i<$prefix_offset_upstream; $i++) {
-		print " ";
-	     }
-	    print "$ruj[4]\n";
-	    for($i=0; $i<$offset; $i++) {
-		print " ";
-	    }
-	    print "$DR\n";
-	    print "\n$downstream_read\n\n";
-		
-		
-		
-#	    print "piecelength[0] = $piecelength[0]\n";
-#	    print "piecelength[1] = $piecelength[1]\n";
-#	    print "piecelength[2] = $piecelength[2]\n";
-#	    print "piecelength[3] = $piecelength[3]\n";
-#	    print "piecelength[4] = $piecelength[4]\n";
+#		print "\n$upstream_read\n\n";
+#		print $P;
+#		print "$UR\n";
+#		print $P;
+#		for($i=0; $i<$prefix_offset_upstream; $i++) {
+#		    print " ";
+#		}
+#		print "$ruj[4]\n";
+#		for($i=0; $i<$offset; $i++) {
+#		    print " ";
+#		}
+#		print "$downstream_read\n\n";
+#		print "\n$downstream_read\n\n";
 		
 		$RC = 0;
 		$pl=0;
-#	    print "offset=$offset\n";
-#	    print "prefix_offset_downstream=$prefix_offset_downstream\n";
-#	    print "prefix_offset_upstream=$prefix_offset_upstream\n";
-		until($piecelength[$pl] > $offset + $prefix_offset_downstream || $pl >= @piecelength) {
+
+		until($piecelength[$pl] > $offset + $prefix_offset_downstream - $prefix_offset_upstream || $pl >= @piecelength) {
 		    $pl++;
 		}
-#	    print "pl=$pl\n";
+		
 		# the first three if's here deal with the case that there's an insertion right at 
 		# the begginging of the downstream read, either starting at the start of the read,
 		# or ending just before it, or overlapping the end.
-		if($pl == 0 && $piecelength[0] == $offset) {
+		if($pl == 0 && $piecelength[0] == $offset - $prefix_offset_upstream) {
 		    substr($DR2, $piecelength[$pl+1]-$piecelength[$pl], 0, "+");
 		    $DR2 = "+" . $DR2;
-		} elsif(($pl == 1 && $piecelength[1] == $offset) || ($pl >= @piecelength)) {
+		} elsif(($pl == 1 && $piecelength[1] == $offset - $prefix_offset_upstream) || ($pl >= @piecelength)) {
 		    # do nothing
 		}
 		elsif($pl % 2 == 1) {
 		    substr($DR2, $piecelength[$pl]-$offset+$RC-$prefix_offset_downstream+$prefix_offset_upstream, 0, "+");
-		    $pl--;
+		    $pl++;
 		    $DR2 = "+" . $DR2;
-		} else {
-#		print "pl=$pl\n";
-#		print "DR2=$DR2\n";
-		    while($piecelength[$pl] >= $offset + $prefix_offset_downstream -$prefix_offset_upstream && $pl < @piecelength-1) {
-			$plen = $plen - ($piecelength[$pl+1] - $piecelength[$pl]);
-#		    print "x:plen=$plen\n";
-			$ABC = $piecelength[$pl]-$offset+$RC-$prefix_offset_downstream+$prefix_offset_upstream;
-			$XYZ = $piecelength[$pl+1]-$offset+$RC-$prefix_offset_downstream+$prefix_offset_upstream;
-			substr($DR2, $piecelength[$pl]-$offset+$RC-$prefix_offset_downstream+$prefix_offset_upstream, 0, "+");
-			$RC++;
-			substr($DR2, $piecelength[$pl+1]-$offset+$RC-$prefix_offset_downstream+$prefix_offset_upstream, 0, "+");
-			$RC++;
-			$pl=$pl+2;
-		    }
+		    $RC=$RC+2;
+		} 
+		while($piecelength[$pl] >= $offset + $prefix_offset_downstream - $prefix_offset_upstream && $pl < @piecelength-1) {
+		    $plen = $plen - ($piecelength[$pl+1] - $piecelength[$pl]);
+		    substr($DR2, $piecelength[$pl]-$offset+$RC-$prefix_offset_downstream+$prefix_offset_upstream, 0, "+");
+		    $RC++;
+		    substr($DR2, $piecelength[$pl+1]-$offset+$RC-$prefix_offset_downstream+$prefix_offset_upstream, 0, "+");
+		    $RC++;
+		    $pl=$pl+2;
 		}
 		$DR2 =~ s/^\+([^\+]+)\+//; # individual alignments don't have insertions at the ends,
 		# so removing it because it'll mess things up downstream
 		$prefix_offset_downstream = $prefix_offset_downstream + length($1);
-#	    print "plen=$plen\n";
 		$plen = $plen - length($1);
-#	    print "plen=$plen\n";
 		
 		for($i=0; $i<$suffix_offset_downstream; $i++) {
 		    $DR2 =~ s/.$//;
@@ -543,11 +622,10 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    }
 	    
 	    if($rum_u_forward =~ /\S/) {
-		
 		# COLLECT INFO FROM FORWARD RUM RECORD
 		# note: this might be a joined read for which the surrogate forward was created above
 		
-	    print "rum_u_forward = $rum_u_forward\n\n";
+#		print "rum_u_forward = $rum_u_forward\n\n";
 		
 		@ruf = split(/\t/,$rum_u_forward);
 		@SEQ = split(/:/, $ruf[4]);
@@ -556,7 +634,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$ruf[4] =~ s/\+//g;
 		$rum_u_forward_length = length($ruf[4]);
 		if($ruf[3] eq "-") {
-		    $forward_read = reversecomplement($forward_read);
+		    $forward_read = reversecomplement($forward_read_hold);
 		    if(!($rum_u_joined =~ /\S/)) {
 			$bitscore_f = $bitscore_f + 16;
 			$bitscore_r = $bitscore_r + 32;
@@ -564,6 +642,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 			    $bitscore_r = $bitscore_r + 16;
 			}
 		    }
+		} else {
+		    $forward_read = $forward_read_hold;
 		}
 		if($rum_u_joined =~ /\S/) {
 		    if($ruf[3] eq "+") {
@@ -584,7 +664,6 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 			}
 		    }
 		}
-		
 		$CIGAR_f = "";
 		if($prefix_offset_forward > 0) {
 		    $CIGAR_f = $prefix_offset_forward . "S";
@@ -631,7 +710,6 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    }
 		    $running_length = $running_length + $L;
 		}
-		
 		$right_clip_size_f = $readlength - $running_length - $prefix_offset_forward;
 		if($right_clip_size_f > 0) {
 		    if($rum_u_forward =~ /\+$/) {
@@ -648,7 +726,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		# COLLECT INFO FROM REVERSE RUM RECORD
 		# note: this might be a joined read for which the surrogate forward was created above
 		
-	    print "rum_u_reverse = $rum_u_reverse\n\n";
+#		print "rum_u_reverse = $rum_u_reverse\n\n";
 		
 		@rur = split(/\t/,$rum_u_reverse);
 		@SEQ = split(/:/, $rur[4]);
@@ -657,7 +735,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$rur[4] =~ s/\+//g;
 		$rum_u_reverse_length = length($rur[4]);
 		if($rur[3] eq "+") {
-		    $reverse_read = reversecomplement($reverse_read);
+		    $reverse_read = reversecomplement($reverse_read_hold);
 		    if(!($rum_u_joined =~ /\S/)) {
 			$bitscore_r = $bitscore_r + 16;
 			$bitscore_f = $bitscore_f + 32;
@@ -665,6 +743,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 			    $bitscore_f = $bitscore_f + 16;
 			}
 		    }
+		} else {
+		    $reverse_read = $reverse_read_hold;
 		}
 		
 #	    print "$reverse_read\n";
@@ -747,8 +827,6 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		}
 	    }
 	    
-#	print "bitscore_f = $bitscore_f\n";
-#	print "bitscore_r = $bitscore_r\n";
 	    
 # COMPUTE IDIST
 	    
@@ -826,8 +904,14 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    $forward_record = $forward_record . "\tIH:i:$num_mappers\tHI:i:$MM";
 
 	    $forward_record = $forward_record . "\n";
-#	print SAM $forward_record;
-	    print $forward_record;
+	    if($suppress2 eq "true" && $forward_record =~ /\*\t=/) {
+		# do nothing
+	    } elsif($suppress3 eq "true" && ($forward_record =~ /\*\t=/ || $reverse_record =~ /\*\t=/)) {
+		# do nothing
+	    } else {
+		print SAM $forward_record;
+#		print $forward_record;
+	    }
 	    
 # REVERSE
 	    
@@ -855,8 +939,14 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$reverse_record = $reverse_record . "\tIH:i:$num_mappers\tHI:i:$MM";
 
 		$reverse_record = $reverse_record . "\n";
-#	    print SAM $reverse_record;
-		print $reverse_record;
+		if($suppress2 eq "true" && $reverse_record =~ /\*\t=/) {
+		    # do nothing
+		} elsif($suppress3 eq "true" && ($forward_record =~ /\*\t=/ || $reverse_record =~ /\*\t=/)) {
+		    # do nothing
+		} else {
+		    print SAM $reverse_record;
+#		    print $reverse_record;
+		}
 	    }
 	}
     }
@@ -866,15 +956,19 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	if($paired eq "false") {
 	    $record = "seq.$seqnum";
 	    $record = $record . "a\t4\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
-#	    print SAM $record;
-	    print $record;
+	    if($suppress1 eq "false" && $suppress2 eq "false" && $suppress3 eq "false") {
+		print SAM $record;
+#		print $record;
+	    }
 	} else {
 	    $record = "seq.$seqnum";
 	    $record = $record . "a\t77\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
 	    $record = $record . "seq.$seqnum";
 	    $record = $record . "b\t141\t*\t0\t255\t*\t*\t0\t0\t$reverse_read\t$reverse_qual\n";
-#	    print SAM $record;
-	    print $record;
+	    if($suppress1 eq "false" && $suppress2 eq "false" && $suppress3 eq "false") {
+		print SAM $record;
+#		print $record;
+	    }
 	}
     }
 }

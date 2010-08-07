@@ -108,9 +108,6 @@ for($i=6; $i<@ARGV; $i++) {
 
 # NOTE: insertions instead are indicated in the final output file with the "+" notation
 for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
-    if($seq_count % 100000 == 0) {
-	print "$seq_count\n";
-    }
     if($seq_count == $first_seq_num) {
 	$line = <BLATHITS>;
 	chomp($line);
@@ -542,7 +539,9 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	    for($i=0; $i<$numa; $i++) {
 		@B1 = split(/\t/, $read_mapping_to_genome_coords[0][$i]);
 		$spans[$i] = $B1[2];
-		$seq_temp = $B1[3];
+		if($i==0) {
+		    $seq_temp = $B1[3];
+		}
 		if($B1[4] eq "+") {
 		    $STRAND = "+";
 		}
@@ -592,7 +591,9 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	    for($i=0; $i<$numb; $i++) {
 		@B1 = split(/\t/, $read_mapping_to_genome_coords[1][$i]);
 		$spans[$i] = $B1[2];
-		$seq_temp = $B1[3];
+		if($i==0) {
+		    $seq_temp = $B1[3];
+		}
 		if($B1[4] eq "+") {
 		    $STRAND = "+";
 		}
@@ -632,23 +633,46 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	    $achr = $B1[1];
 	    @AR = split(/\t/,$read_mapping_to_genome_coords[0][$i]);
 	    $astrand = $AR[4];
+	    $astrand_hold = $astrand;
 	    $aseq = $AR[3];
+	    $aseq_hold = $aseq;
+	    $aspans = $B1[2];
+	    $aave = &getave($aspans);
+	    $aave_hold = $aave;
+	    $aspans_hold = $aspans;
 	    @aexons = split(/, /,$B1[2]);
 	    undef @astarts;
 	    undef @aends;
+	    undef @astarts_hold;
+	    undef @aends_hold;
 	    for($e=0; $e<@aexons; $e++) {
 		@c = split(/-/,$aexons[$e]);
 		$astarts[$e] = $c[0];
+		$astarts_hold[$e] = $astarts[$e];
 		$aends[$e] = $c[1];
+		$aends_hold[$e] = $aends[$e];
 	    }
 	    $astart = $astarts[0];
+	    $astart_hold = $astart;
 	    $aend = $aends[$e-1];
+	    $aend_hold = $aend;
 	    for($j=0; $j<$numb; $j++) {
+		$astart = $astart_hold;
+		$aend = $aend_hold;
+		$aspans = $aspans_hold;
+		$aave = $aave_hold;
+		$aseq = $aseq_hold;
+		for($e=0; $e<@aexons; $e++) {
+		    $astarts[$e] = $astarts_hold[$e];
+		    $aends[$e] = $aends_hold[$e];
+		}
 		@B1 = split(/\t/, $read_mapping_to_genome_pairing_candidate[1][$j]);
 		$bchr = $B1[1];
 		@BR = split(/\t/,$read_mapping_to_genome_coords[1][$j]);
 		$bstrand = $BR[4];
 		$bseq = $BR[3];
+		$bspans = $B1[2];
+		$bave = &getave($bspans);
 		@bexons = split(/, /,$B1[2]);
 		undef @bstarts;
 		undef @bends;
@@ -659,7 +683,21 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 		}
 		$bstart = $bstarts[0];
 		$bend = $bends[$e-1];
-		if($achr eq $bchr) {
+		
+#		    print "----------------\n";
+#		    print "$read_mapping_to_genome_coords[0][$i]\n";
+#		    print "$read_mapping_to_genome_coords[1][$j]\n";
+#		    print "aave = $aave\n";
+#		    print "bave = $bave\n";
+
+		$proceedflag = 0;
+		if($astrand eq "+" && $bstrand eq "+" && $aave <= $bave) {
+		    $proceedflag = 1;
+		}
+		if($astrand eq "-" && $bstrand eq "-" && $bave <= $aave) {
+		    $proceedflag = 1;
+		}
+		if($achr eq $bchr && $proceedflag == 1) {
 		    $ostrand = $astrand;  # "o" for "original"
 		    if($astrand eq "+" && $bstrand eq "+" && ($aend < $bstart-1) && ($bstart - $aend <= $max_distance_between_paired_reads)) {
 			$consistent_mappers{"$read_mapping_to_genome_coords[0][$i]\n$read_mapping_to_genome_coords[1][$j]"}++;
@@ -867,7 +905,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			    if($postfix_length <= $merged_length - $alength) {
 				$str_temp = $ins . $bpostfix;
 				$str_temp =~ s/\+/\\+/g;
-				if(!($merged_seq =~ /$str_temp/)) {
+				if(!($merged_seq =~ /$str_temp$/)) {
 				    $merged_seq =~ s/$bpostfix$/$ins$bpostfix/;
 				}
 			    }
@@ -1114,51 +1152,51 @@ sub getsequence {
     ($blocksizes, $qstarts, $strand, $seq) = @_;
     chomp($seq);
     if($strand eq "-") {
-	@a = split(//,$seq);
-	$n = @a;
+	@a_g = split(//,$seq);
+	$n_g = @a_g;
 	$revcomp = "";
-	for($i=$n-1; $i>=0; $i--) {
-	    $flag = 0;
-	    if($a[$i] eq 'A') {
+	for($i_g=$n_g-1; $i_g>=0; $i_g--) {
+	    $flag_g = 0;
+	    if($a_g[$i_g] eq 'A') {
 		$revcomp = $revcomp . "T";
-		$flag = 1;
+		$flag_g = 1;
 	    }
-	    if($a[$i] eq 'T') {
+	    if($a_g[$i_g] eq 'T') {
 		$revcomp = $revcomp . "A";
-		$flag = 1;
+		$flag_g = 1;
 	    }
-	    if($a[$i] eq 'C') {
+	    if($a_g[$i_g] eq 'C') {
 		$revcomp = $revcomp . "G";
-		$flag = 1;
+		$flag_g = 1;
 	    }
-	    if($a[$i] eq 'G') {
+	    if($a_g[$i_g] eq 'G') {
 		$revcomp = $revcomp . "C";
-		$flag = 1;
+		$flag_g = 1;
 	    }
-	    if($flag == 0) {
-		$revcomp = $revcomp . $a[$i];
+	    if($flag_g == 0) {
+		$revcomp = $revcomp . $a_g[$i_g];
 	    }
 	}
 	$seq = $revcomp;
     }
     $blocksizes =~ s/,\s*$//;
     $qstarts =~ s/,\s*$//;
-    @a = split(/,/,$blocksizes);
-    @b = split(/,/,$qstarts);
-    @s = split(//,$seq);
+    @a_g = split(/,/,$blocksizes);
+    @b_g = split(/,/,$qstarts);
+    @s_g = split(//,$seq);
     $seq_out = "";
-    for($i=0; $i<@a; $i++) {
-	for($j=0; $j<$a[$i]; $j++) {
-	    $seq_out = $seq_out . "$s[$b[$i]+$j]";
+    for($i_g=0; $i_g<@a_g; $i_g++) {
+	for($j_g=0; $j_g<$a_g[$i_g]; $j_g++) {
+	    $seq_out = $seq_out . "$s_g[$b_g[$i_g]+$j_g]";
 	}
-	if($i<@a-1) {
-	    if($a[$i]+$b[$i] == $b[$i+1]) {
+	if($i_g<@a_g-1) {
+	    if($a_g[$i_g]+$b_g[$i_g] == $b_g[$i_g+1]) {
 		$seq_out = $seq_out . ":";
 	    }
 	    else{
 		$seq_out = $seq_out . "+";
-		for($k=0; $k<$b[$i+1]-$a[$i]-$b[$i]; $k++) {
-		    $seq_out = $seq_out . $s[$b[$i]+$a[$i]+$k];
+		for($k_g=0; $k_g<$b_g[$i_g+1]-$a_g[$i_g]-$b_g[$i_g]; $k_g++) {
+		    $seq_out = $seq_out . $s_g[$b_g[$i_g]+$a_g[$i_g]+$k_g];
 		}
 		$seq_out = $seq_out . "+";
 	    }
@@ -1169,35 +1207,35 @@ sub getsequence {
 
 sub intersect () {
     ($spans_ref, $seq) = @_;
+
     @spans = @{$spans_ref};
-    $num = @spans;
+    $num_i = @spans;
     undef %chash;
-    for($s=0; $s<$num; $s++) {
-	@a = split(/, /,$spans[$s]);
-	for($i=0;$i<@a;$i++) {
-	    @b = split(/-/,$a[$i]);
-	    for($j=$b[0];$j<=$b[1];$j++) {
-		$chash{$j}++;
+    for($s_i=0; $s_i<$num_i; $s_i++) {
+	@a_i = split(/, /,$spans[$s_i]);
+	for($i_i=0;$i_i<@a_i;$i_i++) {
+	    @b_i = split(/-/,$a_i[$i_i]);
+	    for($j_i=$b_i[0];$j_i<=$b_i[1];$j_i++) {
+		$chash{$j_i}++;
 	    }
 	}
     }
     $spanlength = 0;
-    $flag = 0;
-    $maxspanlength = 0;
+    $flag_i = 0;
+    $maxspanlength = 0;  # going to report one contiguous span of the read, so will find the longest
     $maxspan_start = 0;
     $maxspan_end = 0;
     $prevkey = 0;
-    for $key (sort {$a <=> $b} keys %chash) {
-	if($chash{$key} == $num) {
-	    if($flag == 0) {
-		$flag = 1;
-		$span_start = $key;
+    for $key_i (sort {$a <=> $b} keys %chash) {
+	if($chash{$key_i} == $num_i) {  # this location is contained in all sets of spans, so keep it
+	    if($flag_i == 0) { # starts a new span
+		$flag_i = 1;
+		$span_start = $key_i;
 	    }
 	    $spanlength++;
-	}
-	else {
-	    if($flag == 1) {
-		$flag = 0;
+	} else {
+	    if($flag_i == 1) { # ends a span, if one has been started
+		$flag_i = 0;
 		if($spanlength > $maxspanlength) {
 		    $maxspanlength = $spanlength;
 		    $maxspan_start = $span_start;
@@ -1206,9 +1244,9 @@ sub intersect () {
 		$spanlength = 0;
 	    }
 	}
-	$prevkey = $key;
+	$prevkey = $key_i;
     }
-    if($flag == 1) {
+    if($flag_i == 1) {
 	if($spanlength > $maxspanlength) {
 	    $maxspanlength = $spanlength;
 	    $maxspan_start = $span_start;
@@ -1216,54 +1254,55 @@ sub intersect () {
 	}
     }
     if($maxspanlength > 0) {
-	@a = split(/, /,$spans[0]);
-	@b = split(/-/,$a[0]);
-	$i=0;
-	until($b[1] >= $maxspan_start) {
-	    $i++;
-	    @b = split(/-/,$a[$i]);
+	@a_i = split(/, /,$spans[0]);
+	@b_i = split(/-/,$a_i[0]);
+	$i_i=0;
+	until($b_i[1] >= $maxspan_start) {
+	    $i_i++;
+	    @b_i = split(/-/,$a_i[$i_i]);
 	}
-	$prefix_size = $maxspan_start - $b[0];  # the size of the part removed from spans[0]
-	for($j=0; $j<$i; $j++) {
-	    @b = split(/-/,$a[$j]);
-	    $prefix_size = $prefix_size + $b[1] - $b[0] + 1;
+	$prefix_size = $maxspan_start - $b_i[0];  # the size of the part removed from spans[0]
+	for($j_i=0; $j_i<$i_i; $j_i++) {
+	    @b_i = split(/-/,$a_i[$j_i]);
+	    $prefix_size = $prefix_size + $b_i[1] - $b_i[0] + 1;
 	}
-	@s = split(//,$seq);
+	$seq =~ s/://g;
+	@s_i = split(//,$seq);
 	$newseq = "";
 
 	$ADD = 0;
-	for($i=$prefix_size; $i<$prefix_size + $maxspanlength + $ADD; $i++) {
-	    if($s[$i] eq "+") {
-		$newseq = $newseq . $s[$i];
-		$i++;
+	for($i_i=$prefix_size; $i_i<$prefix_size + $maxspanlength + $ADD; $i_i++) {
+	    if($s_i[$i_i] eq "+") {
+		$newseq = $newseq . $s_i[$i_i];
+		$i_i++;
 		$ADD++;
-		until($s[$i] eq "+") {
-		    $newseq = $newseq . $s[$i];
-		    $i++;
+		until($s_i[$i_i] eq "+") {
+		    $newseq = $newseq . $s_i[$i_i];
+		    $i_i++;
 		    $ADD++;
 		}
 		$ADD++;
 	    }
-	    $newseq = $newseq . $s[$i];
+	    $newseq = $newseq . $s_i[$i_i];
 	}
 
-	$flag = 0;
-	$i=0;
-	@b = split(/-/,$a[0]);
-	until($b[1] >= $maxspan_start) {
-	    $i++;
-	    @b = split(/-/,$a[$i]);
+	$flag_i = 0;
+	$i_i=0;
+	@b_i = split(/-/,$a_i[0]);
+	until($b_i[1] >= $maxspan_start) {
+	    $i_i++;
+	    @b_i = split(/-/,$a_i[$i_i]);
 	}
 	$newspans = $maxspan_start;
-	until($b[1] >= $maxspan_end) {
-	    $newspans = $newspans . "-$b[1]";
-	    $i++;
-	    @b = split(/-/,$a[$i]);
-	    $newspans = $newspans . ", $b[0]";
+	until($b_i[1] >= $maxspan_end) {
+	    $newspans = $newspans . "-$b_i[1]";
+	    $i_i++;
+	    @b_i = split(/-/,$a_i[$i_i]);
+	    $newspans = $newspans . ", $b_i[0]";
 	}
 	$newspans = $newspans . "-$maxspan_end";
 	$off = "";
-	for($i=0; $i<$prefix_size; $i++) {
+	for($i_i=0; $i_i<$prefix_size; $i_i++) {
 	    $off = $off . " ";
 	}
 	return "$maxspanlength\t$newspans\t$newseq";
@@ -1276,32 +1315,48 @@ sub intersect () {
 sub addJunctionsToSeq () {
     ($seq, $spans) = @_;
     $seq =~ s/://g;
-    @s = split(//,$seq);
-    @b = split(/, /,$spans);
+    @s_j = split(//,$seq);
+    @b_j = split(/, /,$spans);
     $seq_out = "";
     $place = 0;
-    for($j=0; $j<@b; $j++) {
-	@c = split(/-/,$b[$j]);
-	$len = $c[1] - $c[0] + 1;
+    for($j_j=0; $j_j<@b_j; $j_j++) {
+	@c_j = split(/-/,$b_j[$j_j]);
+	$len_j = $c_j[1] - $c_j[0] + 1;
 	if($seq_out =~ /\S/) { # to avoid putting a colon at the beginning
 	    $seq_out = $seq_out . ":";
 	}
-	for($k=0; $k<$len; $k++) {
-	    if($s[$place] eq "+") {
-		$seq_out = $seq_out . $s[$place];
+	for($k_j=0; $k_j<$len_j; $k_j++) {
+	    if($s_j[$place] eq "+") {
+		$seq_out = $seq_out . $s_j[$place];
 		$place++;
-		until($s[$place] eq "+") {
-		    $seq_out = $seq_out . $s[$place];
+		until($s_j[$place] eq "+") {
+		    $seq_out = $seq_out . $s_j[$place];
 		    $place++;
-		    if($place > @s-1) {
+		    if($place > @s_j-1) {
 			last;
 		    }
 		}
-		$k--;
+		$k_j--;
 	    }
-	    $seq_out = $seq_out . $s[$place];
+	    $seq_out = $seq_out . $s_j[$place];
 	    $place++;
 	}
     }
     return $seq_out;
+}
+
+sub getave () {
+    ($spans_x) = @_;
+
+    @SS3 = split(/, /, $spans_x);
+    $spanave = 0;
+    $spanlen = 0;
+    for($ss3=0; $ss3<@SS3; $ss3++) {
+	@SS4 = split(/-/, $SS3[$ss3]);
+	$spanave = $spanave + $SS4[1]*($SS4[1]+1)/2 - $SS4[0]*($SS4[0]-1)/2;
+	$spanlen = $spanlen + $SS4[1] - $SS4[0] + 1;
+    }
+    $spanave = $spanave / $spanlen;
+
+    return $spanave;
 }

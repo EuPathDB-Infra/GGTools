@@ -5,13 +5,17 @@
 
 if(@ARGV < 1) {
     die "
-Usage: sam2rum.pl <sam file>
+Usage: sam2rum.pl <sam file> <RUM Unique outfile> <RUM NU outfile>
 
 Outputs to RUM format:
 
 seq_name   chr    spans    sequence
 
 Where sequence has a colon to indicate gaps and +XXX+ to indicates an insertion of XXX
+
+If you want the unique and non-unique mappers all in one file, put 'none' for the
+<RUM NU outfile> argument and everything will be written to the first file even if
+not unique.
 
 ";
 }
@@ -30,19 +34,35 @@ $bitflag[10] = "the read is either a PCR duplicate or an optical duplicate";
 
 $|=1;
 
-open(INFILE, $ARGV[0]);
+open(INFILE, $ARGV[0]) or die "\nError: Cannot open '$ARGV[0]' for reading\n\n";
 $line = <INFILE>;
 while($line =~ /^@/) {
     $line = <INFILE>;
 }
+$rum_u_outfile = $ARGV[1];
+open(UOUT, ">$rum_u_outfile") or die "\nError: Cannot open '$ARGV[1]' for writing\n\n";;
+$rum_nu_outfile = $ARGV[2];
+$nu_separate = "true";
+if($ARGV[2] =~ /none/ || $ARGV[2] =~ /.none./) {
+    $nu_separate = "false";
+} else {
+    open(NUOUT, ">$rum_nu_outfile") or die "\nError: Cannot open '$ARGV[2]' for writing\n\n";;
+}
+
 until($line eq '') {
     chomp($line);
     @a = split(/\t/,$line);
-    if($a[11] =~ /OL:A:T/) {
+    if($line =~ /OL:A:T/) {
 	$joined = "true";
     } else {
 	$joined = "false";
     }
+    if($line =~ /IH:i:(\d+)/) {
+	$number_of_alignments = $1;
+    } else {
+	$number_of_alignments = 0;
+    }
+
     $seq = $a[9];
     $bitstring = $a[1];
     for($j=0; $j<10; $j++) {
@@ -131,7 +151,11 @@ until($line eq '') {
 
     if($paired eq "false") {
 	$seq_with_junctions = addJunctionsToSeq($seq, $spans);
-	print "$seqname\t$chr\t$spans\t$strand\t$seq_with_junctions\n";
+	if($number_of_alignments == 1) {
+	    print UOUT "$seqname\t$chr\t$spans\t$strand\t$seq_with_junctions\n";
+	} else {
+	    print NUOUT "$seqname\t$chr\t$spans\t$strand\t$seq_with_junctions\n";
+	}
     } else {
 	if($BIT[6] == 1) {
 	    $forward_seqname = $seqname;
@@ -156,33 +180,57 @@ until($line eq '') {
 		if(!($forward_spans =~ /\S/) && $reverse_spans =~ /\S/) {
 		    $reverse_seq_with_junctions = addJunctionsToSeq($reverse_seq, $reverse_spans);
 		    if($reverse_seqname =~ /\S/) {
-			print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+			if($number_of_alignments == 1) {
+			    print UOUT "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+			} else {
+			    print NUOUT "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+			}
 		    }
 		} elsif($forward_spans =~ /\S/ && !($reverse_spans =~ /\S/)) {
 		    $forward_seq_with_junctions = addJunctionsToSeq($forward_seq, $forward_spans);
 		    if($forward_seqname =~ /\S/) {
-			print "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
+			if($number_of_alignments == 1) {
+			    print UOUT "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
+			} else {
+			    print NUOUT "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
+			}
 		    }
 		} elsif($forward_end + 1 < $reverse_start || $forward_chr ne $reverse_chr) {
 		    $forward_seq_with_junctions = addJunctionsToSeq($forward_seq, $forward_spans);
 		    $reverse_seq_with_junctions = addJunctionsToSeq($reverse_seq, $reverse_spans);
 		    if($joined eq "false") {
 			if($forward_seqname =~ /\S/) {
-			    print "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
+			    if($number_of_alignments == 1) {
+				print UOUT "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
+			    } else {
+				print NUOUT "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
+			    }
 			}
 			if($reverse_seqname =~ /\S/) {
-			    print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+			    if($number_of_alignments == 1) {
+				print UOUT "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+			    } else {
+				print NUOUT "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+			    }
 			}
 		    } else {
 			$Sname = $forward_seqname;
 			$Sname =~ s/a//;
-			print "$Sname\t$forward_chr\t$forward_spans, $reverse_spans\t$strand\t$forward_seq_with_junctions:$reverse_seq_with_junctions\n";
+			if($number_of_alignments == 1) {
+			    print UOUT "$Sname\t$forward_chr\t$forward_spans, $reverse_spans\t$strand\t$forward_seq_with_junctions:$reverse_seq_with_junctions\n";
+			} else {
+			    print NUOUT "$Sname\t$forward_chr\t$forward_spans, $reverse_spans\t$strand\t$forward_seq_with_junctions:$reverse_seq_with_junctions\n";
+			}
 		    }
 		} elsif($forward_spans =~ /\S/ && $reverse_spans =~ /\S/) {
 		    ($merged_spans, $merged_seq) = merge($forward_spans, $reverse_spans, $forward_seq, $reverse_seq);
 		    $forward_seqname =~ s/a//;
 		    $seq_with_junctions = addJunctionsToSeq($merged_seq, $merged_spans);
-		    print "$forward_seqname\t$forward_chr\t$merged_spans\t$strand\t$seq_with_junctions\n";
+		    if($number_of_alignments == 1) {
+			print UOUT "$forward_seqname\t$forward_chr\t$merged_spans\t$strand\t$seq_with_junctions\n";
+		    } else {
+			print NUOUT "$forward_seqname\t$forward_chr\t$merged_spans\t$strand\t$seq_with_junctions\n";
+		    }
 		}
 	    }
 
@@ -190,33 +238,56 @@ until($line eq '') {
 		if(!($forward_spans =~ /\S/) && $reverse_spans =~ /\S/) {
 		    $reverse_seq_with_junctions = addJunctionsToSeq($reverse_seq, $reverse_spans);
 		    if($reverse_seqname =~ /\S/) {
-			print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+			if($number_of_alignments == 1) {
+			    print UOUT "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+			} else {
+			    print NUOUT "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+			}
 		    }
 		} elsif($forward_spans =~ /\S/ && !($reverse_spans =~ /\S/)) {
 		    $forward_seq_with_junctions = addJunctionsToSeq($forward_seq, $forward_spans);
 		    if($forward_seqname =~ /\S/) {
-			print "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
+			if($number_of_alignments == 1) {
+			    print UOUT "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
+			} else {
+			    print NUOUT "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
+			}
 		    }
 		} elsif($reverse_end + 1 < $forward_start || $forward_chr ne $reverse_chr) {
 		    $forward_seq_with_junctions = addJunctionsToSeq($forward_seq, $forward_spans);
 		    $reverse_seq_with_junctions = addJunctionsToSeq($reverse_seq, $reverse_spans);
 		    if($joined eq "false") {
 			if($forward_seqname =~ /\S/) {
-			    print "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
+			    if($number_of_alignments == 1) {
+				print UOUT "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
+			    } else {
+				print NUOUT "$forward_seqname\t$forward_chr\t$forward_spans\t$strand\t$forward_seq_with_junctions\n";
+			    }
 			}
 			if($reverse_seqname =~ /\S/) {
-			    print "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+			    if($number_of_alignments == 1) {
+				print UOUT "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";
+			    } else {
+				print NUOUT "$reverse_seqname\t$reverse_chr\t$reverse_spans\t$strand\t$reverse_seq_with_junctions\n";			    }
 			}
 		    } else {
 			$Sname = $forward_seqname;
 			$Sname =~ s/a//;
-			print "$Sname\t$forward_chr\t$reverse_spans, $forward_spans\t$strand\t$reverse_seq_with_junctions:$forward_seq_with_junctions\n";
+			if($number_of_alignments == 1) {
+			    print UOUT "$Sname\t$forward_chr\t$reverse_spans, $forward_spans\t$strand\t$reverse_seq_with_junctions:$forward_seq_with_junctions\n";
+			} else {
+			    print NUOUT "$Sname\t$forward_chr\t$reverse_spans, $forward_spans\t$strand\t$reverse_seq_with_junctions:$forward_seq_with_junctions\n";
+			}
 		    }
 		} elsif($forward_spans =~ /\S/ && $reverse_spans =~ /\S/) {
 		    ($merged_spans, $merged_seq) = merge($reverse_spans, $forward_spans, $reverse_seq, $forward_seq);
 		    $forward_seqname =~ s/a//;
 		    $seq_with_junctions = addJunctionsToSeq($merged_seq, $merged_spans);
-		    print "$forward_seqname\t$forward_chr\t$merged_spans\t$strand\t$seq_with_junctions\n";
+		    if($number_of_alignments == 1) {
+			print UOUT "$forward_seqname\t$forward_chr\t$merged_spans\t$strand\t$seq_with_junctions\n";
+		    } else {
+			print NUOUT "$forward_seqname\t$forward_chr\t$merged_spans\t$strand\t$seq_with_junctions\n";
+		    }
 		}
 	    }
 

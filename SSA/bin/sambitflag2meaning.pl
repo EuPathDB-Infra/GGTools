@@ -24,10 +24,6 @@ $vals[8] = "the alignment is not primary";
 $vals[9] = "the read fails platform/vendor quality checks";
 $vals[10] = "the read is either a PCR duplicate or an optical duplicate";
 
-for($j=0; $j<10; $j++) {
-    print "$j : $vals[$j]\n";
-}
-
 print "\n";
 for($j=0; $j<10; $j++) {
     print "\t$j";    
@@ -37,17 +33,9 @@ if($ARGV[0] =~ /^\d+$/) {
     print "$ARGV[0]:";
     for($j=0; $j<10; $j++) {
 	if($ARGV[0] & 2**$j) {
-	    if($j == 4 || $j == 5) {
-		print "\t-";
-	    } else {
-		print "\tyes";
-	    }
+	    print "\tyes";
 	} else {
-	    if($j == 4 || $j == 5) {
-		print "\t+";
-	    } else {
-		print "\tno";
-	    }
+	    print "\tno";
 	}
     }
     print "\n\n";

@@ -331,8 +331,8 @@ while($FLAG == 1 || $FLAG2 == 1) {
 	    $numjoined=0;
 	    for($ii=0; $ii<@a3; $ii++) {
 		$line2 = $a3[$ii];
-		if($line1 =~ /\-$/) {
-		    $joined = joinifpossible($line1, $line2);
+		if($line1 =~ /\-$/) { # check the strand
+		    $joined = joinifpossible($line1, $line2);  # this is not backwards, line1 is the reverse read
 		} else {
 		    $joined = joinifpossible($line2, $line1);
 		}
@@ -470,6 +470,11 @@ while($FLAG == 1 || $FLAG2 == 1) {
 		# This is the tricky case where there's a unique forward bowtie mapper and a unique reverse
                 # blat mapper, or convsersely.  Must check for consistency.  This cannot be in BlatNU so don't
                 # have to worry about that here.
+		if($hash1{$id}[1] =~ /seq.\d+a/) {
+		    $atype = "a";
+		} else {
+		    $atype = "b";
+		}
 		@a = split(/\t/,$hash1{$id}[1]);
 		$aspans = $a[2];
 		$a[2] =~ /^(\d+)[^\d]/;
@@ -491,20 +496,24 @@ while($FLAG == 1 || $FLAG2 == 1) {
 		$chrb = $a[1];
 		$bseq = $a[3];
 		$Bstrand = $a[4];
-		if(($Astrand eq $Bstrand) && ($chra eq $chrb) && ($aend < $bstart-1) && ($bstart - $aend < $max_distance_between_paired_reads)) {
-		    if($hash1{$id}[1] =~ /a\t/) {
-			print OUTFILE1 "$hash1{$id}[1]\n$hash2{$id}[1]\n";
-		    }
-		    else {
-			print OUTFILE1 "$hash2{$id}[1]\n$hash1{$id}[1]\n";
+		if( (($atype eq "a") && ($Astrand eq "+")) || ((($atype eq "b") && ($Astrand eq "-"))) ) {
+		    if(($Astrand eq $Bstrand) && ($chra eq $chrb) && ($aend < $bstart-1) && ($bstart - $aend < $max_distance_between_paired_reads)) {
+			if($hash1{$id}[1] =~ /a\t/) {
+			    print OUTFILE1 "$hash1{$id}[1]\n$hash2{$id}[1]\n";
+			}
+			else {
+			    print OUTFILE1 "$hash2{$id}[1]\n$hash1{$id}[1]\n";
+			}
 		    }
 		}
-		if(($Astrand eq $Bstrand) && ($chra eq $chrb) && ($bend < $astart-1) && ($astart - $bend < $max_distance_between_paired_reads)) {
-		    if($hash1{$id}[1] =~ /a\t/) {
-			print OUTFILE1 "$hash1{$id}[1]\n$hash2{$id}[1]\n";
-		    }
-		    else {
-			print OUTFILE1 "$hash2{$id}[1]\n$hash1{$id}[1]\n";
+		if( (($atype eq "a") && ($Astrand eq "-")) || ((($atype eq "b") && ($Astrand eq "+"))) ) {
+		    if(($Astrand eq $Bstrand) && ($chra eq $chrb) && ($bend < $astart-1) && ($astart - $bend < $max_distance_between_paired_reads)) {
+			if($hash1{$id}[1] =~ /a\t/) {
+			    print OUTFILE1 "$hash1{$id}[1]\n$hash2{$id}[1]\n";
+			}
+			else {
+			    print OUTFILE1 "$hash2{$id}[1]\n$hash1{$id}[1]\n";
+			}
 		    }
 		}
 # if they overlap, can't merge properly if there's an insertion, so chop it out,
@@ -532,62 +541,66 @@ while($FLAG == 1 || $FLAG2 == 1) {
 		    }
 		}
 		$dflag = 0;
-		if(($Astrand eq $Bstrand) && ($chra eq $chrb) && ($aend >= $bstart-1) && ($astart <= $bstart) && ($aend <= $bend)) {
-		    # they overlap and forward is to left of reverse
-		    $spans_merged = merge($aspans,$bspans);
-		    $merged_length = spansTotalLength($spans_merged);
-		    $aseq =~ s/://g;
-		    $seq_merged = $aseq;
-		    @s = split(//,$aseq);
-		    $bsize = $merged_length - @s;
-		    $bseq =~ s/://g;
-		    @s = split(//,$bseq);
-		    $add = "";
-		    for($i=@s-1; $i>=@s-$bsize; $i--) {
-			$add = $s[$i] . $add;
-		    }
-		    $seq_merged = $seq_merged . $add;
-		    if($a_insertion =~ /\S/) { # put back the insertions, if any...
-			$seq_merged =~ s/$astem/$astem$a_insertion/;
-		    }
-		    if($b_insertion =~ /\S/) {
-			$str_temp = $b_insertion;
-			$str_temp =~ s/\+/\\+/g;
-			if(!($seq_merged =~ /$str_temp$bpost/)) {
-			    $seq_merged =~ s/$bpost/$b_insertion$bpost/;
+		if( (($atype eq "a") && ($Astrand eq "+")) || ((($atype eq "b") && ($Astrand eq "-"))) ) {
+		    if(($Astrand eq $Bstrand) && ($chra eq $chrb) && ($aend >= $bstart-1) && ($astart <= $bstart) && ($aend <= $bend)) {
+			# they overlap
+			$spans_merged = merge($aspans,$bspans);
+			$merged_length = spansTotalLength($spans_merged);
+			$aseq =~ s/://g;
+			$seq_merged = $aseq;
+			@s = split(//,$aseq);
+			$bsize = $merged_length - @s;
+			$bseq =~ s/://g;
+			@s = split(//,$bseq);
+			$add = "";
+			for($i=@s-1; $i>=@s-$bsize; $i--) {
+			    $add = $s[$i] . $add;
 			}
+			$seq_merged = $seq_merged . $add;
+			if($a_insertion =~ /\S/) { # put back the insertions, if any...
+			    $seq_merged =~ s/$astem/$astem$a_insertion/;
+			}
+			if($b_insertion =~ /\S/) {
+			    $str_temp = $b_insertion;
+			    $str_temp =~ s/\+/\\+/g;
+			    if(!($seq_merged =~ /$str_temp$bpost$/)) {
+				$seq_merged =~ s/$bpost/$b_insertion$bpost/;
+			    }
+			}
+			$seq_j = addJunctionsToSeq($seq_merged, $spans_merged);
+			print OUTFILE1 "$seqnum\t$chra\t$spans_merged\t$seq_j\t$Astrand\n";
+			$dflag = 1;
 		    }
-		    $seq_j = addJunctionsToSeq($seq_merged, $spans_merged);
-		    print OUTFILE1 "$seqnum\t$chra\t$spans_merged\t$seq_j\t$Astrand\n";
-		    $dflag = 1;
 		}
-		if(($Astrand eq $Bstrand) && ($chra eq $chrb) && ($bend >= $astart-1) && ($bstart <= $astart) && ($bend <= $aend) && ($dflag == 0)) {
-		    # they overlap and reverse is to left of forward
-		    $spans_merged = merge($bspans,$aspans);
-		    $merged_length = spansTotalLength($spans_merged);
-		    $bseq =~ s/://g;
-		    $seq_merged = $bseq;
-		    @s = split(//,$bseq);
-		    $asize = $merged_length - @s;
-		    $aseq =~ s/://g;
-		    @s = split(//,$aseq);
-		    $add = "";
-		    for($i=@s-1; $i>=@s-$asize; $i--) {
-			$add = $s[$i] . $add;
-		    }
-		    $seq_merged = $seq_merged . $add;
-		    if($a_insertion =~ /\S/) { # put back the insertions, if any...
-			$seq_merged =~ s/$apost/$a_insertion$apost/;
-		    }
-		    if($b_insertion =~ /\S/) {
-			$str_temp = $b_insertion;
-			$str_temp =~ s/\+/\\+/g;
-			if(!($seq_merged =~ /$bstem$str_temp/)) {
-			    $seq_merged =~ s/$bstem/$bstem$b_insertion/;
+		if( (($atype eq "a") && ($Astrand eq "-")) || ((($atype eq "b") && ($Astrand eq "+"))) ) {
+		    if(($Astrand eq $Bstrand) && ($chra eq $chrb) && ($bend >= $astart-1) && ($bstart <= $astart) && ($bend <= $aend) && ($dflag == 0)) {
+			# they overlap
+			$spans_merged = merge($bspans,$aspans);
+			$merged_length = spansTotalLength($spans_merged);
+			$bseq =~ s/://g;
+			$seq_merged = $bseq;
+			@s = split(//,$bseq);
+			$asize = $merged_length - @s;
+			$aseq =~ s/://g;
+			@s = split(//,$aseq);
+			$add = "";
+			for($i=@s-1; $i>=@s-$asize; $i--) {
+			    $add = $s[$i] . $add;
 			}
-		    }
-		    $seq_j = addJunctionsToSeq($seq_merged, $spans_merged);
+			$seq_merged = $seq_merged . $add;
+			if($a_insertion =~ /\S/) { # put back the insertions, if any...
+			    $seq_merged =~ s/$apost/$a_insertion$apost/;
+			}
+			if($b_insertion =~ /\S/) {
+			    $str_temp = $b_insertion;
+			    $str_temp =~ s/\+/\\+/g;
+			    if(!($seq_merged =~ /^$bstem$str_temp/)) {
+				$seq_merged =~ s/$bstem/$bstem$b_insertion/;
+			    }
+			}
+			$seq_j = addJunctionsToSeq($seq_merged, $spans_merged);
 		    print OUTFILE1 "$seqnum\t$chra\t$spans_merged\t$seq_j\t$Astrand\n";
+		    }
 		}
 	    }
 	}
@@ -707,7 +720,7 @@ sub joinifpossible () {
     }
     $dflag = 0;
     if(($chra eq $chrb) && ($aend >= $bstart-1) && ($astart <= $bstart) && ($aend <= $bend) && ($astrand eq $bstrand)) {
-	# they overlap and forward is to left of reverse
+	# they overlap
 	$spans_merged = merge($aspans,$bspans);
 	$merged_length = spansTotalLength($spans_merged);
 	$aseq =~ s/://g;
@@ -727,7 +740,7 @@ sub joinifpossible () {
 	if($b_insertion =~ /\S/) {
 	    $str_temp = $b_insertion;
 	    $str_temp =~ s/\+/\\+/g;
-	    if(!($seq_merged =~ /$str_temp$bpost/)) {
+	    if(!($seq_merged =~ /$str_temp$bpost$/)) {
 		$seq_merged =~ s/$bpost/$b_insertion$bpost/;
 	    }
 	}
@@ -783,34 +796,34 @@ sub merge () {
 sub intersect () {
     ($spans_ref, $seq) = @_;
     @spans = @{$spans_ref};
-    $num = @spans;
+    $num_i = @spans;
     undef %chash;
-    for($s=0; $s<$num; $s++) {
-	@a = split(/, /,$spans[$s]);
-	for($i=0;$i<@a;$i++) {
-	    @b = split(/-/,$a[$i]);
-	    for($j=$b[0];$j<=$b[1];$j++) {
-		$chash{$j}++;
+    for($s_i=0; $s_i<$num_i; $s_i++) {
+	@a_i = split(/, /,$spans[$s_i]);
+	for($i_i=0;$i_i<@a_i;$i_i++) {
+	    @b_i = split(/-/,$a_i[$i_i]);
+	    for($j_i=$b_i[0];$j_i<=$b_i[1];$j_i++) {
+		$chash{$j_i}++;
 	    }
 	}
     }
     $spanlength = 0;
-    $flag = 0;
+    $flag_i = 0;
     $maxspanlength = 0;
     $maxspan_start = 0;
     $maxspan_end = 0;
     $prevkey = 0;
-    for $key (sort {$a <=> $b} keys %chash) {
-	if($chash{$key} == $num) {
-	    if($flag == 0) {
-		$flag = 1;
-		$span_start = $key;
+    for $key_i (sort {$a <=> $b} keys %chash) {
+	if($chash{$key_i} == $num_i) {
+	    if($flag_i == 0) {
+		$flag_i = 1;
+		$span_start = $key_i;
 	    }
 	    $spanlength++;
 	}
 	else {
-	    if($flag == 1) {
-		$flag = 0;
+	    if($flag_i == 1) {
+		$flag_i = 0;
 		if($spanlength > $maxspanlength) {
 		    $maxspanlength = $spanlength;
 		    $maxspan_start = $span_start;
@@ -819,9 +832,9 @@ sub intersect () {
 		$spanlength = 0;
 	    }
 	}
-	$prevkey = $key;
+	$prevkey = $key_i;
     }
-    if($flag == 1) {
+    if($flag_i == 1) {
 	if($spanlength > $maxspanlength) {
 	    $maxspanlength = $spanlength;
 	    $maxspan_start = $span_start;
@@ -829,40 +842,40 @@ sub intersect () {
 	}
     }
     if($maxspanlength > 0) {
-	@a = split(/, /,$spans[0]);
-	@b = split(/-/,$a[0]);
-	$i=0;
-	until($b[1] >= $maxspan_start) {
-	    $i++;
-	    @b = split(/-/,$a[$i]);
+	@a_i = split(/, /,$spans[0]);
+	@b_i = split(/-/,$a_i[0]);
+	$i_i=0;
+	until($b_i[1] >= $maxspan_start) {
+	    $i_i++;
+	    @b_i = split(/-/,$a_i[$i_i]);
 	}
-	$prefix_size = $maxspan_start - $b[0];  # the size of the part removed from spans[0]
-	for($j=0; $j<$i; $j++) {
-	    @b = split(/-/,$a[$j]);
-	    $prefix_size = $prefix_size + $b[1] - $b[0] + 1;
+	$prefix_size = $maxspan_start - $b_i[0];  # the size of the part removed from spans[0]
+	for($j_i=0; $j_i<$i_i; $j_i++) {
+	    @b_i = split(/-/,$a_i[$j_i]);
+	    $prefix_size = $prefix_size + $b_i[1] - $b_i[0] + 1;
 	}
-	@s = split(//,$seq);
+	@s_i = split(//,$seq);
 	$newseq = "";
-	for($i=$prefix_size; $i<$prefix_size + $maxspanlength; $i++) {
-	    $newseq = $newseq . $s[$i];
+	for($i_i=$prefix_size; $i_i<$prefix_size + $maxspanlength; $i_i++) {
+	    $newseq = $newseq . $s_i[$i_i];
 	}
-	$flag = 0;
-	$i=0;
-	@b = split(/-/,$a[0]);
-	until($b[1] >= $maxspan_start) {
-	    $i++;
-	    @b = split(/-/,$a[$i]);
+	$flag_i = 0;
+	$i_i=0;
+	@b_i = split(/-/,$a_i[0]);
+	until($b_i[1] >= $maxspan_start) {
+	    $i_i++;
+	    @b_i = split(/-/,$a_i[$i_i]);
 	}
 	$newspans = $maxspan_start;
-	until($b[1] >= $maxspan_end) {
-	    $newspans = $newspans . "-$b[1]";
-	    $i++;
-	    @b = split(/-/,$a[$i]);
-	    $newspans = $newspans . ", $b[0]";
+	until($b_i[1] >= $maxspan_end) {
+	    $newspans = $newspans . "-$b_i[1]";
+	    $i_i++;
+	    @b_i = split(/-/,$a_i[$i_i]);
+	    $newspans = $newspans . ", $b_i[0]";
 	}
 	$newspans = $newspans . "-$maxspan_end";
 	$off = "";
-	for($i=0; $i<$prefix_size; $i++) {
+	for($i_i=0; $i_i<$prefix_size; $i_i++) {
 	    $off = $off . " ";
 	}
 	return "$maxspanlength\t$newspans\t$newseq";
@@ -875,31 +888,31 @@ sub intersect () {
 sub addJunctionsToSeq () {
     ($seq, $spans) = @_;
     $seq =~ s/://g;
-    @s = split(//,$seq);
-    @b = split(/, /,$spans);
+    @s_j = split(//,$seq);
+    @b_j = split(/, /,$spans);
     $seq_out = "";
-    $place = 0;
-    for($j=0; $j<@b; $j++) {
-	@c = split(/-/,$b[$j]);
-	$len = $c[1] - $c[0] + 1;
+    $place_j = 0;
+    for($j_j=0; $j_j<@b_j; $j_j++) {
+	@c_j = split(/-/,$b_j[$j_j]);
+	$len_j = $c_j[1] - $c_j[0] + 1;
 	if($seq_out =~ /\S/) { # to avoid putting a colon at the beginning
 	    $seq_out = $seq_out . ":";
 	}
-	for($k=0; $k<$len; $k++) {
-	    if($s[$place] eq "+") {
-		$seq_out = $seq_out . $s[$place];
-		$place++;
-		until($s[$place] eq "+") {
-		    $seq_out = $seq_out . $s[$place];
-		    $place++;
-		    if($place > @s-1) {
+	for($k_j=0; $k_j<$len_j; $k_j++) {
+	    if($s_j[$place_j] eq "+") {
+		$seq_out = $seq_out . $s_j[$place_j];
+		$place_j++;
+		until($s_j[$place_j] eq "+") {
+		    $seq_out = $seq_out . $s_j[$place_j];
+		    $place_j++;
+		    if($place_j > @s_j-1) {
 			last;
 		    }
 		}
-		$k--;
+		$k_j--;
 	    }
-	    $seq_out = $seq_out . $s[$place];
-	    $place++;
+	    $seq_out = $seq_out . $s_j[$place_j];
+	    $place_j++;
 	}
     }
     return $seq_out;
@@ -907,11 +920,27 @@ sub addJunctionsToSeq () {
 
 sub spansTotalLength () {
     ($spans) = @_;
-    @a = split(/, /,$spans);
-    $length = 0;
-    for($i=0; $i<@a; $i++) {
-	@b = split(/-/,$a[$i]);
-	$length = $length + $b[1] - $b[0] + 1;
+    @a_s = split(/, /,$spans);
+    $length_s = 0;
+    for($i_s=0; $i_s<@a_s; $i_s++) {
+	@b_s = split(/-/,$a_s[$i_s]);
+	$length_s = $length_s + $b_s[1] - $b_s[0] + 1;
     }
-    return $length;
+    return $length_s;
+}
+
+sub getave () {
+    ($spans_x) = @_;
+
+    @SS3 = split(/, /, $spans_x);
+    $spanave = 0;
+    $spanlen = 0;
+    for($ss3=0; $ss3<@SS3; $ss3++) {
+	@SS4 = split(/-/, $SS3[$ss3]);
+	$spanave = $spanave + $SS4[1]*($SS4[1]+1)/2 - $SS4[0]*($SS4[0]-1)/2;
+	$spanlen = $spanlen + $SS4[1] - $SS4[0] + 1;
+    }
+    $spanave = $spanave / $spanlen;
+
+    return $spanave;
 }

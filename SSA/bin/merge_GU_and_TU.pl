@@ -697,34 +697,34 @@ while($FLAG == 1) {
 sub intersect () {
     ($spans_ref, $seq) = @_;
     @spans = @{$spans_ref};
-    $num = @spans;
+    $num_i = @spans;
     undef %chash;
-    for($s=0; $s<$num; $s++) {
-	@a = split(/, /,$spans[$s]);
-	for($i=0;$i<@a;$i++) {
-	    @b = split(/-/,$a[$i]);
-	    for($j=$b[0];$j<=$b[1];$j++) {
-		$chash{$j}++;
+    for($s_i=0; $s_i<$num_i; $s_i++) {
+	@a_i = split(/, /,$spans[$s_i]);
+	for($i_i=0;$i_i<@a_i;$i_i++) {
+	    @b_i = split(/-/,$a_i[$i_i]);
+	    for($j_i=$b_i[0];$j_i<=$b_i[1];$j_i++) {
+		$chash{$j_i}++;
 	    }
 	}
     }
     $spanlength = 0;
-    $flag = 0;
+    $flag_i = 0;
     $maxspanlength = 0;
     $maxspan_start = 0;
     $maxspan_end = 0;
     $prevkey = 0;
-    for $key (sort {$a <=> $b} keys %chash) {
-	if($chash{$key} == $num) {
-	    if($flag == 0) {
-		$flag = 1;
-		$span_start = $key;
+    for $key_i (sort {$a <=> $b} keys %chash) {
+	if($chash{$key_i} == $num_i) {
+	    if($flag_i == 0) {
+		$flag_i = 1;
+		$span_start = $key_i;
 	    }
 	    $spanlength++;
 	}
 	else {
-	    if($flag == 1) {
-		$flag = 0;
+	    if($flag_i == 1) {
+		$flag_i = 0;
 		if($spanlength > $maxspanlength) {
 		    $maxspanlength = $spanlength;
 		    $maxspan_start = $span_start;
@@ -733,9 +733,9 @@ sub intersect () {
 		$spanlength = 0;
 	    }
 	}
-	$prevkey = $key;
+	$prevkey = $key_i;
     }
-    if($flag == 1) {
+    if($flag_i == 1) {
 	if($spanlength > $maxspanlength) {
 	    $maxspanlength = $spanlength;
 	    $maxspan_start = $span_start;
@@ -743,40 +743,40 @@ sub intersect () {
 	}
     }
     if($maxspanlength > 0) {
-	@a = split(/, /,$spans[0]);
-	@b = split(/-/,$a[0]);
-	$i=0;
-	until($b[1] >= $maxspan_start) {
-	    $i++;
-	    @b = split(/-/,$a[$i]);
+	@a_i = split(/, /,$spans[0]);
+	@b_i = split(/-/,$a_i[0]);
+	$i_i=0;
+	until($b_i[1] >= $maxspan_start) {
+	    $i_i++;
+	    @b_i = split(/-/,$a_i[$i_i]);
 	}
-	$prefix_size = $maxspan_start - $b[0];  # the size of the part removed from spans[0]
-	for($j=0; $j<$i; $j++) {
-	    @b = split(/-/,$a[$j]);
-	    $prefix_size = $prefix_size + $b[1] - $b[0] + 1;
+	$prefix_size = $maxspan_start - $b_i[0];  # the size of the part removed from spans[0]
+	for($j_i=0; $j_i<$i_i; $j_i++) {
+	    @b_i = split(/-/,$a_i[$j_i]);
+	    $prefix_size = $prefix_size + $b_i[1] - $b_i[0] + 1;
 	}
-	@s = split(//,$seq);
+	@s_i = split(//,$seq);
 	$newseq = "";
-	for($i=$prefix_size; $i<$prefix_size + $maxspanlength; $i++) {
-	    $newseq = $newseq . $s[$i];
+	for($i_i=$prefix_size; $i_i<$prefix_size + $maxspanlength; $i_i++) {
+	    $newseq = $newseq . $s_i[$i_i];
 	}
-	$flag = 0;
-	$i=0;
-	@b = split(/-/,$a[0]);
-	until($b[1] >= $maxspan_start) {
-	    $i++;
-	    @b = split(/-/,$a[$i]);
+	$flag_i = 0;
+	$i_i=0;
+	@b_i = split(/-/,$a_i[0]);
+	until($b_i[1] >= $maxspan_start) {
+	    $i_i++;
+	    @b_i = split(/-/,$a_i[$i_i]);
 	}
 	$newspans = $maxspan_start;
-	until($b[1] >= $maxspan_end) {
-	    $newspans = $newspans . "-$b[1]";
-	    $i++;
-	    @b = split(/-/,$a[$i]);
-	    $newspans = $newspans . ", $b[0]";
+	until($b_i[1] >= $maxspan_end) {
+	    $newspans = $newspans . "-$b_i[1]";
+	    $i_i++;
+	    @b_i = split(/-/,$a_i[$i_i]);
+	    $newspans = $newspans . ", $b_i[0]";
 	}
 	$newspans = $newspans . "-$maxspan_end";
 	$off = "";
-	for($i=0; $i<$prefix_size; $i++) {
+	for($i_i=0; $i_i<$prefix_size; $i_i++) {
 	    $off = $off . " ";
 	}
 	return "$maxspanlength\t$newspans\t$newseq";
@@ -931,9 +931,9 @@ sub merge () {
 	    $HASH{"$Darray[$i1]-$Darray[$i1+1]"}++;
 	}
 	$merged_length=0;
-	foreach $key (sort {$a<=>$b} keys %HASH) {
-	    $merged = $merged . ", $key";
-	    @A = split(/-/,$key);
+	foreach $key_i (sort {$a<=>$b} keys %HASH) {
+	    $merged = $merged . ", $key_i";
+	    @A = split(/-/,$key_i);
 	    $merged_length = $merged_length + $A[1] - $A[0] + 1;
 	}
 	$suffix_length = $merged_length - $Flength;

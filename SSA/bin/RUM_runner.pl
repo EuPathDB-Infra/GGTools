@@ -262,6 +262,7 @@ if(($readsfile =~ /,,,/) && $paired_end eq "false") {
 if(!($readsfile =~ /,,,/) && !(-e $readsfile)) {
     die "\nError: The reads file '$readsfile' does not seem to exist\n\n";
 }
+$quals = "false";
 if(($readsfile =~ /,,,/) && ($paired_end eq "true")) {
     @a = split(/,,,/, $readsfile);
     if(@a > 2) {
@@ -279,9 +280,14 @@ if(($readsfile =~ /,,,/) && ($paired_end eq "true")) {
 
     print STDERR "Reformatting reads file...\n";
     `perl $scripts_dir/parse2fasta.pl $a[0] $a[1] > $output_dir/reads.fa`;
+    `perl $scripts_dir/fastq2qualities.pl $a[0] $a[1] > $output_dir/quals.fa`;
+    $X = `head -2 $output_dir/quals.fa | tail -1`;
+    if(!($X =~ /Sorry, can't figure these files out/)) {
+	$quals = "true"
+    }
     $readsfile = "$output_dir/reads.fa";
+    $qualsfile = "$output_dir/quals.fa";
 }
-
 
 open(LOGFILE, ">$output_dir/rum.log");
 print LOGFILE "config file: $configfile\n";
@@ -326,7 +332,13 @@ if($paired_end eq 'false') {
     if($type1 ne "a") {
 	print STDERR "Reformatting reads file...\n";
 	`perl scripts/parse2fasta.pl $readsfile > $output_dir/reads.fa`;
+	`perl scripts/fastq2qualities.pl $readsfile > $output_dir/quals.fa`;
+	$X = `head -2 $output_dir/quals.fa | tail -1`;
+	if(!($X =~ /Sorry, can't figure/)) {
+	    $quals = "true"
+	}
 	$readsfile = "$output_dir/reads.fa";
+	$qualsfile = "$output_dir/quals.fa";
 	$head = `head -4 $readsfile`;
 	$head =~ /seq.(\d+)(.).*seq.(\d+)(.)/s;
 	$num1 = $1;
@@ -416,7 +428,11 @@ if($chipseq eq "false") {
     $pipeline_template = `cat pipeline_template_chipseq.sh`;
 }
 if($fasta_already_fragmented eq "false") {
-    $x = breakup_fasta($readsfile, $numchunks);
+    print STDERR "Splitting files ...\n\n";
+    $x = breakup_file($readsfile, $numchunks);
+    if($quals eq "true") {
+	$x = breakup_file($qualsfile, $numchunks);
+    }
 }
 print STDERR "Reads fasta file already fragmented: $fasta_already_fragmented\n";
 print STDERR "Number of Chunks: $numchunks\n";
@@ -434,6 +450,11 @@ for($i=1; $i<=$numchunks; $i++) {
 	$pipeline_file =~ s!perl SCRIPTSDIR/limit_NU.pl OUTDIR/RUM_NU_temp2.CHUNK LIMITNUCUTOFF > OUTDIR/RUM_NU_temp3.CHUNK\n!!gs;
     }
     $pipeline_file =~ s!OUTDIR!$output_dir!gs;
+    if($quals eq "false") {
+	$pipeline_file =~ s!QUALSFILE.CHUNK!none!gs;
+    } else {
+	$pipeline_file =~ s!QUALSFILE!$qualsfile!gs;
+    }
     $pipeline_file =~ s!CHUNK!$i!gs;
     $pipeline_file =~ s!MINIDENTITY!$minidentity!gs;
     $pipeline_file =~ s!BOWTIEEXE!$bowtie_exe!gs;
@@ -478,7 +499,7 @@ for($i=1; $i<=$numchunks; $i++) {
 	$pipeline_file =~ s!PAIREDEND!single!gs;
     }
     $outfile = "pipeline." . $i . ".sh";
-    open(OUTFILE, ">$output_dir/$outfile");
+    open(OUTFILE, ">$output_dir/$outfile") or die "\nError: cannot open '$output_dir/$outfile' for writing\n\n";
     print OUTFILE $pipeline_file;
     close(OUTFILE);
 
@@ -489,23 +510,45 @@ for($i=1; $i<=$numchunks; $i++) {
 	system("/bin/bash $output_dir/$outfile &");
     }
     print STDERR "Chunk $i initiated\n";
+    $status{$i} = 1;
 }
 if($numchunks > 1) {
     print STDERR "\nAll chunks initiated, now the long wait...\n";
-    print STDERR "I'm going to watch for all chunks to finish, then I will merge everything...\n\n";
+    print STDERR "\nI'm going to watch for all chunks to finish, then I will merge everything...\n";
+    sleep(2);
+    if($qsub eq "false") {
+	print STDERR "\nThe next thing to print here will be the status reports from bowtie.\n";
+	print STDERR "     * don't be alarmed.\n\n";
+    }
 } else {
     print STDERR "\nThe job has been initiated, now the long wait...\n";
+    sleep(2);
+    if($qsub eq "false") {
+	print STDERR "\nThe next thing to print here will be the status reports from bowtie.\n";
+	print STDERR "     * don't be alarmed.\n\n";
+    }
 }
 
+$currenttime = time();
+$lastannouncetime = $currenttime;
+$numannouncements = 0;
 $doneflag = 0;
+
 while($doneflag == 0) {
     $doneflag = 1;
+    $numdone = 0;
     for($i=1; $i<=$numchunks; $i++) {
 	$logfile = "$output_dir/rum_log.$i";
 	if (-e $logfile) {
 	    $x = `cat $logfile`;
 	    if(!($x =~ /pipeline complete/s)) {
 		$doneflag = 0;
+	    } else {
+		$numdone++;
+		if($status{$i} == 1) {
+		    $status{$i} = 2;
+		    print STDERR "\n *** Chunk $i has finished.\n";
+		}
 	    }
 	}
 	else {
@@ -514,6 +557,24 @@ while($doneflag == 0) {
     }
     if($doneflag == 0) {
 	sleep(30);
+	$currenttime = time();
+	if($currenttime - $lastannouncetime > 3600) {
+	    $lastannouncetime = $currenttime;
+	    $numannouncements++;
+	    if($numannouncements == 1) {
+		if($numdone == 1) {
+		    print STDERR "\nIt has been $numannouncements hour, $numdone chunk has finished.\n";
+		} else {
+		    print STDERR "\nIt has been $numannouncements hour, $numdone chunks have finished.\n";
+		}
+	    } else {
+		if($numdone == 1) {
+		    print STDERR "\nIt has been $numannouncements hours, $numdone chunk has finished.\n";
+		} else {
+		    print STDERR "\nIt has been $numannouncements hours, $numdone chunks have finished.\n";
+		}
+	    }
+	}
     }
 }
 
@@ -530,19 +591,23 @@ $x = `cp $output_dir/RUM_NU.1 $output_dir/RUM_NU`;
 for($i=2; $i<=$numchunks; $i++) {
     $x = `cat $output_dir/RUM_NU.$i >> $output_dir/RUM_NU`;
 }
-print LOGFILE "finished creating RUM_Unique/RUM_NU: $date\n";
+$x = `cp $output_dir/RUM.sam.1 $output_dir/RUM.sam`;
+for($i=2; $i<=$numchunks; $i++) {
+    $x = `cat $output_dir/RUM.sam.$i >> $output_dir/RUM.sam`;
+}
+print LOGFILE "finished creating RUM_Unique/RUM_NU/RUM.sam: $date\n";
 print LOGFILE "starting M2C: $date\n";
 $M2C_log = "M2C_$name" . ".log";
 $shellscript = "#!/bin/sh\n";
 $shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl $output_dir/RUM_Unique $output_dir/RUM_NU > $output_dir/mapping_stats.txt\n";
 $shellscript = $shellscript . "echo making bed > $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$M2C_log\n";
-$shellscript = $shellscript . "perl $scripts_dir/make_bed.pl $output_dir/RUM_Unique $output_dir/RUM_Unique.bed\n";
+$shellscript = $shellscript . "perl $scripts_dir/make_bed.pl $output_dir/RUM_Unique $output_dir/RUM_Unique.bed -zbho\n";
 $shellscript = $shellscript . "echo starting M2C >> $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$M2C_log\n";
 $covfilename = $name . ".cov";
 $logfilename = $name . ".log";
-$shellscript = $shellscript . "java -Xmx2000m M2C $output_dir/RUM_Unique.bed $output_dir/RUM_$covfilename $output_dir/RUM_$logfilename -ucsc -name \"$name\" -chunks 4\n";
+$shellscript = $shellscript . "java -Xmx2000m M2C $output_dir/RUM_Unique.bed $output_dir/RUM_$covfilename $output_dir/RUM_$logfilename -ucsc -name \"$name\" -start_coordinate_infile 0 -openinterval_infile -chunks 4\n";
 $shellscript = $shellscript . "echo starting to quantify features >> $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$M2C_log\n";
 $shellscript = $shellscript . "perl $scripts_dir/quantify_one_sample.pl $output_dir/RUM_$name";
@@ -561,7 +626,7 @@ else {
     system("/bin/bash $output_dir/$str");
 }
 
-print STDERR "\nWorking, now another long wait...\n\n";
+print STDERR "\nWorking, now another wait...\n\n";
 $doneflag = 0;
 while($doneflag == 0) {
     $doneflag = 1;
@@ -585,14 +650,11 @@ $date = `date`;
 print LOGFILE "pipeline finished: $date\n";
 close(LOGFILE);
 
-sub breakup_fasta () {
-    ($fastafile, $numpieces) = @_;
+sub breakup_file () {
+    ($FILE, $numpieces) = @_;
 
-    print STDERR "Preparing to break up the reads file.\n\n";
-    sleep(2);
-
-    open(INFILE, $fastafile);
-    $filesize = `wc -l $fastafile`;
+    open(INFILE, $FILE);
+    $filesize = `wc -l $FILE`;
     chomp($filesize);
     $filesize =~ s/^\s+//;
     $filesize =~ s/\s.*//;
@@ -609,10 +671,8 @@ sub breakup_fasta () {
     }
     $bflag = 0;
 
-    print STDERR "Breaking up the reads file...\n\n";
-
     for($i=1; $i<$numpieces; $i++) {
-	$outfilename = $fastafile . "." . $i;
+	$outfilename = $FILE . "." . $i;
 	open(OUTFILE, ">$outfilename");
 	for($j=0; $j<$piecesize; $j++) {
 	    $line = <INFILE>;
@@ -628,7 +688,7 @@ sub breakup_fasta () {
 	}
 	close(OUTFILE);
     }
-    $outfilename = $fastafile . "." . $numpieces;
+    $outfilename = $FILE . "." . $numpieces;
     open(OUTFILE, ">$outfilename");
     while($line = <INFILE>) {
 	print OUTFILE $line;

@@ -67,13 +67,8 @@ close(INFILE);
 open(INFILE, $infile) or die "\nERROR: Cannot open file '$infile' for reading\n";
 
 open(OUTFILE, ">$outfile") or die "\nERROR: Cannot open file '$outfile' for writing\n";
-$linecnt=0;
-print STDERR "Parsing $infile and writing R ...\n";
+
 while($line = <INFILE>) {
-    $linecnt++;
-    if($linecnt % 1000000 == 0) {
-	print "$linecnt\n";
-    }
     chomp($line);
     if($line =~ /^>(seq.\d+)/) {
 	$seq = $1;
@@ -99,3 +94,5 @@ while($line = <INFILE>) {
 }
 close(INFILE);
 close(OUTFILE);
+
+print STDERR "Starting BLAT on '$outfile'.\n";
