@@ -520,7 +520,9 @@ while($FLAG == 1 || $FLAG2 == 1) {
 # save it and put it back in before printing the next two if's do the chopping...
 		$aseq=~ s/://g;
 		if($aseq =~ /\+/) {
-		    $aseq =~ /(.*)(\+.*\+)(.*)/;
+		    $aseq =~ /(.*)(\+.*\+)(.*)/;  # THIS IS ONLY GOING TO WORK IF THERE IS ONE INSERTION
+		                                  # as is guaranteed, seach for "comment.1" in parse_blat_out.pl
+		                                  # This limitation should probably be fixed at some point...
 		    $astem = $1;
 		    $a_insertion = $2;
 		    $apost = $3;
@@ -531,7 +533,7 @@ while($FLAG == 1 || $FLAG2 == 1) {
 		}
 		$bseq=~ s/://g;
 		if($bseq =~ /\+/) {
-		    $bseq =~ /(.*)(\+.*\+)(.*)/;
+		    $bseq =~ /(.*)(\+.*\+)(.*)/; # SAME COMMENT AS ABOVE
 		    $bstem = $1;
 		    $b_insertion = $2;
 		    $bpost = $3;
@@ -558,13 +560,13 @@ while($FLAG == 1 || $FLAG2 == 1) {
 			}
 			$seq_merged = $seq_merged . $add;
 			if($a_insertion =~ /\S/) { # put back the insertions, if any...
-			    $seq_merged =~ s/$astem/$astem$a_insertion/;
+			    $seq_merged =~ s/^$astem/$astem$a_insertion/;
 			}
 			if($b_insertion =~ /\S/) {
 			    $str_temp = $b_insertion;
 			    $str_temp =~ s/\+/\\+/g;
 			    if(!($seq_merged =~ /$str_temp$bpost$/)) {
-				$seq_merged =~ s/$bpost/$b_insertion$bpost/;
+				$seq_merged =~ s/$bpost$/$b_insertion$bpost/;
 			    }
 			}
 			$seq_j = addJunctionsToSeq($seq_merged, $spans_merged);
@@ -589,13 +591,13 @@ while($FLAG == 1 || $FLAG2 == 1) {
 			}
 			$seq_merged = $seq_merged . $add;
 			if($a_insertion =~ /\S/) { # put back the insertions, if any...
-			    $seq_merged =~ s/$apost/$a_insertion$apost/;
+			    $seq_merged =~ s/$apost$/$a_insertion$apost/;
 			}
 			if($b_insertion =~ /\S/) {
 			    $str_temp = $b_insertion;
 			    $str_temp =~ s/\+/\\+/g;
 			    if(!($seq_merged =~ /^$bstem$str_temp/)) {
-				$seq_merged =~ s/$bstem/$bstem$b_insertion/;
+				$seq_merged =~ s/^$bstem/$bstem$b_insertion/;
 			    }
 			}
 			$seq_j = addJunctionsToSeq($seq_merged, $spans_merged);
@@ -663,32 +665,32 @@ close(OUTFILE);
 
 sub joinifpossible () {
     ($LINE1, $LINE2) = @_;
-    @a = split(/\t/,$LINE1);
-    $aspans = $a[2];
-    $a[2] =~ /^(\d+)[^\d]/;
-    $astart = $1;
-    $a[2] =~ /[^\d](\d+)$/;
-    $aend = $1;
-    $chra = $a[1];
-    $aseq = $a[3];
-    $astrand = $a[4];
-    $seqnum = $a[0];
-    $seqnum =~ s/a$//;
-    $seqnum =~ s/b$//;
-    @a = split(/\t/,$LINE2);
-    $bspans = $a[2];
-    $a[2] =~ /^(\d+)[^\d]/;
-    $bstart = $1;
-    $a[2] =~ /[^\d](\d+)$/;
-    $bend = $1;
-    $chrb = $a[1];
-    $bseq = $a[3];
-    $bstrand = $a[4];
+    @a_p = split(/\t/,$LINE1);
+    $aspans_p = $a_p[2];
+    $a_p[2] =~ /^(\d+)[^\d]/;
+    $astart_p = $1;
+    $a_p[2] =~ /[^\d](\d+)$/;
+    $aend_p = $1;
+    $chra_p = $a_p[1];
+    $aseq_p = $a_p[3];
+    $astrand_p = $a_p[4];
+    $seqnum_p = $a_p[0];
+    $seqnum_p =~ s/a$//;
+    $seqnum_p =~ s/b$//;
+    @a_p = split(/\t/,$LINE2);
+    $bspans_p = $a_p[2];
+    $a_p[2] =~ /^(\d+)[^\d]/;
+    $bstart_p = $1;
+    $a_p[2] =~ /[^\d](\d+)$/;
+    $bend_p = $1;
+    $chrb_p = $a_p[1];
+    $bseq_p = $a_p[3];
+    $bstrand_p = $a_p[4];
     $returnstring = "";
-    if($astrand ne $bstrand) {
+    if($astrand_p ne $bstrand_p) {
 	return "";
     }
-    if(($chra eq $chrb) && ($astrand eq $bstrand) && ($aend < $bstart-1) && ($bstart - $aend < $max_distance_between_paired_reads)) {
+    if(($chra_p eq $chrb_p) && ($astrand_p eq $bstrand_p) && ($aend_p < $bstart_p-1) && ($bstart_p - $aend_p < $max_distance_between_paired_reads)) {
 	if($LINE1 =~ /a\t/) {
 	    $returnstring = $returnstring . "$LINE1\n$LINE2\n";
 	}
@@ -698,54 +700,56 @@ sub joinifpossible () {
     }
 # if they overlap, can't merge properly if there's an insertion, so chop it out,
 # save it and put it back in before printing the next two if's do the chopping...
-    if($aseq =~ /\+/) {
-	$aseq =~ /(.*)(\+.*\+)(.*)/;
+    $aseq_p =~ s/://g;
+    if($aseq_p =~ /\+/) {
+	$aseq_p =~ /(.*)(\+.*\+)(.*)/; # Only going to work if there is at most one insertion, search on "comment.1"
 	$astem = $1;
 	$a_insertion = $2;
 	$apost = $3;
-	$aseq =~ s/\+.*\+//;
+	$aseq_p =~ s/\+.*\+//;
 	if(!($a_insertion =~ /\S/)) {
 	    $returnstring = $returnstring . "Something is wrong, here 1.07\n";
 	}
     }
-    if($bseq =~ /\+/) {
-	$bseq =~ /(.*)(\+.*\+)(.*)/;
+    $bseq_p =~ s/://g;
+    if($bseq_p =~ /\+/) {
+	$bseq_p =~ /(.*)(\+.*\+)(.*)/; # Only going to work if there is at most one insertion, search on "comment.1"
 	$bstem = $1;
 	$b_insertion = $2;
 	$bpost = $3;
-	$bseq =~ s/\+.*\+//;
+	$bseq_p =~ s/\+.*\+//;
 	if(!($b_insertion =~ /\S/)) {
 	    $returnstring = $returnstring . "Something is wrong, here 1.21\n";
 	}
     }
     $dflag = 0;
-    if(($chra eq $chrb) && ($aend >= $bstart-1) && ($astart <= $bstart) && ($aend <= $bend) && ($astrand eq $bstrand)) {
+    if(($chra_p eq $chrb_p) && ($aend_p >= $bstart_p-1) && ($astart_p <= $bstart_p) && ($aend_p <= $bend_p) && ($astrand_p eq $bstrand_p)) {
 	# they overlap
-	$spans_merged = merge($aspans,$bspans);
-	$merged_length = spansTotalLength($spans_merged);
-	$aseq =~ s/://g;
-	$seq_merged = $aseq;
-	@s = split(//,$aseq);
+	$spans_merged_p = merge($aspans_p,$bspans_p);
+	$merged_length = spansTotalLength($spans_merged_p);
+	$aseq_p =~ s/://g;
+	$seq_merged_p = $aseq_p;
+	@s = split(//,$aseq_p);
 	$bsize = $merged_length - @s;
-	$bseq =~ s/://g;
-	@s = split(//,$bseq);
+	$bseq_p =~ s/://g;
+	@s = split(//,$bseq_p);
 	$add = "";
 	for($i=@s-1; $i>=@s-$bsize; $i--) {
 	    $add = $s[$i] . $add;
 	}
-	$seq_merged = $seq_merged . $add;
+	$seq_merged_p = $seq_merged_p . $add;
 	if($a_insertion =~ /\S/) { # put back the insertions, if any...
-	    $seq_merged =~ s/$astem/$astem$a_insertion/;
+	    $seq_merged_p =~ s/^$astem/$astem$a_insertion/;
 	}
 	if($b_insertion =~ /\S/) {
 	    $str_temp = $b_insertion;
 	    $str_temp =~ s/\+/\\+/g;
-	    if(!($seq_merged =~ /$str_temp$bpost$/)) {
-		$seq_merged =~ s/$bpost/$b_insertion$bpost/;
+	    if(!($seq_merged_p =~ /$str_temp$bpost$/)) {
+		$seq_merged_p =~ s/$bpost$/$b_insertion$bpost/;
 	    }
 	}
-	$seq_j = addJunctionsToSeq($seq_merged, $spans_merged);
-	$returnstring = $returnstring . "$seqnum\t$chra\t$spans_merged\t$seq_j\t$astrand\n";
+	$seq_p = addJunctionsToSeq($seq_merged_p, $spans_merged_p);
+	$returnstring = $returnstring . "$seqnum_p\t$chra_p\t$spans_merged_p\t$seq_p\t$astrand_p\n";
 	$dflag = 1;
     }
 
