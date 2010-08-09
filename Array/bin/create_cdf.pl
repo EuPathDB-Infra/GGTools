@@ -58,7 +58,7 @@ open(INFILE, "$ARGV[1]");
 $unit = 1;
 while($line = <INFILE>) {
     chomp($line);
-    @a = split(/\t/,$line);
+    @a = split(/\t/,$line,2);
     @probes = split(/\t/,$a[1]);
     $numprobes = @probes;
     if($numprobes >= 3) {
