@@ -282,7 +282,7 @@ if(($readsfile =~ /,,,/) && ($paired_end eq "true")) {
     `perl $scripts_dir/parse2fasta.pl $a[0] $a[1] > $output_dir/reads.fa`;
     `perl $scripts_dir/fastq2qualities.pl $a[0] $a[1] > $output_dir/quals.fa`;
     $X = `head -2 $output_dir/quals.fa | tail -1`;
-    if(!($X =~ /Sorry, can't figure these files out/)) {
+    if($X =~ /\S/ && !($X =~ /Sorry, can't figure these files out/)) {
 	$quals = "true"
     }
     $readsfile = "$output_dir/reads.fa";
