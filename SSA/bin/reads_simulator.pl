@@ -1258,28 +1258,6 @@ sub getreads () {
 
     #    ****   FORWARD READ   ****
 
-# START DEBUG STUFF
-
-#    undef @INDELS;
-#    $start_forward = 4118;
-#    $INDELS[0][0] = 3866;
-#    $INDELS[0][1] = 1;
-#    $INDELS[1][0] = 4057;
-#    $INDELS[1][1] = -2;
-#    $INDELS[2][0] = 4117;
-#    $INDELS[2][1] = 1;
-#    $INDELS[3][0] = 4135;
-#    $INDELS[3][1] = -1;
-#    $INDELS[4][0] = 4165;
-#    $INDELS[4][1] = 1;
-
-# END DEBUG STUFF
-
-    print SIMCIGOUT "GENE=$GENE\n";
-    print SIMCIGOUT "STARTS = $STARTS\n";
-    print SIMCIGOUT "ENDS = $ENDS\n";
-    print SIMCIGOUT "CHR = $CHR\n";
-
     # fragment FORWARD read by its deletions and feed each piece separately to getcoords(),
     # then contcatenate coords together, also must correct the start and length of the FORWARD
     # read for the insertions (if any)
@@ -1292,35 +1270,26 @@ sub getreads () {
     undef @insertion_loc;
     undef @insertion_length;
     $indels_in_read_running_length=0;
+    $insertion_at_beggining_of_read=0;
+    $offset = 0;
     for($ind=0; $ind<@INDELS; $ind++) {  # indels are sorted by location
 	if($INDELS[$ind][0] < $start_forward && $INDELS[$ind][0]+$INDELS[$ind][1]>=$start_forward && $INDELS[$ind][1] > 0) {
-	    print SIMCIGOUT "here 1\n";
-	    print SIMCIGOUT "1:start_forward = $start_forward\n";
-	    print SIMCIGOUT "INDELS[$ind][0] = $INDELS[$ind][0]\n";
 	    $insertion_loc[0] = 0;
 	    $insertion_length[0] = $INDELS[$ind][0]+$INDELS[$ind][1]-$start_forward + 1;
 	    $indels_in_read_running_length = $indels_in_read_running_length + $insertion_length[0];
 	    $insertion_count++;
+	    $insertion_at_beggining_of_read = $insertion_at_beggining_of_read + $insertion_length[0];
+	    $readlength = $readlength - $insertion_length[0];
 	}
 	if($INDELS[$ind][0] < $start_forward - 1) {
 	    if($INDELS[$ind][0] + $INDELS[$ind][1] < $start_forward) {
 		$start_forward = $start_forward - $INDELS[$ind][1];
-		print SIMCIGOUT "2a:start_forward = $start_forward\n";
 	    } else {
 		$start_forward = $start_forward - $INDELS[$ind][1] + ($INDELS[$ind][0] + $INDELS[$ind][1] - $start_forward + 1);
-		print SIMCIGOUT "2b:start_forward = $start_forward\n";
 	    }
-	    $readlength = $readlength - $insertion_length[0];
 	}
     }
     $end_forward = $start_forward + $readlength - 1;
-
-    print SIMCIGOUT "s:start_forward = $start_forward\n";
-    for($ind=0; $ind<@INDELS; $ind++) {
-	print SIMCIGOUT "INDELS[$ind][0] = $INDELS[$ind][0]\n";
-	print SIMCIGOUT "INDELS[$ind][1] = $INDELS[$ind][1]\n";
-    }
-    $offset = 0;
     $coords = "";
     $cigar_string = "";
     # this loop does the fragmenting and feeding of each piece to getcoords()
@@ -1338,27 +1307,20 @@ sub getreads () {
 		    $checker_forward = 1;
 		    $ins_length = $ins_length - $adjustment_factor;
 		}
-		print SIMCIGOUT "X:insertion_count=$insertion_count\n";
 		if($start_forward <= $INDELS[$ind][0]) {
 		    $insertion_loc[$insertion_count] = $INDELS[$ind][0] - $start_forward + 1 + $indels_in_read_running_length;
 		    $insertion_length[$insertion_count] = $ins_length;
 		    $indels_in_read_running_length = $indels_in_read_running_length + $ins_length;
-		    print SIMCIGOUT "g:start_forward = $start_forward\n";
-		    print SIMCIGOUT "ins_length=$ins_length\n";
 		    $insertion_count++;
 		}
 	    }
 	    if($INDELS[$ind][1] < 0) {  # deletion w.r.t. reference
-		print SIMCIGOUT "a:here\n";
-		print SIMCIGOUT "INDELS[$ind][0] = $INDELS[$ind][0]\n";
-		print SIMCIGOUT "INDELS[$ind][1] = $INDELS[$ind][1]\n";
 		$deletion_length = -1 * $INDELS[$ind][1];
 		$fragment_start = $start_forward + $offset;
 		$fragment_length = $INDELS[$ind][0] - $fragment_start + 1;
 		$SEQNAME = "seq." . $CNT . "a";
 		$coords_to_add = getcoords($fragment_start, $fragment_length, $STARTS, $ENDS, $CHR, $SEQNAME);
 		@CRD = split(/, / , $coords_to_add);
-		print SIMCIGOUT "1:coords_to_add = $coords_to_add\n";
 		for($crd=0; $crd<@CRD; $crd++) {
 		    @SEG = split(/-/, $CRD[$crd]);
 		    $len_seg = $SEG[1] - $SEG[0] + 1;
@@ -1379,15 +1341,11 @@ sub getreads () {
 	    $end_forward = $end_forward - $INDELS[$ind][1];
 	}
     }
-    for($ins=0; $ins<@insertion_loc; $ins++) {
-	print SIMCIGOUT "insertion_loc[$ins] = $insertion_loc[$ins]\n";
-	print SIMCIGOUT "insertion_length[$ins] = $insertion_length[$ins]\n";
-    }    
+
     $fragment_start = $start_forward + $offset;
     $fragment_length = $end_forward - $fragment_start + 1;
     $SEQNAME = "seq." . $CNT . "a";
     $coords_to_add = getcoords($fragment_start, $fragment_length, $STARTS, $ENDS, $CHR, $SEQNAME);
-    print SIMCIGOUT "2:coords_to_add = $coords_to_add\n";
     @CRD = split(/, / , $coords_to_add);
     for($crd=0; $crd<@CRD; $crd++) {
 	@SEG = split(/-/, $CRD[$crd]);
@@ -1406,17 +1364,20 @@ sub getreads () {
     $coords1 = $coords;
     $coords1 =~ s/.*\t//;
 
+    # up to now the (forward) cigar string has no insertions, now going to put in all the insertions
     $cigar_string2 = "";
-    $matchcount=0;  # this will be the total number of bases of the read accounted for by matches or insertions
-    print SIMCIGOUT "seq.$CNT";
-    print SIMCIGOUT "a\t";
-    print SIMCIGOUT "$cigar_string\n";
+    $matchcount=0;  # this will keep a running total number of bases of the read accounted for by matches or insertions
 
-# seq.770a        100M
-# seq.770a        1I100M
-# insertion_loc[0] = 0
-# insertion_length[0] = 1
-
+    $cigar_string_temp = $cigar_string;
+    $match_total_length = 0;    
+    while($cigar_string_temp =~ /^(\d+)([^\d])/) {
+	$num = $1;
+	$type = $2;
+	if($type eq 'M') {
+	    $match_total_length = $match_total_length + $num;
+	}
+	$cigar_string_temp =~ s/^\d+[^\d]//;
+    }
     while($cigar_string =~ /^(\d+)([^\d])/) {
 	$num = $1;
 	$type = $2;
@@ -1428,6 +1389,9 @@ sub getreads () {
 		    $M1 = $insertion_loc[$ins] - $current_length - $matchcount;
 		    if($M1 > 0) {
 			$cigar_string2 = $cigar_string2 . $M1 . "M";
+		    }
+		    if($insertion_loc[$ins] + $insertion_length[$ins] > $READLENGTH) {
+			$insertion_length[$ins] = $insertion_length[$ins] - (($insertion_loc[$ins] + $insertion_length[$ins]) - $READLENGTH);
 		    }
 		    $cigar_string2 = $cigar_string2 . $insertion_length[$ins] . "I";
 		    $current_length = $current_length + $M1;
@@ -1447,14 +1411,7 @@ sub getreads () {
 	$cigar_string =~ s/^\d+[^\d]//;
     }
 
-    print SIMCIGOUT "seq.$CNT";
-    print SIMCIGOUT "a\t";
-    print SIMCIGOUT "$cigar_string2\n";
-    for($iii=0; $iii<@insertion_loc; $iii++) {
-	print SIMCIGOUT "insertion_loc[$iii] = $insertion_loc[$iii]\n";
-	print SIMCIGOUT "insertion_length[$iii] = $insertion_length[$iii]\n";
-    }
-    print SIMCIGOUT "---------\n";
+    $cigar_string_a = $cigar_string2;
 
     #    ****   REVERSE READ   ****
 
@@ -1462,38 +1419,78 @@ sub getreads () {
     # then contcatenate coords together, also must correct the start and length of the REVERSE
     # read for the insertions (if any)
 
-    print SIMCIGOUT "seq.$CNT";
-    print SIMCIGOUT "b\t";
-
     $readlength = $READLENGTH;
     $checker_reverse = 0;
 
     # this loop adjusts the start of the read for insertions/deletions upstream of the start
+    $insertion_count = 0;
+    undef @insertion_loc;
+    undef @insertion_length;
+    $indels_in_read_running_length=0;
+    $insertion_at_beggining_of_read=0;
+    $offset = 0;
     for($ind=0; $ind<@INDELS; $ind++) {  # indels are sorted by location
-	if($INDELS[$ind][0] < $start_reverse) {
-	    $start_reverse = $start_reverse - $INDELS[$ind][1]; 
+	if($INDELS[$ind][0] < $start_reverse && $INDELS[$ind][0]+$INDELS[$ind][1]>=$start_reverse && $INDELS[$ind][1] > 0) {
+	    $insertion_loc[0] = 0;
+	    $insertion_length[0] = $INDELS[$ind][0]+$INDELS[$ind][1]-$start_reverse + 1;
+	    $indels_in_read_running_length = $indels_in_read_running_length + $insertion_length[0];
+	    $insertion_count++;
+	    $insertion_at_beggining_of_read = $insertion_at_beggining_of_read + $insertion_length[0];
+	    $readlength = $readlength - $insertion_length[0];
+	}
+	if($INDELS[$ind][0] < $start_reverse - 1) {
+	    if($INDELS[$ind][0] + $INDELS[$ind][1] < $start_reverse) {
+		$start_reverse = $start_reverse - $INDELS[$ind][1];
+	    } else {
+		$start_reverse = $start_reverse - $INDELS[$ind][1] + ($INDELS[$ind][0] + $INDELS[$ind][1] - $start_reverse + 1);
+	    }
 	}
     }
     $end_reverse = $start_reverse + $readlength - 1;
-    
-    $offset = 0;
     $coords = "";
+    $cigar_string = "";
     # this loop does the fragmenting and feeding of each piece to getcoords()
     for($ind=0; $ind<@INDELS; $ind++) {  # indels are sorted by location
 	if($start_reverse <= $INDELS[$ind][0] && $INDELS[$ind][0] < ($start_reverse+$readlength-1)) {
 	    if($INDELS[$ind][1] > 0) {
+                # in case insertion goes beyond end of read, don't want
+                # to overcorrect later, the following 'if' takes care of that
+		$ins_length = $INDELS[$ind][1];
 		if( ($INDELS[$ind][0]+$INDELS[$ind][1]) > ($start_reverse+$readlength-1) ) {
 		    $adjustement_factor = (($INDELS[$ind][0]+$INDELS[$ind][1])-($start_reverse+$readlength-1));
-		    $readlength = $readlength + $adjustement_factor;
+		    $readlength = $readlength + $adjustement_factor;  # yes, adding, so that subtraction later doesn't overcorrect
 		    $end_reverse = $end_reverse + $adjustement_factor;
 		    $checker_reverse = 1;
+		    $ins_length = $ins_length - $adjustment_factor;
+		}
+		if($start_reverse <= $INDELS[$ind][0]) {
+		    $insertion_loc[$insertion_count] = $INDELS[$ind][0] - $start_reverse + 1 + $indels_in_read_running_length;
+		    $insertion_length[$insertion_count] = $ins_length;
+		    $indels_in_read_running_length = $indels_in_read_running_length + $ins_length;
+		    $insertion_count++;
 		}
 	    }
-	    if($INDELS[$ind][1] < 0) {
+	    if($INDELS[$ind][1] < 0) {  # deletion w.r.t. reference
+		$deletion_length = -1 * $INDELS[$ind][1];
 		$fragment_start = $start_reverse + $offset;
 		$fragment_length = $INDELS[$ind][0] - $fragment_start + 1;
 		$SEQNAME = "seq." . $CNT . "b";
-		$coords = $coords . ", " . getcoords($fragment_start, $fragment_length, $STARTS, $ENDS, $CHR, $SEQNAME);
+		$coords_to_add = getcoords($fragment_start, $fragment_length, $STARTS, $ENDS, $CHR, $SEQNAME);
+		@CRD = split(/, / , $coords_to_add);
+		for($crd=0; $crd<@CRD; $crd++) {
+		    @SEG = split(/-/, $CRD[$crd]);
+		    $len_seg = $SEG[1] - $SEG[0] + 1;
+		    if($crd==0) {
+			$cigar_string = $cigar_string . $len_seg . "M";
+		    } else {
+			$intronlen = $SEG[0] - $prev_end - 1;
+			$cigar_string = $cigar_string . $intronlen . "N" . $len_seg . "M";
+		    }	
+		    $prev_end = $SEG[1];
+		}
+		$cigar_string = $cigar_string . $deletion_length . "D";
+		$indels_in_read_running_length = $indels_in_read_running_length - $deletion_length;
+		$coords = $coords . ", " . $coords_to_add;
 		$offset = $offset + $fragment_length - $INDELS[$ind][1];
 	    }
 	    $readlength = $readlength - $INDELS[$ind][1];
@@ -1504,14 +1501,97 @@ sub getreads () {
     $fragment_start = $start_reverse + $offset;
     $fragment_length = $end_reverse - $fragment_start + 1;
     $SEQNAME = "seq." . $CNT . "b";
-    $coords = $coords . ", " . getcoords($fragment_start, $fragment_length, $STARTS, $ENDS, $CHR, $SEQNAME);
+    $coords_to_add = getcoords($fragment_start, $fragment_length, $STARTS, $ENDS, $CHR, $SEQNAME);
+    @CRD = split(/, / , $coords_to_add);
+    for($crd=0; $crd<@CRD; $crd++) {
+	@SEG = split(/-/, $CRD[$crd]);
+	$len_seg = $SEG[1] - $SEG[0] + 1;
+	if($crd==0) {
+	    $cigar_string = $cigar_string . $len_seg . "M";
+	} else {
+	    $intronlen = $SEG[0] - $prev_end - 1;
+	    $cigar_string = $cigar_string . $intronlen . "N" . $len_seg . "M";
+	}	
+	$prev_end = $SEG[1];
+    }
+    $coords = $coords . ", " . $coords_to_add;
     $coords =~ s/^\s*,\s*//;
     $coords =~ s/\s*,\s*$//;
     $coords2 = $coords;
     $coords2 =~ s/.*\t//;
+    $coords1 =~ /^(\d+)-/;
+    $start_a = $1;
+    $coords2 =~ /^(\d+)-/;
+    $start_b = $1;
     $mergedcoords = merge($coords1, $coords2);
 
-    print SIMCIGOUT "\n";
+    # up to now the (reverse) cigar string has no insertions, now going to put in all the insertions
+    $cigar_string2 = "";
+    $matchcount=0;  # this will keep a running total number of bases of the read accounted for by matches or insertions
+
+    $cigar_string_temp = $cigar_string;
+    $match_total_length = 0;    
+    $cigar_string_temp = $cigar_string;
+    $match_total_length = 0;    
+    while($cigar_string_temp =~ /^(\d+)([^\d])/) {
+	$num = $1;
+	$type = $2;
+	if($type eq 'M') {
+	    $match_total_length = $match_total_length + $num;
+	}
+	$cigar_string_temp =~ s/^\d+[^\d]//;
+    }
+    while($cigar_string =~ /^(\d+)([^\d])/) {
+	$num = $1;
+	$type = $2;
+	if($type eq 'M') {
+	    $M1 = $num;
+	    $current_length = 0;  # this keeps track of the length just in this match
+	    for($ins=0; $ins<@insertion_loc; $ins++) {
+		if($insertion_loc[$ins] >= $matchcount && $insertion_loc[$ins] <= $matchcount + $num) {
+		    $M1 = $insertion_loc[$ins] - $current_length - $matchcount;
+		    if($M1 > 0) {
+			$cigar_string2 = $cigar_string2 . $M1 . "M";
+		    }
+		    if($insertion_loc[$ins] + $insertion_length[$ins] > $READLENGTH) {
+			$insertion_length[$ins] = $insertion_length[$ins] - (($insertion_loc[$ins] + $insertion_length[$ins]) - $READLENGTH);
+		    }
+		    $cigar_string2 = $cigar_string2 . $insertion_length[$ins] . "I";
+		    $current_length = $current_length + $M1;
+		    $matchcount = $matchcount + $insertion_length[$ins];
+		    $M1 = $num - $current_length;
+		}
+	    }
+	    if($M1 > 0) {
+		$cigar_string2 = $cigar_string2 . $M1 . "M";
+		$current_length = $current_length + $M1;
+	    }
+	    $matchcount = $matchcount + $num;
+	}
+	if($type eq 'D' || $type eq 'N') {
+	    $cigar_string2 = $cigar_string2 . $num . $type;
+	}
+	$cigar_string =~ s/^\d+[^\d]//;
+    }
+    $cigar_string_b = $cigar_string2;
+
+    if($rev_flip == 0) {
+	print SIMCIGOUT "seq.$CNT";
+	print SIMCIGOUT "a\t$CHR\t$start_a\t";
+	print SIMCIGOUT "$cigar_string_a\t$coords1\t$forward_read\n";
+
+	print SIMCIGOUT "seq.$CNT";
+	print SIMCIGOUT "b\t$CHR\t$start_b\t";
+	print SIMCIGOUT "$cigar_string_b\t$coords2\t$reverse_read\n";
+    } else {
+	print SIMCIGOUT "seq.$CNT";
+	print SIMCIGOUT "a\t$CHR\t$start_b\t";
+	print SIMCIGOUT "$cigar_string_b\t$coords2\t$reverse_read\n";
+
+	print SIMCIGOUT "seq.$CNT";
+	print SIMCIGOUT "b\t$CHR\t$start_a\t";
+	print SIMCIGOUT "$cigar_string_a\t$coords1\t$forward_read\n";
+    }
 
     @D = split(/, /,$mergedcoords);
     $bed = "";
