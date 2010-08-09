@@ -185,9 +185,7 @@ while(1 == 1) {
 		    @a = split(/\t/,$str);
 		    $spans_t[$ii] = $a[1];
 		    $CHRS{$a[0]}++;
-		    if($ii==0) {
-			$seq_temp = $a[3];
-		    }
+		    $seq_temp = $a[3];
 		}
 		$nchrs = 0;
 		foreach $ky (keys %CHRS) {
@@ -369,8 +367,6 @@ while(1 == 1) {
 				$consistent = 0;
 			    }
 			    
-			    $NT = @astarts;
-			    $NT = @bstarts;
 			    $overlap = 0;
 			    if($first_overlap_exon < @astarts-1 || $last_overlap_exon > 0) {
 				if($bends[0] != $aends[$first_overlap_exon]) {
@@ -388,8 +384,6 @@ while(1 == 1) {
 				}
 			    }
 			    if($consistent == 1) {
-				$NN = @astarts;
-				$MM = @bstarts;
 				$num_exons_merged = @astarts + @bstarts - $last_overlap_exon - 1;
 				undef @mergedstarts;
 				undef @mergedends;
