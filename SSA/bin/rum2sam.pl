@@ -564,7 +564,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 #		for($i=0; $i<$offset; $i++) {
 #		    print " ";
 #		}
-#		print "$downstream_read\n\n";
+#		print "$DR\n";
 #		print "\n$downstream_read\n\n";
 		
 		$RC = 0;
@@ -726,6 +726,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		# COLLECT INFO FROM REVERSE RUM RECORD
 		# note: this might be a joined read for which the surrogate forward was created above
 		
+
 #		print "rum_u_reverse = $rum_u_reverse\n\n";
 		
 		@rur = split(/\t/,$rum_u_reverse);
