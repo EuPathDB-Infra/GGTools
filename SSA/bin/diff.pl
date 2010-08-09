@@ -4,10 +4,15 @@ if(@ARGV<2) {
 Usage: perl diff.pl <file1> <file2> [options]
 
 Reports the first line on which file1 and file2 differ, if any.
+This is much faster on large files than using 'diff' for the same purpose.
 
 Options: -all  : show all lines that are different.
 
 ";
+}
+
+if($ARGV[0] eq $ARGV[1]) {
+    die "\nYou specified the same file for both arguments,\nobviously those are goin to be equal... doh.\n\n";
 }
 
 open(INFILE1, $ARGV[0]);
@@ -27,7 +32,7 @@ while($line1 = <INFILE1>) {
     }
     $line2 = <INFILE2>;
     if($line2 eq '') {
-	print "Reached the end of '$ARGV[2]'\n";
+	print "Reached the end of '$ARGV[1]'\n";
 	last;
     }
     if(!($line1 eq $line2)) {
@@ -44,7 +49,7 @@ while($line1 = <INFILE1>) {
 if($line1 eq '') {
     $line2 = <INFILE2>;
     if($line2 =~ /\S/) {
-	print "Reached the end of '$ARGV[1]'\n";
+	print "Reached the end of '$ARGV[0]'\n";
     } else {
 	print "Reached the end of both files\n";
     }
