@@ -219,7 +219,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	if($SCORE > $cutoff{$seqname}) {   # so match is at least cutoff long (and this cutoff was set to be longer if there are a lot of N's (bad reads or low complexity masked by dust)
 #	    if($a[11] <= 1) {   # so match starts at position zero or one in the query (allow '1' because first base can tend to be an N or low quality)
 	    if(1 == 1) {   # trying this with no condition to see if it helps...
-		if($a[4] <= 1) { # then the aligment has at most one gap in the query, allowing for an insertion in the sample, throw out this alignment otherwise (we don't believe two separate insertions in such a short span).
+		if($a[4] <= 1) { # then the aligment has at most one gap in the query, allowing for an insertion in the sample, throw out this alignment otherwise (we don't believe two separate insertions in such a short span).  comment.1
 		    if($Ncount{$a[9]} <= ($a[10] / 2) || $a[17] <= 3) { # IF SEQ IS MORE THAN 50% LOW COMPLEXITY, DON'T ALLOW MORE THAN 3 BLOCKS, OTHERWISE GIVING IT TOO MUCH OPPORTUNITY TO MATCH BY CHANCE.  
 			if($a[17] <= $num_blocks_allowed) { # NEVER ALLOW MORE THAN $num_blocks_allowed blocks, which is set to 1 for chipseq, and 1000 (the equiv of infinity) for rnaseq
 			    # at this point we know it's a prefix match starting at pos 0 or 1 and with at most one gap in the query, and if low comlexity then not too fragemented...
@@ -459,8 +459,9 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	for($c=0; $c<$N; $c++) {
 	    $key = $read_mapping_to_genome_blatoutput[$t][$c];
 	    @a4 = split(/\t/,$key);
-#	    if($a4[3] > $max_length - 5 && $a4[8] <= $maxkey_nummismatch + 2) {
-	    if($a4[3] > $max_length - 1 && $a4[8] <= $maxkey_nummismatch + 2) {
+	    if($a4[3] > $max_length - 2 && $a4[8] <= $maxkey_nummismatch + 2) {
+		# might want to change $max_length - 2 to  $max_length - n for n>2 or even n=1,
+		# should do some rigorous benchmarking to figure this out
 		if($sname[$t] =~ /a/) {
 		    $seq = getsequence($a4[6], $a4[9], $a4[4], $seqa);
 		}
@@ -662,6 +663,8 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 		$aspans = $aspans_hold;
 		$aave = $aave_hold;
 		$aseq = $aseq_hold;
+		undef @astarts;
+		undef @aends;
 		for($e=0; $e<@aexons; $e++) {
 		    $astarts[$e] = $astarts_hold[$e];
 		    $aends[$e] = $aends_hold[$e];
@@ -689,7 +692,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 #		    print "$read_mapping_to_genome_coords[1][$j]\n";
 #		    print "aave = $aave\n";
 #		    print "bave = $bave\n";
-
+		
 		$proceedflag = 0;
 		if($astrand eq "+" && $bstrand eq "+" && $aave <= $bave) {
 		    $proceedflag = 1;
@@ -764,7 +767,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			$consistent = 1;
 			$flag = 0;
 			while($flag == 0 && $f < @astarts) { # this checks for a valid overlap
-			    if($bstart >= $astarts[$f] && $bstart <= $aends[$f]) {
+			    if($bstart >= $astarts[$f] && $bstart <= $aends[$f] && $bends[0]>=$aends[$f]) {
 				$first_overlap_exon = $f;  # this index is relative to the a read
 				$flag = 1;
 			    }
@@ -780,7 +783,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			    $base_hold = $1;
 			    $f = 0;
 			    while($flag == 0 && $f < @astarts) {
-				if($bstart >= $astarts[$f] && $bstart <= $aends[$f]) {
+				if($bstart >= $astarts[$f] && $bstart <= $aends[$f] && $bends[0]>=$aends[$f]) {
 				    $first_overlap_exon = $f;  # this index is relative to the a read
 				    $flag = 1;
 				}
@@ -799,7 +802,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			}
 			$f = @bstarts-1;
 			while($flag == 0 && $f >= 0) { # try the other direction
-			    if($aend >= $bstarts[$f] && $aend <= $bends[$f]) {
+			    if($aend >= $bstarts[$f] && $aend <= $bends[$f] && $aends[0]>=$bends[$f]) {
 				$last_overlap_exon = $f;  # this index is relative to the b read
 				$flag = 1;
 			    }
@@ -815,7 +818,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			    $base_hold = $1;
 			    $f = @bstarts-1;
 			    while($flag == 0 && $f >= 0) {
-				if($aend >= $bstarts[$f] && $aend <= $bends[$f]) {
+				if($aend >= $bstarts[$f] && $aend <= $bends[$f] && $aends[0]>=$bends[$f]) {
 				    $last_overlap_exon = $f;  # this index is relative to the b read
 				    $flag = 1;
 				}
@@ -833,9 +836,13 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			    $consistent = 0;
 			}
 			
-			$NT = @astarts;
-			$NT = @bstarts;
-			$overlap = 0;
+#			$NT = @astarts;
+#			print "size of astarts = $NT\n";
+#			$NT = @bstarts;
+#			print "size of bstarts = $NT\n";
+#			print "first_overlap_exon = $first_overlap_exon\n";
+#			print "last_overlap_exon = $last_overlap_exon\n";
+			
 			if($first_overlap_exon < @astarts-1 || $last_overlap_exon > 0) {
 			    if($bends[0] != $aends[$first_overlap_exon]) {
 				$consistent = 0;
@@ -885,14 +892,16 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			    }
 			    # now gotta put back any insertions into the merged...
 			    $aseq_temp = $aseq;
-			    $aseq_temp =~ s/\+.*\+//g;
+			    $aseq_temp =~ s/\+.*\+//g;  # THIS IS ONLY GOING TO WORK IF THERE IS ONE INSERTION
+			                                # as is guaranteed, seach for "comment.1"
+			                                # This limitation should probably be fixed at some point...
 			    @s1 = split(//,$aseq_temp);
 			    $aseqlength = @s1;
 			    $bseq_temp = $bseq;
 			    $bseq_temp =~ /(\+.*\+)([^+]*)$/;
 			    $ins = $1;
 			    $bpostfix = $2;
-			    $bseq_temp =~ s/(\+.*\+)//;
+			    $bseq_temp =~ s/(\+.*\+)//;  # SAME COMMENT AS ABOVE
 			    @s2 = split(//,$bseq_temp);
 			    $bseqlength = @s2;
 			    $merged_seq = $aseq;
@@ -909,7 +918,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 				    $merged_seq =~ s/$bpostfix$/$ins$bpostfix/;
 				}
 			    }
-			$consistent_mappers{"seq.$seq_count\t$achr\t$merged_spans\t$merged_seq\t$ostrand"}++;
+			    $consistent_mappers{"seq.$seq_count\t$achr\t$merged_spans\t$merged_seq\t$ostrand"}++;
 			}
 			if($swaphack eq "true") {
 			    $astrand = "-";
