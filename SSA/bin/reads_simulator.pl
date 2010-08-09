@@ -1122,6 +1122,7 @@ while( 1 == 1) {
 	$STARTS = $starts{$GENE};
 	$ENDS = $ends{$GENE};
     }
+    $rev_flip = int(rand(2));
     $return_vector_ref = getreads($SEQ, \@INDELS, $STARTS, $ENDS, $CNT, $chr{$GENE});
 
     @return_vector = @{$return_vector_ref};
@@ -1130,7 +1131,6 @@ while( 1 == 1) {
     $mergedcoords = $return_vector[2];
 
     if($fa ne "none") {
-	$rev_flip = int(rand(2));
 	@F = split(/\n/,$fa);
 	$stemp = &add_sequencing_error($F[1], $base_error);
 	$stemp2 = &add_error_to_tail($stemp, $low_qual_tail_length, $percent_of_tails_that_are_low_qual, $quality_of_low_qual_tail);
@@ -1578,19 +1578,19 @@ sub getreads () {
     if($rev_flip == 0) {
 	print SIMCIGOUT "seq.$CNT";
 	print SIMCIGOUT "a\t$CHR\t$start_a\t";
-	print SIMCIGOUT "$cigar_string_a\t$coords1\t$forward_read\n";
+	print SIMCIGOUT "$cigar_string_a\t$coords1\t+\t$forward_read\n";
 
 	print SIMCIGOUT "seq.$CNT";
 	print SIMCIGOUT "b\t$CHR\t$start_b\t";
-	print SIMCIGOUT "$cigar_string_b\t$coords2\t$reverse_read\n";
+	print SIMCIGOUT "$cigar_string_b\t$coords2\t-\t$reverse_read\n";
     } else {
 	print SIMCIGOUT "seq.$CNT";
 	print SIMCIGOUT "a\t$CHR\t$start_b\t";
-	print SIMCIGOUT "$cigar_string_b\t$coords2\t$reverse_read\n";
+	print SIMCIGOUT "$cigar_string_b\t$coords2\t-\t$reverse_read\n";
 
 	print SIMCIGOUT "seq.$CNT";
 	print SIMCIGOUT "b\t$CHR\t$start_a\t";
-	print SIMCIGOUT "$cigar_string_a\t$coords1\t$forward_read\n";
+	print SIMCIGOUT "$cigar_string_a\t$coords1\t+\t$forward_read\n";
     }
 
     @D = split(/, /,$mergedcoords);
