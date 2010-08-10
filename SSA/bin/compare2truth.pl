@@ -56,6 +56,9 @@ $total_number_of_bases_aligned_correctly = 0;
 $total_number_of_bases_aligned_incorrectly = 0;
 $total_number_of_bases_aligned_ambiguously = 0;
 $total_number_of_bases_unaligned = 0;
+$total_number_of_bases_in_true_insertions = 0;
+$total_number_of_bases_called_insertions = 0;
+$insertions_called_correctly = 0;
 
 $flag = 0;
 for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
@@ -159,6 +162,7 @@ for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
 		for($i=0; $i<$num; $i++) {
 		    $location[$pos_on_read] = "i";
 		    $pos_on_read++;
+		    $total_number_of_bases_called_insertions++;
 		}
 	    }
 	    $cigar_string_temp =~ s/^\d+[^\d]//;
@@ -180,6 +184,7 @@ for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
 		for($i=0; $i<$num; $i++) {
 		    $truelocation[$pos_on_read] = "i";
 		    $pos_on_read++;
+		    $total_number_of_bases_in_true_insertions++;
 		}
 	    }
 	    $cigar_string_temp =~ s/^\d+[^\d]//;
@@ -187,6 +192,9 @@ for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
 	for($pos_on_read=0; $pos_on_read<@truelocation; $pos_on_read++) {
 	    if($truelocation[$pos_on_read] eq $location[$pos_on_read]) {
 		$total_number_of_bases_aligned_correctly++;
+		if($truelocation[$pos_on_read] eq "i") {
+		    $insertions_called_correctly++;
+		}
 	    } else {
 		if($location[$pos_on_read] ne "x") {
 		    $total_number_of_bases_aligned_incorrectly++;
@@ -223,3 +231,10 @@ print "% bases unaligned: $percent_bases_unaligned%\n";
 $total_num_unique_aligners = $total_number_of_bases_aligned_correctly + $total_number_of_bases_aligned_incorrectly;
 $accuracy_on_unique_aligners = int($total_number_of_bases_aligned_correctly / $total_num_unique_aligners * 10000) / 100;
 print "% unique aligners correct: $accuracy_on_unique_aligners\n";
+
+$insertions_false_positive_rate = (1 - int($insertions_called_correctly / $total_number_of_bases_called_insertions * 10000) / 10000) * 100;
+print "% insertions FP rate: $insertions_false_positive_rate\n";
+
+$insertions_false_negative_rate = (1 - int($insertions_called_correctly / $total_number_of_bases_in_true_insertions * 10000) / 10000) * 100;
+print "% insertions FN rate: $insertions_false_negative_rate\n";
+
