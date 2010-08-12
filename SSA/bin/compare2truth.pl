@@ -4,7 +4,7 @@ if(@ARGV < 2) {
     die "
 Usage: perl compare2truth.pl <truth file> <sam file>
 
-The <truth file> is output from reads_simulator.pl
+The <truth file> is the .cig file output from reads_simulator.pl
 
 The <sam file> is the alignments of the same reads output from 
                an alignment algoirthm.
@@ -230,11 +230,14 @@ print "% bases unaligned: $percent_bases_unaligned%\n";
 
 $total_num_unique_aligners = $total_number_of_bases_aligned_correctly + $total_number_of_bases_aligned_incorrectly;
 $accuracy_on_unique_aligners = int($total_number_of_bases_aligned_correctly / $total_num_unique_aligners * 10000) / 100;
-print "% unique aligners correct: $accuracy_on_unique_aligners\n";
+print "% unique aligners correct: $accuracy_on_unique_aligners%\n";
+
+$insertion_rate = int($total_number_of_bases_in_true_insertions / $total_number_of_bases_of_reads * 1000000) / 10000;
+print "% of bases in true insertions: $insertion_rate%\n";
 
 $insertions_false_positive_rate = (1 - int($insertions_called_correctly / $total_number_of_bases_called_insertions * 10000) / 10000) * 100;
-print "% insertions FP rate: $insertions_false_positive_rate\n";
+print "% insertions FP rate: $insertions_false_positive_rate%\n";
 
 $insertions_false_negative_rate = (1 - int($insertions_called_correctly / $total_number_of_bases_in_true_insertions * 10000) / 10000) * 100;
-print "% insertions FN rate: $insertions_false_negative_rate\n";
+print "% insertions FN rate: $insertions_false_negative_rate%\n";
 
