@@ -37,16 +37,17 @@ Hit get output, and request all upper case
 gunzip the file and run:
 
 > perl modify_fasta_header_for_genome_seq_database.pl NAME_genome.txt > NAME_genome.fa
+> perl modify_fa_to_have_seq_on_one_line.pl NAME_genome.fa > NAME_genome_one-line-seqs.fa
 
 Now need to make files of gene info and sequence:
- - you can use any of the annotation tracks as long as they have the ten fields you are asked to select below:
+ - you can use any of the annotation tracks as long as they have the five fields you are asked to select below:
  - the following illustrates using two tracks "UCSC Known" and "RefSeq".  
 
 Set the table browser as follows:
 
 group: Genes and Gene Prediction Tracks
-track: UCSC Genes 
-table: knownGene
+track: UCSC Genes (or whatever track you like)
+table: knownGene (or whatever is the corresponding name for the track you chose)
 region: genome
 output format: selected fields from primary and related tables
 output file: ucscknown.txt (keep the name of this file simple)
@@ -65,8 +66,8 @@ hit "get output".
 Now do the same thing but get RefSeq genes, save to file called: refseq.txt
   - Set 'table' to be "refGene".
 
-make a file called "gene_info_files" with two lines:
-
+make a file called "gene_info_files" with one line per gene annotation filename:
+--------------
 ucscknown.txt
 refseq.txt
 
@@ -74,20 +75,30 @@ Now run:
 
 > perl create_gene_indexes.pl NAME_refseq_ucscknown NAME_genome.fa 
   - this is a master script that runs seven other scripts...
+  - you will need a fair amount of RAM to do this, 10Gb was sufficient for Human
 
 Now build bowtie indexes:
 
 > bowtie-build NAME_refseq_ucscknown_genes.fa NAME_genes
 > bowtie-build NAME_genome.fa NAME_genome
 
-Now build the blat indexes:
+Make the ooc file:
 
-faToTwoBit NAME_genome_sequence.fa NAME_genome_sequence.2bit
+blat NAME_genome_sequence.fa /dev/null /dev/null -tileSize=11 -makeOoc=11.ooc_NAME -repMatch=1024
 
-and make the ooc file:
+The files you need to keep are the following 14:
 
-blat NAME_genome_sequence.2bit /dev/null /dev/null -tileSize=11 -makeOoc=11.ooc_NAME -repMatch=1024
-
-and transform the genome fa file to have seq all on one line:
-
-perl modify_fa_to_have_seq_on_one_line.pl NAME_genome.fa > NAME_genome_sequence_single-line-seqs.fa
+NAME_reefseq_ucscknown_gene_info.txt
+NAME_genome_one-line-seqs.fa
+NAME_genes.4.ebwt
+NAME_genes.3.ebwt
+NAME_genes.2.ebwt
+NAME_genes.1.ebwt
+NAME_genes.rev.2.ebwt
+NAME_genes.rev.1.ebwt
+NAME_genome.4.ebwt
+NAME_genome.3.ebwt
+NAME_genome.2.ebwt
+NAME_genome.1.ebwt
+NAME_genome.rev.2.ebwt
+NAME_genome.rev.1.ebwt
