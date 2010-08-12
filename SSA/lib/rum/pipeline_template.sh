@@ -45,10 +45,13 @@ perl SCRIPTSDIR/limit_NU.pl OUTDIR/RUM_NU_temp2.CHUNK LIMITNUCUTOFF > OUTDIR/RUM
 perl SCRIPTSDIR/sort_RUM.pl OUTDIR/RUM_NU_temp2.CHUNK OUTDIR/RUM_NU.CHUNK
 echo "finished sorting final results" >> OUTDIR/rum_log.CHUNK
 echo `date` >> OUTDIR/rum_log.CHUNK
-#rm OUTDIR/RUM_Unique_temp.CHUNK
-#rm OUTDIR/RUM_NU_temp.CHUNK
-#rm OUTDIR/RUM_Unique_temp2.CHUNK
-#rm OUTDIR/RUM_NU_temp2.CHUNK
+rm OUTDIR/RUM_Unique_temp.CHUNK
+rm OUTDIR/RUM_NU_temp.CHUNK
+rm OUTDIR/RUM_Unique_temp2.CHUNK
+rm OUTDIR/RUM_NU_temp2.CHUNK
+perl SCRIPTSDIR/rum2sam.pl OUTDIR/RUM_Unique.CHUNK OUTDIR/RUM_NU.CHUNK READSFILE.CHUNK QUALSFILE.CHUNK OUTDIR/RUM.sam.CHUNK
+echo "finished converting to SAM" >> OUTDIR/rum_log.CHUNK
+echo `date` >> OUTDIR/rum_log.CHUNK
 
 echo "pipeline complete" >> OUTDIR/rum_log.CHUNK
 echo `date` >> OUTDIR/rum_log.CHUNK
