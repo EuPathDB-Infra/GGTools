@@ -27,8 +27,8 @@ $ends_col = $ARGV[2];
 $exon_count_col = $ARGV[3];
 
 open(INFILE, $ARGV[0]);
-$line = <INFILE>;
-print $line;
+#$line = <INFILE>;
+#print $line;
 while($line = <INFILE>) {
     chomp($line);
     @a = split(/\t/, $line);
@@ -41,6 +41,7 @@ while($line = <INFILE>) {
     $start_string = $S[0] . ",";
     $end_string = "";
     $N = @S;
+    print "N=$N\n";
     for($i=1; $i<$N; $i++) {
         $intronlength = $S[$i] - $E[$i-1];
         $realstart = $E[$i-1] + 1;
@@ -48,11 +49,13 @@ while($line = <INFILE>) {
         $length = $realend - $realstart + 1;
 #       print "length = $length\n";
         if($length > 0) {
+	    print "here 1\n";
             $start_string = $start_string . $S[$i] . ",";
             $end_string = $end_string . $E[$i-1] . ",";
         }
         else {
 #           print "$line\n";
+	    print "here 2\n";
 	    if($exon_count_col >= 0) {
 		$a[$exon_count_col]--;
 	    }

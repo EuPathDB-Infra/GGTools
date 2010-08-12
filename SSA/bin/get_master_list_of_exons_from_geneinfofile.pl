@@ -9,16 +9,14 @@ Usage: get_master_list_of_exons_from_geneinfofile.pl <gene info file>
 
 This script takes a UCSC gene annotation file and outputs a file of all unique
 exons.  The annotation file has to be downloaded with the following fields:
-1) name
-2) chrom
-3) strand
-4) txStart
-5) txEnd
-6) cdsStart
-7) cdsEnd
-8) exonCount
-9) exonStarts
-10) exonEnds
+1) chrom
+2) strand
+3) txStart
+4) txEnd
+5) exonCount
+6) exonStarts
+7) exonEnds
+8) name
 
 This script is part of the pipeline of scripts used to create RUM indexes.
 For more information see the library file: 'how2setup_genome-indexes_forPipeline.txt'.

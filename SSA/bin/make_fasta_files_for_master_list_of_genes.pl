@@ -50,10 +50,10 @@ foreach $key (keys %chr_hash2) {
 	if($flag == 0) {
 	    print STDERR "no sequence for:\n$key\n";
 	    $flag = 1;
-	    $str = $str .  " | grep -v $key";
 	} else {
 	    print STDERR "$key\n";
 	}
+	$str = $str .  " | grep -v $key";
     }
 }
 if($flag == 1) {
@@ -61,6 +61,9 @@ if($flag == 1) {
     $str = $str . " > $final_gene_info_file";
     print STDERR "str:\n$str\n";
     `$str`;
+} else {
+    $fn = $ARGV[2];
+    `mv $fn $final_gene_info_file`;
 }
 
 sub get_exons () {

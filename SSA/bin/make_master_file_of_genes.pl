@@ -12,13 +12,8 @@ They have to be downloaded with the following fields:
 1) name
 2) chrom
 3) strand
-4) txStart
-5) txEnd
-6) cdsStart
-7) cdsEnd
-8) exonCount
-9) exonStarts
-10) exonEnds
+4) exonStarts
+5) exonEnds
 
 This script is part of the pipeline of scripts used to create RUM indexes.
 You should probably not be running it alone.  See the library file:
@@ -49,9 +44,6 @@ while($file = <FILESFILE>) {
         if($header[$i] eq "strand") {
             $strandcol = $i;
         }
-        if($header[$i] eq "exonCount") {
-            $exonCountcol = $i;
-        }
         if($header[$i] eq "exonStarts") {
             $exonStartscol = $i;
         }
@@ -65,7 +57,7 @@ while($file = <FILESFILE>) {
         @a = split(/\t/,$line);
 	$a[$exonStartscol] =~ /^(\d+)/;
 	$txStart = $1;
-	$a[$exonEndscol] =~ /(\d+)$/;
+	$a[$exonEndscol] =~ /(\d+),?$/;
 	$txEnd = $1;
 	@b = split(/,/,$a[$exonStartscol]);
 	$exonCnt = @b;
