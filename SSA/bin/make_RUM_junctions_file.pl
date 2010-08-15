@@ -36,6 +36,7 @@ while($line = <INFILE>) {
     $bowtie{$1} = 0;
 }
 close(INFILE);
+
 open(INFILE, $bowtieNU);
 while($line = <INFILE>) {
     $line =~ /seq.(\d+.)/;
@@ -91,6 +92,7 @@ while($FLAG == 0) {
 	    chomp($line);
 	    $line =~ />(.*):1-(\d+)_strand=./;
 	    $chr = $1;
+	    print "chr=$chr\n";
 	    $ref_seq = <GENOMESEQ>;
 	    chomp($ref_seq);
 	    $CHR2SEQ{$chr} = $ref_seq;
@@ -101,65 +103,81 @@ while($FLAG == 0) {
 	}
     }
     &getjunctions();
-
+    &printjunctions();
 }
 close(GENOMESEQ);
+
+sub printjunctions () {
+    print "intron\tamb\thqualU\thqualNU\tweakevidenceU\tstrongevidenceU\tweakevidenceNU\tstrongevidenceNU\n";
+    foreach $intron (keys %allintrons) {
+	print "$intron\t$amb{$intron}\t$hqualU($intron}\t$hqualNU($intron}\t$weakevidenceU{$intron}\t$strongevidenceU{$intron}\t$weakevidenceNU{$intron}\t$strongevidenceNU{$intron}\n";
+    }
+}
 
 sub getjunctions () {
     open(INFILE, $rumU);
     while($line = <INFILE>) {
-	$flag = 0;
 	if(!($line =~ /, /)) {
 	    next;
 	}
 	chomp($line);
 	@a = split(/\t/,$line);
-	if(!(defined $CHR2SEQ{$a[1]})) {
+	$chr = $a[1];
+	if(!(defined $CHR2SEQ{$chr})) {
 	    next;
 	}
-	while($seq =~ /\+/) {
-	    $seq =~ s/\+[^+]\+//;
+	$seq = $a[4];
+	while($seq =~ /^([^\+]*)\+/) {  # removing the insertions
+	    $pref = $1;
+	    $seq =~ s/^$pref\+[^+]\+/$pref/;
 	}
 	$strand = $a[3];
-	$chr = $a[1];
 	@SPANS = split(/, /,$a[2]);
 	@SEQ = split(/:/, $seq);
+	$snt = $a[0];
+	$snt =~ s/seq.//;
+	print STDERR "seq.$snt\n";
 	for($i=0; $i<@SPANS-1; $i++) {
 	    @c1 = split(/-/,$SPANS[$i]);
 	    @c2 = split(/-/,$SPANS[$i+1]);
 	    $elen1 = $c1[1] - $c1[0] + 1;
 	    $elen2 = $c2[1] - $c2[0] + 1;
-	    $ilen = $c2[0] - $c1[1] + 1;
+	    $ilen = $c2[0] - $c1[1] - 1;
 	    $istart = $c1[1]+1;
 	    $iend = $c2[0]-1;
 	    $intron = $chr . ":" . $istart . "-" . $iend;
-	    if(defined $bowtie{$a[0]}) {
-		$hqualU{$intron}++;
-	    } elsif($ilen >= $minintron) {
-		$SEQ[$i] =~ /.$/;
-		$leftexon_lastbase = $1;
-		$SEQ[$i+1] =~ /^./;
-		$rightexon_firstbase = $1;
-		$intron_firstbase = substr($CHR2SEQ{$chr}, $istart-1, 1);
-		$intron_lastbase = substr($CHR2SEQ{$chr}, $iend-1, 1);
-		if($leftexon_lastbase eq $intron_lastbase) {
-		    $istart_alt = $istart-1;
-		    $iend_alt = $iend-1;
-		    $altintron = $chr . ":" . $istart_alt . "-" . $iend_alt;
-		    $amb{$intron}=1;  # amb for ambiguous
-		    $amb{$altintron}=1;
-		}
-		if($rightexon_firstbase eq $intron_firtbase) {
-		    $istart_alt = $istart+1;
-		    $iend_alt = $iend+1;
-		    $altintron = $chr . ":" . $istart_alt . "-" . $iend_alt;
-		    $amb{$intron}=1;  # amb for ambiguous
-		    $amb{$altintron}=1;
-		}
-		if($elen1 <= 6 || $elen2 <=6) {
-		    $weakevidence{$junction}++;
+	    if($ilen >= $minintron) {
+		$allintrons{$intron} = 1;
+		if(defined $bowtie{$snt}) {
+		    $hqualU{$intron}++;  # high quality (it's a known junction) and unique
 		} else {
-		    $strongevidence{$junction}++;
+		    if(!(defined $amb{$intron})) {
+			$SEQ[$i] =~ /(.)$/;
+			$leftexon_lastbase = $1;
+			$SEQ[$i+1] =~ /^(.)/;
+			$rightexon_firstbase = $1;
+			$intron_firstbase = substr($CHR2SEQ{$chr}, $istart-1, 1);
+			$intron_lastbase = substr($CHR2SEQ{$chr}, $iend-1, 1);
+			if($leftexon_lastbase eq $intron_lastbase) {
+			    $istart_alt = $istart-1;
+			    $iend_alt = $iend-1;
+			    $altintron = $chr . ":" . $istart_alt . "-" . $iend_alt;
+			    $amb{$intron}=1;  # amb for ambiguous
+			    $amb{$altintron}=1;
+			}
+			if($rightexon_firstbase eq $intron_firtbase) {
+			    $istart_alt = $istart+1;
+			    $iend_alt = $iend+1;
+			    $altintron = $chr . ":" . $istart_alt . "-" . $iend_alt;
+			    $amb{$intron}=1;  # amb for ambiguous
+			    $amb{$altintron}=1;
+			}
+		    }
+		    if($elen1 <= 6 || $elen2 <=6) {
+			$weakevidenceU{$intron}++;
+		    } else {
+			$strongevidenceU{$intron}++;
+		    }
 		}
 	    }
 	}
@@ -168,7 +186,6 @@ sub getjunctions () {
 
     open(INFILE, $rumNU);
     while($line = <INFILE>) {
-	$flag = 0;
 	if(!($line =~ /, /)) {
 	    next;
 	}
@@ -177,29 +194,59 @@ sub getjunctions () {
 	if(!(defined $CHR2SEQ{$a[1]})) {
 	    next;
 	}
-	while($seq =~ /\+/) {
-	    $seq =~ s/\+[^+]\+//;
+	$seq = $a[4];
+	while($seq =~ /^([^\+]*)\+/) {  # removing the insertions
+	    $pref = $1;
+	    $seq =~ s/^$pref\+[^+]\+/$pref/;
 	}
 	$strand = $a[3];
 	$chr = $a[1];
 	@SPANS = split(/, /,$a[2]);
 	@SEQ = split(/:/, $seq);
+	$snt = $a[0];
+	$snt =~ s/seq.//;
+	print "seq.$snt\n";
 	for($i=0; $i<@SPANS-1; $i++) {
 	    @c1 = split(/-/,$SPANS[$i]);
 	    @c2 = split(/-/,$SPANS[$i+1]);
 	    $elen1 = $c1[1] - $c1[0] + 1;
 	    $elen2 = $c2[1] - $c2[0] + 1;
-	    $ilen = $c2[0] - $c1[1] + 1;
+	    $ilen = $c2[0] - $c1[1] - 1;
 	    $istart = $c1[1]+1;
 	    $iend = $c2[0]-1;
-	    $junctions = $chr . ":" . $istart . "-" . $iend;
-	    if(defined $bowtie{$a[0]}) {
-		$hqualNU{$junction}++;
-	    } elsif($ilen >= $minintron) {
-		if($elen1 <= 6 || $elen2 <=6) {
-		    $lqualNU{$junction}++;
+	    if($ilen >= $minintron) {
+		$intron = $chr . ":" . $istart . "-" . $iend;
+		$allintrons{$intron} = 1;
+		if(defined $bowtie{$snt}) {
+		    $hqualNU{$intron}++;
 		} else {
-		    $hqualNU{$junction}++;
+		    if(!(defined $amb{$intron})) {
+			$SEQ[$i] =~ /(.)$/;
+			$leftexon_lastbase = $1;
+			$SEQ[$i+1] =~ /^(.)/;
+			$rightexon_firstbase = $1;
+			$intron_firstbase = substr($CHR2SEQ{$chr}, $istart-1, 1);
+			$intron_lastbase = substr($CHR2SEQ{$chr}, $iend-1, 1);
+			if($leftexon_lastbase eq $intron_lastbase) {
+			    $istart_alt = $istart-1;
+			    $iend_alt = $iend-1;
+			    $altintron = $chr . ":" . $istart_alt . "-" . $iend_alt;
+			    $amb{$intron}=1;  # amb for ambiguous
+			    $amb{$altintron}=1;
+			}
+			if($rightexon_firstbase eq $intron_firtbase) {
+			    $istart_alt = $istart+1;
+			    $iend_alt = $iend+1;
+			    $altintron = $chr . ":" . $istart_alt . "-" . $iend_alt;
+			    $amb{$intron}=1;  # amb for ambiguous
+			    $amb{$altintron}=1;
+			}
+		    }
+		    if($elen1 <= 6 || $elen2 <=6) {
+			$weakevidenceNU{$intron}++;
+		    } else {
+			$strongevidencelNU{$intron}++;
+		    }
 		}
 	    }
 	}
