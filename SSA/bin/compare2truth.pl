@@ -10,29 +10,54 @@ The <sam file> is the alignments of the same reads output from
                an alignment algoirthm.
 
 Options: 
-    -rum  : if comparing to a rum output file
+    -rum     : if comparing to a rum output file
+
+    -uniqueRecords : There is only one record for each sequence.
+
+    -noHtag  :  There aren't HI and IH tag indicating the number of alignments.
+                In this case I will figure out the number the hard way...
 
 This script computes the per-base false alignment rates.
 
-If -rum is not true and there are multiple records per read, then
-one of the IH or NH tags must  be present (except for reads where
-neither forward nor reverse mapped), or this probably won't work...
+If -rum is not true and there is no HI or IH tags and
+there are multiple records per read, then there are ids
+with no records, then this probably won't work...
 
 ";
 }
 
+$noHtag = "false";
 $rum = "false";
+$unique_records = "false";
 for($i=2; $i<@ARGV; $i++) {
     $optionrecognized = 0;
+    if($ARGV[$i] eq "-noHtag") {
+	$noHtag = "true";
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-uniqueRecords") {
+	$unique_records = "true";
+	$optionrecognized = 1;
+    }
     if($ARGV[$i] eq "-rum") {
 	$rum = "true";
 	$optionrecognized = 1;
     }
-
     if($optionrecognized == 0) {
 	die "\nERROR: option '$ARGV[$i]' not recognized\n";
     }
 }
+
+if($noHtag eq "true") {
+    print STDERR "no H tag so computing the numbers of occurrences of each read...\n";
+    open(INFILE, $ARGV[1]) or die "\nError: Cannot open '$ARGV[1]' for reading\n\n";
+    while($line = <INFILE>) {
+	$line =~ /^seq.(\d+.)/;
+	$number_occurrences{$1}++;
+    }
+    print STDERR "done with that..\n";
+}
+close(INFILE);
 
 open(INFILE1, $ARGV[0]);
 $line = <INFILE1>;
@@ -111,7 +136,7 @@ $cnt = 0;
 for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
     $cnt++;
     if($cnt % 50000 == 0) {
-#	print STDERR "finished $cnt reads\n";
+	print STDERR "finished $cnt reads\n";
     }
     $truth = <INFILE1>;
 #    print "--------------\ntruth=$truth";
@@ -174,6 +199,42 @@ for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
 		$flag = 0;
 	    }
 	    next;
+	}
+    } else {
+	if($noHtag eq "true" && $unique_records eq "false") {
+	    @a = split(/\t/, $sam);
+	    $a[0] =~ /seq.(\d+.)/;
+	    $idx = $1;
+	    $XX = $number_occurrences{$idx};
+#	    print "number_occurrences{$idx} = $XX\n";
+	    if($number_occurrences{$idx} > 1) {
+		$total_number_of_bases_aligned_ambiguously = $total_number_of_bases_aligned_ambiguously + $readlength * 2;
+		for($i=0; $i<$number_occurrences{$idx}*2-1; $i++) {
+		    $sam = <INFILE2>;	    
+#		    print "x:sam=$sam";
+		}
+		$truth = <INFILE1>;
+		@a = split(/\t/, $truth);
+		$truth_cigar = $a[3];
+		$cigar_string_temp = $truth_cigar;
+		while($cigar_string_temp =~ /^(\d+)([^\d])/) {
+		    $num = $1;
+		    $type = $2;
+		    if($type eq 'I') {
+			for($i=0; $i<$num; $i++) {
+			    $total_number_of_bases_in_true_insertions++;
+			}
+		    }
+		    $cigar_string_temp =~ s/^\d+[^\d]//;
+		}
+		
+		$total_number_of_bases_of_reads = $total_number_of_bases_of_reads + $readlength;
+		$linenum++;
+		next;
+	    }
+	}
+	if($unique_records eq "true") {
+	    $num_alignments = 1;
 	}
     }
     $truth =~ /seq.(\d+.)/;
