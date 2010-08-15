@@ -5,7 +5,7 @@
 
 if(@ARGV < 1) {
     die "
-Usage: sam2rum.pl <sam file> <RUM Unique outfile> <RUM NU outfile>
+Usage: sam2rum.pl <sam file> <RUM Unique outfile> <RUM NU outfile> [options]
 
 Outputs to RUM format:
 
@@ -17,8 +17,40 @@ If you want the unique and non-unique mappers all in one file, put 'none' for th
 <RUM NU outfile> argument and everything will be written to the first file even if
 not unique.
 
+Options:
+           -uniqueRecords : There is only one record for each sequence.
+           -noHtag  :  There aren't HI and IH tag indicating the number of alignments.
+                       In this case I will figure out the number the hard way...
+
 ";
 }
+
+$noHtag = "false";
+$unique_records = "false";
+for($i=3; $i<@ARGV; $i++) {
+    $optionrecognized = 0;
+    if($ARGV[$i] eq "-noHtag") {
+	$noHtag = "true";
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-uniqueRecords") {
+	$unique_records = "true";
+	$optionrecognized = 1;
+    }
+
+    if($optionrecognized == 0) {
+	die "\nERROR: option '$ARGV[$i]' not recognized\n";
+    }
+}
+
+if($noHtag eq "true") {
+    open(INFILE, $ARGV[0]) or die "\nError: Cannot open '$ARGV[0]' for reading\n\n";
+    while($line = <INFILE>) {
+	$line =~ /^seq.(\d+.)/;
+	$number_occurrences{$1}++;
+    }
+}
+close(INFILE);
 
 $bitflag[0] = "the read is paired in sequencing";
 $bitflag[1] = "the read is mapped in a proper pair";
@@ -59,8 +91,18 @@ until($line eq '') {
     }
     if($line =~ /IH:i:(\d+)/) {
 	$number_of_alignments = $1;
-    } else {
-	$number_of_alignments = 0;
+    } elsif($line =~ /NH:i:(\d+)/) {
+	$number_of_alignments = $1;
+    } elsif ($unique_records eq "true") {
+	$number_of_alignments = 1;	
+    } elsif ($noHtag eq "true") {
+	$seqname = $a[0];
+	$seqname =~ s/seq.//;
+	if($number_occurrences{$seqname} > 1) {
+	    $number_of_alignments = 2; # just need it to be anything bigger than 1
+	} else {
+	    $number_of_alignments = 0;
+	}
     }
 
     $seq = $a[9];
