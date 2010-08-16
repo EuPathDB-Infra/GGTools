@@ -84,12 +84,14 @@ while($line = <INFILE>) {
 	print OUTFILE "StopPosition=$num\n";
 	print OUTFILE "CellHeader=X\tY\tPROBE\tFEAT\tQUAL\tEXPOS\tPOS\tCBASE\tPBASE\tTBASE\tATOM\tINDEX\tCODONIND\tCODON\tREGIONTYPE\tREGION\n";
 	for($i=0; $i<$numprobes; $i++) {
-	    @c = split(/\|/,$probes[$i]);
-#	print "probes[$i] = $probes[$i]\n";
+
+	    @c = split(/[\.\|]/, $probes[$i]);
+#            print STDERR "probes[$i] = $probes[$i]\n";
+#             print STDERR "c[0] = $c[0]\n";
 	    $p = $pbase{$probes[$i]};
 	    $t = $tbase{$probes[$i]};
 	    $ii = $i+1;
-	    print OUTFILE "Cell$ii=$c[1]\t$c[2]\tN\tx\t$a[0]\t$ii\t13\tx\t$p\t$t\tx\tx\t-1\t-1\t99\t \n";
+	    print OUTFILE "Cell$ii=$c[0]\t$c[1]\tN\tx\t$a[0]\t$ii\t13\tx\t$p\t$t\tx\tx\t-1\t-1\t99\t \n";
 	}
 	print OUTFILE "\n";
 	$unit++;
