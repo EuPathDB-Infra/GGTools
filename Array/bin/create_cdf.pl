@@ -85,7 +85,7 @@ while($line = <INFILE>) {
 	print OUTFILE "CellHeader=X\tY\tPROBE\tFEAT\tQUAL\tEXPOS\tPOS\tCBASE\tPBASE\tTBASE\tATOM\tINDEX\tCODONIND\tCODON\tREGIONTYPE\tREGION\n";
 	for($i=0; $i<$numprobes; $i++) {
 
-            my ($x, $y) = $probes[$i] =~ /^(\d+)[\|\.](\d+)$/;
+            my ($x, $y) = $probes[$i] =~ /(\d+)[\|\.\-\_\:](\d+)$/;
 #	    @c = split(/[\.\|]/, $probes[$i]);
 #            print STDERR "probes[$i] = $probes[$i]\n";
 
