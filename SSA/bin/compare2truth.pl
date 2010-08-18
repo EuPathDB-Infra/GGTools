@@ -19,8 +19,8 @@ Options:
 
 This script computes the per-base false alignment rates.
 
-If -rum is not true and there is no HI or IH tags and
-there are multiple records per read, then there are ids
+If -rum is not true and (1) there is no HI or IH tags and
+(2) there are multiple records per read and (3) there are ids
 with no records, then this probably won't work...
 
 ";
@@ -206,13 +206,13 @@ for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
 	    $a[0] =~ /seq.(\d+.)/;
 	    $idx = $1;
 	    $XX = $number_occurrences{$idx};
-#	    print "number_occurrences{$idx} = $XX\n";
 	    if($number_occurrences{$idx} > 1) {
 		$total_number_of_bases_aligned_ambiguously = $total_number_of_bases_aligned_ambiguously + $readlength * 2;
 		for($i=0; $i<$number_occurrences{$idx}*2-1; $i++) {
 		    $sam = <INFILE2>;	    
-#		    print "x:sam=$sam";
 		}
+            }
+	    if($number_occurrences{$idx} != 1) {
 		$truth = <INFILE1>;
 		@a = split(/\t/, $truth);
 		$truth_cigar = $a[3];
@@ -364,7 +364,13 @@ print "total_number_of_bases_of_reads = $total_number_of_bases_of_reads\n";
 
 $percent_bases_aligned_correctly = int($total_number_of_bases_aligned_correctly / $total_number_of_bases_of_reads * 10000) / 100;;
 #print "total_number_of_bases_aligned_correctly = $total_number_of_bases_aligned_correctly\n";
-print "% bases aligned correctly: $percent_bases_aligned_correctly%\n";
+#print "% bases aligned correctly: $percent_bases_aligned_correctly%\n";
+print "accuracy over all bases: $percent_bases_aligned_correctly%\n";
+
+$total_num_unique_aligners = $total_number_of_bases_aligned_correctly + $total_number_of_bases_aligned_incorrectly;
+$accuracy_on_unique_aligners = int($total_number_of_bases_aligned_correctly / $total_num_unique_aligners * 10000) / 100;
+#print "% unique aligners correct: $accuracy_on_unique_aligners%\n";
+print "accuracy over uniquely aligned bases: $accuracy_on_unique_aligners%\n";
 
 $percent_bases_aligned_incorrectly = int($total_number_of_bases_aligned_incorrectly / $total_number_of_bases_of_reads * 10000) / 100;;
 #print "total_number_of_bases_aligned_incorrectly = $total_number_of_bases_aligned_incorrectly\n";
@@ -377,10 +383,6 @@ print "% bases aligned ambiguously: $percent_bases_aligned_ambiguously%\n";
 $percent_bases_unaligned = int($total_number_of_bases_unaligned / $total_number_of_bases_of_reads * 10000) / 100;
 #print "total_number_of_bases_unaligned = $total_number_of_bases_unaligned\n";
 print "% bases unaligned: $percent_bases_unaligned%\n";
-
-$total_num_unique_aligners = $total_number_of_bases_aligned_correctly + $total_number_of_bases_aligned_incorrectly;
-$accuracy_on_unique_aligners = int($total_number_of_bases_aligned_correctly / $total_num_unique_aligners * 10000) / 100;
-print "% unique aligners correct: $accuracy_on_unique_aligners%\n";
 
 #print "number of bases in true insertions = $total_number_of_bases_in_true_insertions\n";
 $insertion_rate = int($total_number_of_bases_in_true_insertions / $total_number_of_bases_of_reads * 1000000) / 10000;
