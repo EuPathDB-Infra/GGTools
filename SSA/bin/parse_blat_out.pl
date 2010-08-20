@@ -18,9 +18,9 @@ $| = 1;
 # Blat should be run with the following parameters for speed:
 # -ooc=11.ooc -minScore=M -minIdentity=93
 
-if(@ARGV < 6) {
+if(@ARGV < 5) {
     die "
-Usage: parse_blat_out.pl <seq file> <blat file> <mdust file> <blat unique outfile> <blat nu outfile> <readlength> [options]
+Usage: parse_blat_out.pl <seq file> <blat file> <mdust file> <blat unique outfile> <blat nu outfile> [options]
 
 Where: <seq file> is a the fasta file of reads output from make_unmapped_file.pl
 
@@ -32,8 +32,6 @@ Where: <seq file> is a the fasta file of reads output from make_unmapped_file.pl
 
        <blat nu outfile> is the name of the output file of non-unique blat mappers
 
-       <readlength> is the length of the read
-
 Option: 
        -maxpairdist N : N is an integer greater than zero representing
                         the furthest apart the forward and reverse reads
@@ -41,24 +39,20 @@ Option:
                         junction so this number can be as large as the largest
                         intron.  Default value = 500,000
 
-       -chipseq       : set this flag is aligning chipseq data
+       -dna           : set this flag is aligning dna sequence data
 
-* All three files must be in order by sequence number, and if paired end the a's come before the b's
+       -num_insertions_allowed n : allow n insertions in one read.  The default
+                                   is n=1.  Setting n>1 only allowed for single
+                                   end reads.  Don't raise it unless you know
+                                   what you are doing, because it can greatly 
+                                   increase the false alignments.
+
+* All three files should preferrably be in order by sequence number,
+and if paired end the a's come before the b's.  The blat file will
+be checked for this and fixed if not, the other two are not checked,
+so make sure they conform.
 
 ";}
-
-$readlength = $ARGV[5];
-if($readlength < 80) {
-    $min_size_intersection_allowed = 35;
-    $match_length_cutoff = 35;
-} else {
-    $min_size_intersection_allowed = 45;
-    $match_length_cutoff = 50;
-}
-if($min_size_intersection_allowed >= .8 * $readlength) {
-    $min_size_intersection_allowed = int(.6 * $readlength);
-    $match_length_cutoff = int(.6 * $readlength);
-}
 
 $seqfile = $ARGV[0];
 $blatfile = $ARGV[1];
@@ -66,8 +60,88 @@ $mdustfile = $ARGV[2];
 $outfile1 = $ARGV[3];
 $outfile2 = $ARGV[4];
 
-open(BLATHITS, $blatfile);  # The file of BLAT output
-open(SEQFILE, $seqfile);
+open(BLATHITS, $blatfile) or die "\nError: cannot open the file '$blatfile' for reading\n\n";
+# check the blat file is in sorted order
+print STDERR "Checking that the blat file is in correctly sorted order.\n";
+$line = <BLATHITS>;
+chomp($line);
+while(($line =~ /--------------------------------/) || ($line =~ /psLayout/) || ($line =~ /blockSizes/) || ($line =~ /match\s+match/) || (!($line =~ /\S/))) {
+    $line = <BLATHITS>;
+    chomp($line);
+}
+$line1 = $line;
+$blatsorted = "true";
+while($line2 = <BLATHITS>) {
+    $line1 =~ /seq.(\d+)(.)/;
+    $seqnum1 = $1;
+    $type1 = $2;
+    $line2 =~ /seq.(\d+)(.)/;
+    $seqnum2 = $1;
+    $type2 = $2;
+
+    if($seqnum1>$seqnum2 || ($seqnum1==$seqnum2 && $type1 eq 'b' && $type2 eq 'a')) {
+	$blatsorted = "false";
+	$flag = 1;
+	last;
+    }
+    $line1 = $line2;
+}
+close(BLATHITS);
+print "blatsorted = $blatsorted\n";
+
+if($blatsorted eq "false") {
+    print STDERR "The blat file is not sorted properly, I'm sorting it now.\n";
+    $blatfile_sorted = $blatfile . ".sorted";
+
+    open(INFILE, $blatfile);
+    $tempfilename = $blatfile . "_temp1";
+    open(OUTFILE1, ">$tempfilename");
+    open(OUTFILE2, ">$blatfile_sorted");
+    $line = <INFILE>;
+    while(($line =~ /--------------------------------/) || ($line =~ /psLayout/) || ($line =~ /blockSizes/) || ($line =~ /match\s+match/) || (!($line =~ /\S/))) {
+	print OUTFILE2 $line;
+	$line = <INFILE>;
+    }
+    chomp($line);
+    @a = split(/\t/, $line);
+    $name = $a[9];
+    $name =~ s/seq.//;
+    $name =~ /(\d+)(a|b)/;
+    print OUTFILE1 "$1\t$2\t$line\n";
+    while($line = <INFILE>) {
+	chomp($line);
+	@a = split(/\t/, $line);
+	$name = $a[9];
+	$name =~ s/seq.//;
+	$name =~ /(\d+)(a|b)/;
+	print OUTFILE1 "$1\t$2\t$line\n";
+    }
+    close(OUTFILE1);
+    close(INFILE);
+    $tempfilename2 = $blatfile . "_temp2";
+    $x = `sort -T . -n $tempfilename > $tempfilename2`;
+    $x = `rm $tempfilename`;
+    open(INFILE, $tempfilename2);
+    while($line = <INFILE>) {
+	chomp($line);
+	$line =~ s/^(\d+)\t(.)\t//;
+	print OUTFILE2 "$line\n";
+    }
+    close(OUTFILE2);
+    close(INFILE);
+    $x = `rm $tempfilename2`;
+    $N = -s $blatfile;
+    $M = -s $blatfile_sorted;
+    if($N != $M) {
+	die "\nERROR: I tried to sort the blat file but the sorted file is not the same size as the original.\n\n";
+    } else {
+	print STDERR "The blat file is now sorted properly.\n";
+    }
+    $blatfile = $blatfile_sorted;
+} else {
+    print STDERR "The blat file is sorted properly.\n";
+}
+
 $head = `head -1 $seqfile`;
 $head2 = `head -3 $seqfile`;
 if($head2 =~ /seq.\d+b/) {
@@ -81,29 +155,43 @@ $tail = `tail -1 $blatfile`;
 @a = split(/\t/,$tail);
 $last_seq_num = $a[9];
 $last_seq_num =~ s/[^\d]//g;
-open(MDUST, $mdustfile);  # the file of mdust output
-open(RESULTS, ">$outfile1");
-open(RESULTS2, ">$outfile2");
+
+open(BLATHITS, $blatfile) or die "\nError: cannot open the file '$blatfile' for reading\n\n";
+open(SEQFILE, $seqfile) or die "\nError: cannot open the file '$seqfile' for reading\n\n";
+open(MDUST, $mdustfile) or die "\nError: cannot open the file '$mdustfile' for reading\n\n";
+open(RESULTS, ">$outfile1") or die "\nError: cannot open the file '$outfile1' for writing\n\n";
+open(RESULTS2, ">$outfile2") or die "\nError: cannot open the file '$outfile2' for writing\n\n";
 
 $max_distance_between_paired_reads = 500000;
-$chipseq = 'false';
+$dna = 'false';
 $num_blocks_allowed = 1000;
-for($i=6; $i<@ARGV; $i++) {
+$num_insertions_allowed = 1;
+for($i=5; $i<@ARGV; $i++) {
     $optionrecognized = 0;
     if($ARGV[$i] eq "-maxpairdist") {
 	$i++;
 	$max_distance_between_paired_reads = $ARGV[$i];
 	$optionrecognized = 1;
     }
-    if($ARGV[$i] eq "-chipseq") {
-	$chipseq = 'true';
+    if($ARGV[$i] eq "-dna") {
+	$dna = 'true';
 	$num_blocks_allowed = 1;
 	$optionrecognized = 1;
     }
-
+    if($ARGV[$i] eq "-num_insertions_allowed") {
+	$i++;
+	$num_insertions_allowed = $ARGV[$i];
+	if($ARGV[$i] =~ /^\d+$/) {
+	    $optionrecognized = 1;
+	}
+    }
     if($optionrecognized == 0) {
 	die "\nERROR: option '$ARGV[$i-1] $ARGV[$i]' not recognized\n";
     }
+}
+
+if($num_insertions_allowed > 1 && $paired_end eq "true") {
+    die "\nError: for paired end data, you cannot set -num_insertions_allowed to be greater than 1.\n\n";
 }
 
 # NOTE: insertions instead are indicated in the final output file with the "+" notation
@@ -116,6 +204,19 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	    chomp($line);
 	}
 	@a = split(/\t/,$line);
+	$readlength = $a[10];
+	if($readlength < 80) {
+	    $min_size_intersection_allowed = 35;
+	    $match_length_cutoff = 35;
+	} else {
+	    $min_size_intersection_allowed = 45;
+	    $match_length_cutoff = 50;
+	}
+	if($min_size_intersection_allowed >= .8 * $readlength) {
+	    $min_size_intersection_allowed = int(.6 * $readlength);
+	    $match_length_cutoff = int(.6 * $readlength);
+	}
+
 	@a_x = split(/\t/,$line);
 	$seqname = $a[9];
 	$seqnum = $seqname;
@@ -218,10 +319,10 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	$SCORE = $LENGTH - $a[1]; # This is the number of matches minus the number of mismatches, ignoring N's and gaps
 	if($SCORE > $cutoff{$seqname}) {   # so match is at least cutoff long (and this cutoff was set to be longer if there are a lot of N's (bad reads or low complexity masked by dust)
 #	    if($a[11] <= 1) {   # so match starts at position zero or one in the query (allow '1' because first base can tend to be an N or low quality)
-	    if(1 == 1) {   # trying this with no condition to see if it helps...
-		if($a[4] <= 1) { # then the aligment has at most one gap in the query, allowing for an insertion in the sample, throw out this alignment otherwise (we don't believe two separate insertions in such a short span).  comment.1
+	    if(1 == 1) {   # trying this with no condition to see if it helps... (it did!)
+		if($a[4] <= $num_insertions_allowed) { # then the aligment has at most $num_insertions_allowed gaps (default = 1) in the query, allowing for insertion(s) in the sample, throw out this alignment otherwise (we typipcally don't believe more than one separate insertions in such a short span).
 		    if($Ncount{$a[9]} <= ($a[10] / 2) || $a[17] <= 3) { # IF SEQ IS MORE THAN 50% LOW COMPLEXITY, DON'T ALLOW MORE THAN 3 BLOCKS, OTHERWISE GIVING IT TOO MUCH OPPORTUNITY TO MATCH BY CHANCE.  
-			if($a[17] <= $num_blocks_allowed) { # NEVER ALLOW MORE THAN $num_blocks_allowed blocks, which is set to 1 for chipseq, and 1000 (the equiv of infinity) for rnaseq
+			if($a[17] <= $num_blocks_allowed) { # NEVER ALLOW MORE THAN $num_blocks_allowed blocks, which is set to 1 for dna and 1000 (the equiv of infinity) for rnaseq
 			    # at this point we know it's a prefix match starting at pos 0 or 1 and with at most one gap in the query, and if low comlexity then not too fragemented...
 			    $gap_flag = 0;
 			    if($a[4] == 1) { # there's a gap in the query, be stricter about allowing it
@@ -364,6 +465,18 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	}	    
 	@a = split(/\t/,$line);
 	@a_x = split(/\t/,$line);
+	$readlength = $a[10];
+	if($readlength < 80) {
+	    $min_size_intersection_allowed = 35;
+	    $match_length_cutoff = 35;
+	} else {
+	    $min_size_intersection_allowed = 45;
+	    $match_length_cutoff = 50;
+	}
+	if($min_size_intersection_allowed >= .8 * $readlength) {
+	    $min_size_intersection_allowed = int(.6 * $readlength);
+	    $match_length_cutoff = int(.6 * $readlength);
+	}
 	$seqname = $a[9];
 	$seqnum = $seqname;
 	$seqnum =~ s/[^\d]//g;
