@@ -79,9 +79,9 @@ $line = <INFILE>;
 chomp($line);
 $readlength = length($line);
 if($quals eq "false") {
-    $QUAL = "";
+    $QUAL{$readlength} = "";
     for($i=0; $i<$readlength; $i++) {
-	$QUAL = $QUAL . "I";
+	$QUAL{$readlength} = $QUAL{$readlength} . "I";
     }
 }
 $line = <INFILE>;
@@ -181,12 +181,27 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
     $forward_read = <READS>;
     chomp($forward_read);
     $forward_read_hold = $forward_read;
+    $readlength_forward = length($forward_read);
+    if($quals eq "false" && !($QUAL{$readlength_forward} =~ /\S/)) {
+	$QUAL{$readlength_forward} = "";
+	for($i=0; $i<$readlength_forward; $i++) {
+	    $QUAL{$readlength_forward} = $QUAL{$readlength_forward} . "I";
+	}
+    }
     if($paired eq "true") {
 	$reverse_read = <READS>;
 	$reverse_read = <READS>;
 	chomp($reverse_read);
 	$reverse_read_hold = $reverse_read;
+	$readlength_reverse = length($reverse_read);
+	if($quals eq "false" && !($QUAL{$readlength_reverse} =~ /\S/)) {
+	    $QUAL{$readlength_reverse} = "";
+	    for($i=0; $i<$readlength_reverse; $i++) {
+		$QUAL{$readlength_reverse} = $QUAL{$readlength_reverse} . "I";
+	    }
+	}
     }
+
     if($quals eq "true") {
 	$forward_qual = <QUALS>;
 	$forward_qual = <QUALS>;
@@ -197,8 +212,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    chomp($reverse_qual);
 	}
     } else {
-	$forward_qual = $QUAL;
-	$reverse_qual = $QUAL;
+	$forward_qual = $QUAL{$readlength_forward};
+	$reverse_qual = $QUAL{$readlength_reverse};
     }
 
     $unique_mapper_found = "false";
@@ -361,8 +376,12 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		@ruj = split(/\t/,$rum_u_joined);
 		if($ruj[3] eq "-") {
 		    $upstream_read = $reverse_read_hold;
+		    $readlength_upstream = $readlength_reverse;
+		    $readlength_downstream = $readlength_forward;
 		} else {
 		    $upstream_read = $forward_read_hold;
+		    $readlength_upstream = $readlength_forward;
+		    $readlength_downstream = $readlength_reverse;
 		}
 		$x = $upstream_read;
 		$ruj[4] =~ s/://g;
@@ -388,7 +407,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 			$prefix_offset_upstream_current_best = $prefix_offset_upstream;
 			$LEN_current_best = $LEN;
 		    }
-		    if($LEN < $readlength) {
+		    if($LEN < $readlength_upstream) {
 			$LENflag = 0;
 			$x = $upstream_read;
 			$suffix_offset_upstream++;
@@ -416,16 +435,16 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		$UR2 = $UR;
 		$UR = $UR . $replace;
 		
-		$plen = $readlength - $prefix_offset_upstream - $suffix_offset_upstream;
+		$plen = $readlength_upstream - $prefix_offset_upstream - $suffix_offset_upstream;
 		$pl=0;
 		$RC = 0;
 		$matchlength = $piecelength[0];
 
-		while($piecelength[$pl] + $prefix_offset_upstream < $readlength - $suffix_offset_upstream) {
+		while($piecelength[$pl] + $prefix_offset_upstream < $readlength_upstream - $suffix_offset_upstream) {
 		    $plen = $plen - ($piecelength[$pl+1] - $piecelength[$pl]);
-		    if($piecelength[$pl+1] > $readlength) { # insertion went past the end of the read,
+		    if($piecelength[$pl+1] > $readlength_upstream) { # insertion went past the end of the read,
 			# so overcorrected, this fixes that
-			$plen = $plen + ($piecelength[$pl+1] - $readlength);
+			$plen = $plen + ($piecelength[$pl+1] - $readlength_upstream);
 		    }
 		    substr($UR2, $piecelength[$pl]+$RC+$prefix_offset_upstream, 0, "+");
 		    $RC++;
@@ -484,7 +503,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 			$prefix_offset_downstream_current_best = $prefix_offset_downstream;
 			$LEN_current_best = $LEN;
 		    }
-		    if($LEN < $readlength) {
+		    if($LEN < $readlength_downstream) {
 			$LENflag = 0;
 			$x = $downstream_read;
 			$prefix_offset_downstream++;
@@ -499,7 +518,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 			}
 		    }
 		}
-		$max_length_of_alignment = $readlength - $suffix_offset_downstream_current_best;
+		$max_length_of_alignment = $readlength_downstream - $suffix_offset_downstream_current_best;
 		if(length($ruj[4]) < $max_length_of_alignment) {
 		    $max_length_of_alignment = length($ruj[4]);
 		}
@@ -543,7 +562,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		
 		$offset = length($ruj[4]) + $prefix_offset_upstream + $suffix_offset_downstream - length($DR);
 		
-		$OFFSET = $readlength - length($ruj[4]) - $suffix_offset_downstream;
+		$OFFSET = $readlength_downstream - length($ruj[4]) - $suffix_offset_downstream;
 		$P = "";
 		if($OFFSET < 0) {
 		    $OFFSET = 0;
@@ -551,7 +570,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		for($i=0; $i<$OFFSET; $i++) {
 		    $P = $P . " ";
 		}
-		$plen = $readlength - $prefix_offset_downstream - $suffix_offset_downstream;
+		$plen = $readlength_downstream - $prefix_offset_downstream - $suffix_offset_downstream;
 		
 #		print "\n$upstream_read\n\n";
 #		print $P;
@@ -655,7 +674,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    }
 		} else {
 		    $prefix_offset_forward = 0;
-		    if($rum_u_forward_length < $readlength) {
+		    if($rum_u_forward_length < $readlength_forward) {
 			$x = $forward_read;
 			$y = $ruf[4];
 			until($x =~ /^$y/) {
@@ -710,7 +729,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    }
 		    $running_length = $running_length + $L;
 		}
-		$right_clip_size_f = $readlength - $running_length - $prefix_offset_forward;
+		$right_clip_size_f = $readlength_forward - $running_length - $prefix_offset_forward;
 		if($right_clip_size_f > 0) {
 		    if($rum_u_forward =~ /\+$/) {
 			$CIGAR_f = $CIGAR_f . $right_clip_size_f . "I";
@@ -759,7 +778,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    }
 		} else {
 		    $prefix_offset_reverse = 0;
-		    if($rum_u_reverse_length < $readlength) {
+		    if($rum_u_reverse_length < $readlength_reverse) {
 			$x = $reverse_read;
 			$y = $rur[4];
 			until($x =~ /^$y/) {
@@ -818,7 +837,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    $running_length = $running_length + $L;
 		}
 		
-		$right_clip_size_r = $readlength - $running_length - $prefix_offset_reverse;
+		$right_clip_size_r = $readlength_reverse - $running_length - $prefix_offset_reverse;
 		if($right_clip_size_r > 0) {
 		    if($rum_u_reverse =~ /\+$/) {
 			$CIGAR_r = $CIGAR_r . $right_clip_size_r . "I";

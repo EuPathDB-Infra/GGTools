@@ -30,6 +30,11 @@ Where:
          <type> is 'single' for single-end reads, or 'paired' for paired-end reads
 
   Options:
+
+         -readlength    : The read length, if not specified I will try to determine it,
+                          but if there aren't enough well mapped reads I might not get
+                          it right.  If there are variable read lengths, set n=v.
+
          -maxpairdist N : N is an integer greater than zero representing
                           the furthest apart the forward and reverse reads
                           can be.  They could be separated by an exon/exon
@@ -42,115 +47,7 @@ Where:
 # get readlength from bowtie unique/nu, if both empty then get max in blat unique/nu
 
 open(INFILE, $ARGV[0]) or die "\nError: unable to open file '$ARGV[0]' for reading\n\n";
-$readlength = 0;
-$cnt = 0;
-while($line = <INFILE>) {
-    $length = 0;
-    if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
-	chomp($line);
-	@a = split(/\t/,$line);
-	$span = $a[2];
-	@SPANS = split(/, /, $span);
-	$cnt++;
-	for($i=0; $i<@SPANS; $i++) {
-	    @b = split(/-/,$SPANS[$i]);
-	    $length = $length + $b[1] - $b[0] + 1;
-	}
-	if($length > $readlength) {
-	    $readlength = $length;
-	    $cnt = 0;
-	}
-	if($cnt > 50000) { # it checked 50,000 lines without finding anything larger than the last time
-	    # readlength was changed, so it's most certainly found the max.
-	    # Went through this to avoid the user having to input the readlength.
-	    last;
-	}
-    }
-}
-close(INFILE);
-open(INFILE, $ARGV[1]) or die "\nError: unable to open file '$ARGV[1]' for reading\n\n";
-$cnt = 0;
-while($line = <INFILE>) {
-    $length = 0;
-    if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
-	chomp($line);
-	@a = split(/\t/,$line);
-	$span = $a[2];
-	@SPANS = split(/, /, $span);
-	$cnt++;
-	for($i=0; $i<@SPANS; $i++) {
-	    @b = split(/-/,$SPANS[$i]);
-	    $length = $length + $b[1] - $b[0] + 1;
-	}
-	if($length > $readlength) {
-	    $readlength = $length;
-	    $cnt = 0;
-	}
-	if($cnt > 50000) {
-	    last;
-	}
-    }
-}
-close(INFILE);
 
-open(INFILE, $ARGV[2]) or die "\nError: unable to open file '$ARGV[2]' for reading\n\n";
-$cnt = 0;
-while($line = <INFILE>) {
-    $length = 0;
-    if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
-	chomp($line);
-	@a = split(/\t/,$line);
-	$span = $a[2];
-	@SPANS = split(/, /, $span);
-	$cnt++;
-	for($i=0; $i<@SPANS; $i++) {
-	    @b = split(/-/,$SPANS[$i]);
-	    $length = $length + $b[1] - $b[0] + 1;
-	}
-	if($length > $readlength) {
-	    $readlength = $length;
-	    $cnt = 0;
-	}
-	if($cnt > 50000) {
-	    last;
-	}
-    }
-}
-close(INFILE);
-open(INFILE, $ARGV[3]) or die "\nError: unable to open file '$ARGV[3]' for reading\n\n";
-$cnt = 0;
-while($line = <INFILE>) {
-    $length = 0;
-    if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
-	chomp($line);
-	@a = split(/\t/,$line);
-	$span = $a[2];
-	@SPANS = split(/, /, $span);
-	$cnt++;
-	for($i=0; $i<@SPANS; $i++) {
-	    @b = split(/-/,$SPANS[$i]);
-	    $length = $length + $b[1] - $b[0] + 1;
-	}
-	if($length > $readlength) {
-	    $readlength = $length;
-	    $cnt = 0;
-	}
-	if($cnt > 50000) {
-	    last;
-	}
-    }
-}
-close(INFILE);
-
-print "readlength = $readlength\n";
-if($readlength < 80) {
-    $min_overlap = 35;
-} else {
-    $min_overlap = 45;
-}
-if($min_overlap >= .8 * $readlength) {
-    $min_overlap = int(.6 * $readlength);
-}
 
 $type = $ARGV[6];
 $typerecognized = 1;
@@ -167,6 +64,7 @@ if($typerecognized == 1) {
 }
 
 $max_distance_between_paired_reads = 500000;
+$readlength = 0;
 for($i=7; $i<@ARGV; $i++) {
     $optionrecognized = 0;
     if($ARGV[$i] eq "-maxpairdist") {
@@ -174,9 +72,129 @@ for($i=7; $i<@ARGV; $i++) {
 	$max_distance_between_paired_reads = $ARGV[$i];
 	$optionrecognized = 1;
     }
+    if($ARGV[$i] eq "-readlength") {
+	$i++;
+	$readlength = $ARGV[$i];
+	$optionrecognized = 1;
+    }
 
     if($optionrecognized == 0) {
 	die "\nERROR: option '$ARGV[$i-1] $ARGV[$i]' not recognized\n";
+    }
+}
+
+if($readlength == 0) {
+    $cnt = 0;
+    while($line = <INFILE>) {
+	$length = 0;
+	if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
+	    chomp($line);
+	    @a = split(/\t/,$line);
+	    $span = $a[2];
+	    @SPANS = split(/, /, $span);
+	    $cnt++;
+	    for($i=0; $i<@SPANS; $i++) {
+		@b = split(/-/,$SPANS[$i]);
+		$length = $length + $b[1] - $b[0] + 1;
+	    }
+	    if($length > $readlength) {
+		$readlength = $length;
+		$cnt = 0;
+	    }
+	    if($cnt > 50000) { # it checked 50,000 lines without finding anything larger than the last time
+		# readlength was changed, so it's most certainly found the max.
+		# Went through this to avoid the user having to input the readlength.
+		last;
+	    }
+	}
+    }
+    close(INFILE);
+    open(INFILE, $ARGV[1]) or die "\nError: unable to open file '$ARGV[1]' for reading\n\n";
+    $cnt = 0;
+    while($line = <INFILE>) {
+	$length = 0;
+	if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
+	    chomp($line);
+	    @a = split(/\t/,$line);
+	    $span = $a[2];
+	    @SPANS = split(/, /, $span);
+	    $cnt++;
+	    for($i=0; $i<@SPANS; $i++) {
+		@b = split(/-/,$SPANS[$i]);
+		$length = $length + $b[1] - $b[0] + 1;
+	    }
+	    if($length > $readlength) {
+		$readlength = $length;
+		$cnt = 0;
+	    }
+	    if($cnt > 50000) {
+		last;
+	    }
+	}
+    }
+    close(INFILE);
+    
+    open(INFILE, $ARGV[2]) or die "\nError: unable to open file '$ARGV[2]' for reading\n\n";
+    $cnt = 0;
+    while($line = <INFILE>) {
+	$length = 0;
+	if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
+	    chomp($line);
+	    @a = split(/\t/,$line);
+	    $span = $a[2];
+	    @SPANS = split(/, /, $span);
+	    $cnt++;
+	    for($i=0; $i<@SPANS; $i++) {
+		@b = split(/-/,$SPANS[$i]);
+		$length = $length + $b[1] - $b[0] + 1;
+	    }
+	    if($length > $readlength) {
+		$readlength = $length;
+		$cnt = 0;
+	    }
+	    if($cnt > 50000) {
+		last;
+	    }
+	}
+    }
+    close(INFILE);
+    open(INFILE, $ARGV[3]) or die "\nError: unable to open file '$ARGV[3]' for reading\n\n";
+    $cnt = 0;
+    while($line = <INFILE>) {
+	$length = 0;
+	if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
+	    chomp($line);
+	    @a = split(/\t/,$line);
+	    $span = $a[2];
+	    @SPANS = split(/, /, $span);
+	    $cnt++;
+	    for($i=0; $i<@SPANS; $i++) {
+		@b = split(/-/,$SPANS[$i]);
+		$length = $length + $b[1] - $b[0] + 1;
+	    }
+	    if($length > $readlength) {
+		$readlength = $length;
+		$cnt = 0;
+	    }
+	    if($cnt > 50000) {
+		last;
+	    }
+	}
+    }
+    close(INFILE);
+}
+if($readlength == 0) {  # Couldn't determine the read length so going to fall back
+                        # on the strategy used for variable length reads.
+    $readlength = "v";
+}
+if(!($readlength eq "v")) {
+    if($readlength < 80) {
+	$min_overlap = 35;
+    } else {
+	$min_overlap = 45;
+    }
+    if($min_overlap >= .8 * $readlength) {
+	$min_overlap = int(.6 * $readlength);
     }
 }
 
@@ -454,6 +472,22 @@ while($FLAG == 1 || $FLAG2 == 1) {
 		$str =~ /^(\d+)/;
 		$length_overlap = $1;
 		if($F == 0) {
+
+		    if($readlength eq "v") {
+			$readlength_temp = length($a1[3]);
+			if(length($a2[3]) < $readlength_temp) {
+			    $readlength_temp = length($a2[3]);
+			}
+			if($readlength_temp < 80) {
+			    $min_overlap = 35;
+			} else {
+			    $min_overlap = 45;
+			}
+			if($min_overlap >= .8 * $readlength_temp) {
+			    $min_overlap = int(.6 * $readlength_temp);
+			}
+		    }
+
 		    if(($length_overlap > $min_overlap) && ($a1[1] eq $a2[1])) {
 			print OUTFILE1 "$hash1{$id}[1]\n";  # preference bowtie (so no worries about insertions)
 		    }

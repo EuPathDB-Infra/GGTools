@@ -28,6 +28,10 @@ Where:   <GU infile> is the file of unique mappers that is output from the
          <type> is 'single' for single-end reads, or 'paired' for paired-end reads
 
   Options:
+         -readlength n  : The read length, if not specified I will try to determine it,
+                          but if there aren't enough well mapped reads I might not get
+                          it right.  If there are variable read lengths, set n=v.
+
          -maxpairdist N : N is an integer greater than zero representing
                           the furthest apart the forward and reverse reads
                           can be.  They could be separated by an exon/exon
@@ -58,11 +62,24 @@ if($typerecognized == 1) {
 }
 
 $max_distance_between_paired_reads = 500000;
+
+$readlength = 0;
 for($i=7; $i<@ARGV; $i++) {
     $optionrecognized = 0;
     if($ARGV[$i] eq "-maxpairdist") {
 	$i++;
 	$max_distance_between_paired_reads = $ARGV[$i];
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-readlength") {
+	$i++;
+	$readlength = $ARGV[$i];
+	if(!($readlength =~ /^\d+$/) && !($readlength eq 'v')) {
+	    die "\nERROR: -readlength must be a positive integer > 4, or 'v', '$ARGV[$i]' not recognized\n";
+	}
+	if($readlength ne "v" && $readlength < 5) {
+	    die "\nERROR: -readlength cannot be that small, must be at least 5, or 'v', '$ARGV[$i]' not valid\n";
+	}
 	$optionrecognized = 1;
     }
 
@@ -72,112 +89,121 @@ for($i=7; $i<@ARGV; $i++) {
 }
 
 open(INFILE, $infile4) or die "\nERROR: Cannot open file '$infile4' for reading\n";
-$readlength = 0;
-$cnt = 0;
-while($line = <INFILE>) {
-    $length = 0;
-    if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
-	chomp($line);
-	@a = split(/\t/,$line);
-	$span = $a[2];
-	@SPANS = split(/, /, $span);
-	$cnt++;
-	for($i=0; $i<@SPANS; $i++) {
-	    @b = split(/-/,$SPANS[$i]);
-	    $length = $length + $b[1] - $b[0] + 1;
-	}
-	if($length > $readlength) {
-	    $readlength = $length;
-	    $cnt = 0;
-	}
-	if($cnt > 50000) {
-	    last;
-	}
-    }
-}
-close(INFILE);
-open(INFILE, $infile3) or die "\nERROR: Cannot open file '$infile3' for reading\n";
-$cnt = 0;
-while($line = <INFILE>) {
-    $length = 0;
-    if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
-	chomp($line);
-	@a = split(/\t/,$line);
-	$span = $a[2];
-	@SPANS = split(/, /, $span);
-	$cnt++;
-	for($i=0; $i<@SPANS; $i++) {
-	    @b = split(/-/,$SPANS[$i]);
-	    $length = $length + $b[1] - $b[0] + 1;
-	}
-	if($length > $readlength) {
-	    $readlength = $length;
-	    $cnt = 0;
-	}
-	if($cnt > 50000) {
-	    last;
-	}
-    }
-}
-close(INFILE);
-$cnt = 0;
-open(INFILE, $infile1) or die "\nERROR: Cannot open file '$infile1' for reading\n";
-while($line = <INFILE>) {
-    if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
-	chomp($line);
-	@a = split(/\t/,$line);
-	$span = $a[2];
-	if(!($span =~ /,/)) {
+
+if($readlength == 0) {
+    $cnt = 0;
+    while($line = <INFILE>) {
+	$length = 0;
+	if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
+	    chomp($line);
+	    @a = split(/\t/,$line);
+	    $span = $a[2];
+	    @SPANS = split(/, /, $span);
 	    $cnt++;
-	    @b = split(/-/,$span);
-	    $length = $b[1] - $b[0] + 1;
+	    for($i=0; $i<@SPANS; $i++) {
+		@b = split(/-/,$SPANS[$i]);
+		$length = $length + $b[1] - $b[0] + 1;
+	    }
 	    if($length > $readlength) {
 		$readlength = $length;
 		$cnt = 0;
 	    }
-	    if($cnt > 50000) { # it checked 50,000 lines without finding anything larger than the last time
-		# readlength was changed, so it's most certainly found the max.
-		# Went through this to avoid the user having to input the readlength.
+	    if($cnt > 50000) {
 		last;
 	    }
 	}
     }
-}
-close(INFILE);
-$cnt = 0;
-open(INFILE, $infile2) or die "\nERROR: Cannot open file '$infile3' for reading\n";
-while($line = <INFILE>) {
-    if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
-	chomp($line);
-	@a = split(/\t/,$line);
-	$span = $a[2];
-	if(!($span =~ /,/)) {
+    close(INFILE);
+    open(INFILE, $infile3) or die "\nERROR: Cannot open file '$infile3' for reading\n";
+    $cnt = 0;
+    while($line = <INFILE>) {
+	$length = 0;
+	if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
+	    chomp($line);
+	    @a = split(/\t/,$line);
+	    $span = $a[2];
+	    @SPANS = split(/, /, $span);
 	    $cnt++;
-	    @b = split(/-/,$span);
-	    $length = $b[1] - $b[0] + 1;
+	    for($i=0; $i<@SPANS; $i++) {
+		@b = split(/-/,$SPANS[$i]);
+		$length = $length + $b[1] - $b[0] + 1;
+	    }
 	    if($length > $readlength) {
 		$readlength = $length;
 		$cnt = 0;
 	    }
-	    if($cnt > 50000) { # it checked 50,000 lines without finding anything larger than the last time
-		# readlength was changed, so it's most certainly found the max.
-		# Went through this to avoid the user having to input the readlength.
+	    if($cnt > 50000) {
 		last;
 	    }
 	}
     }
+    close(INFILE);
+    $cnt = 0;
+    open(INFILE, $infile1) or die "\nERROR: Cannot open file '$infile1' for reading\n";
+    while($line = <INFILE>) {
+	if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
+	    chomp($line);
+	    @a = split(/\t/,$line);
+	    $span = $a[2];
+	    if(!($span =~ /,/)) {
+		$cnt++;
+		@b = split(/-/,$span);
+		$length = $b[1] - $b[0] + 1;
+		if($length > $readlength) {
+		    $readlength = $length;
+		    $cnt = 0;
+		}
+		if($cnt > 50000) { # it checked 50,000 lines without finding anything larger than the last time
+		    # readlength was changed, so it's most certainly found the max.
+		    # Went through this to avoid the user having to input the readlength.
+		    last;
+		}
+	    }
+	}
+    }
+    close(INFILE);
+    $cnt = 0;
+    open(INFILE, $infile2) or die "\nERROR: Cannot open file '$infile3' for reading\n";
+    while($line = <INFILE>) {
+	if($line =~ /seq.\d+a/ || $line =~ /seq.\d+b/) {
+	    chomp($line);
+	    @a = split(/\t/,$line);
+	    $span = $a[2];
+	    if(!($span =~ /,/)) {
+		$cnt++;
+		@b = split(/-/,$span);
+		$length = $b[1] - $b[0] + 1;
+		if($length > $readlength) {
+		    $readlength = $length;
+		    $cnt = 0;
+		}
+		if($cnt > 50000) { # it checked 50,000 lines without finding anything larger than the last time
+		    # readlength was changed, so it's most certainly found the max.
+		    # Went through this to avoid the user having to input the readlength.
+		    last;
+		}
+	    }
+	}
+    }
+    close(INFILE);
 }
-close(INFILE);
+if($readlength == 0) {  # Couldn't determine the read length so going to fall back
+                        # on the strategy used for variable length reads.
+    $readlength = "v";
+}
 
-if($readlength < 80) {
-    $min_overlap = 35;
-} else {
-    $min_overlap = 45;
+if(!($readlength eq "v")) {
+    if($readlength < 80) {
+	$min_overlap = 35;
+    } else {
+	$min_overlap = 45;
+    }
+    if($min_overlap >= .8 * $readlength) {
+	$min_overlap = int(.6 * $readlength);
+    }
+    $min_overlap1 = $min_overlap;
+    $min_overlap2 = $min_overlap;
 }
-if($min_overlap >= .8 * $readlength) {
-    $min_overlap = int(.6 * $readlength);
-}
-
 open(INFILE, $infile1) or die "\nERROR: Cannot open file '$infile1' for reading\n";
 while($line = <INFILE>) {
     $line =~ /^seq.(\d+)/;
@@ -228,7 +254,7 @@ while($FLAG == 1) {
 	    }
 	    if($paired_end eq "true") {
 		# this makes sure we have read in both a and b reads, this approach might cause a problem
-		# if no, or very few, b reads mapped at all.
+		# for paired end data if no, or very few, b reads mapped at all.
 		if( (($linecount == ($num_lines_at_once - 1)) && !($a[0] =~ /a$/)) || ($linecount < ($num_lines_at_once - 1)) ) {
 		    $linecount++;
 		}
@@ -315,6 +341,21 @@ while($FLAG == 1) {
 	    $str = intersect(\@spans, $a1[3]);
 	    $str =~ /^(\d+)/;
 	    $length_overlap = $1;
+
+	    if($readlength eq "v") {
+		$readlength_temp = length($a1[3]);
+		if(length($a2[3]) < $readlength_temp) {
+		    $readlength_temp = length($a2[3]);
+		}
+		if($readlength_temp < 80) {
+		    $min_overlap = 35;
+		} else {
+		    $min_overlap = 45;
+		}
+		if($min_overlap >= .8 * $readlength_temp) {
+		    $min_overlap = int(.6 * $readlength_temp);
+		}
+	    }
 	    if(($length_overlap > $min_overlap) && ($a1[1] eq $a2[1])) {
 		print OUTFILE1 "$hash2{$id}[1]\n";
 	    }
@@ -337,6 +378,22 @@ while($FLAG == 1) {
 		$str = intersect(\@spans, $a1[3]);
 		$str =~ /^(\d+)/;
 		$length_overlap = $1;
+
+		if($readlength eq "v") {
+		    $readlength_temp = length($a1[3]);
+		    if(length($a2[3]) < $readlength_temp) {
+			$readlength_temp = length($a2[3]);
+		    }
+		    if($readlength_temp < 80) {
+			$min_overlap = 35;
+		    } else {
+			$min_overlap = 45;
+		    }
+		    if($min_overlap >= .8 * $readlength_temp) {
+			$min_overlap = int(.6 * $readlength_temp);
+		    }
+		}
+		
 		if(($length_overlap > $min_overlap) && ($a1[1] eq $a2[1])) {
                     # preference TU
 		    print OUTFILE1 "$hash2{$id}[1]\n";
@@ -417,8 +474,6 @@ while($FLAG == 1) {
 		}
 
  # the next two if's take care of the case that there is no overlap, one read lies entirely downstream of the other
-
-		
 		
 		if((($astrand eq "+" && $bstrand eq "+" && $atype eq "forward" && $btype eq "reverse") || ($astrand eq "-" && $bstrand eq "-" && $atype eq "reverse" && $btype eq "forward")) && ($chra eq $chrb) && ($aend < $bstart-1) && ($bstart - $aend < $max_distance_between_paired_reads)) {
 		    if($hash1{$id}[1] =~ /a\t/) {
@@ -619,15 +674,47 @@ while($FLAG == 1) {
 	    @a = split(/\t/,$hash2{$id}[1]);
 	    $chr2 = $a[1];
 	    $spansa[1] = $a[2];
+
+	    if($readlength eq "v") {
+		$readlength_temp = length($seqa);
+		if(length($a[3]) < $readlength_temp) {
+		    $readlength_temp = length($a[3]);
+		}
+		if($readlength_temp < 80) {
+		    $min_overlap1 = 35;
+		} else {
+		    $min_overlap1 = 45;
+		}
+		if($min_overlap1 >= .8 * $readlength_temp) {
+		    $min_overlap1 = int(.6 * $readlength_temp);
+		}
+	    }
+
 	    @a = split(/\t/,$hash2{$id}[2]);
 	    $spansb[1] = $a[2];
+
+	    if($readlength eq "v") {
+		$readlength_temp = length($seqb);
+		if(length($a[3]) < $readlength_temp) {
+		    $readlength_temp = length($a[3]);
+		}
+		if($readlength_temp < 80) {
+		    $min_overlap2 = 35;
+		} else {
+		    $min_overlap2 = 45;
+		}
+		if($min_overlap2 >= .8 * $readlength_temp) {
+		    $min_overlap2 = int(.6 * $readlength_temp);
+		}
+	    }
+
 	    $str = intersect(\@spansa, $seqa);
 	    $str =~ /^(\d+)/;
 	    $length_overlap1 = $1;
 	    $str = intersect(\@spansb, $seqb);
 	    $str =~ /^(\d+)/;
 	    $length_overlap2 = $1;
-	    if(($length_overlap1 > $min_overlap) && ($length_overlap2 > $min_overlap) && ($chr1 eq $chr2)) {
+	    if(($length_overlap1 > $min_overlap1) && ($length_overlap2 > $min_overlap2) && ($chr1 eq $chr2)) {
 		print OUTFILE1 "$hash2{$id}[1]\n";
 		print OUTFILE1 "$hash2{$id}[2]\n";
 	    }
@@ -656,16 +743,44 @@ while($FLAG == 1) {
 	    $chr2 = $a[1];
 	    $spans[1] = $a[2];
 	    if($chr1 eq $chr2) {
+		if($readlength eq "v") {
+		    $readlength_temp = length($seq);
+		    if(length($a[3]) < $readlength_temp) {
+			$readlength_temp = length($a[3]);
+		    }
+		    if($readlength_temp < 80) {
+			$min_overlap1 = 35;
+		    } else {
+			$min_overlap1 = 45;
+		    }
+		    if($min_overlap1 >= .8 * $readlength_temp) {
+			$min_overlap1 = int(.6 * $readlength_temp);
+		    }
+		}
 		$str = intersect(\@spans, $seq);
 		$str =~ /^(\d+)/;
 		$overlap1 = $1;
 		@a = split(/\t/,$hash1{$id}[2]);
+		if($readlength eq "v") {
+		    $readlength_temp = length($seq);
+		    if(length($a[3]) < $readlength_temp) {
+			$readlength_temp = length($a[3]);
+		    }
+		    if($readlength_temp < 80) {
+			$min_overlap2 = 35;
+		    } else {
+			$min_overlap2 = 45;
+		    }
+		    if($min_overlap2 >= .8 * $readlength_temp) {
+			$min_overlap2 = int(.6 * $readlength_temp);
+		    }
+		}
 		$spans[0] = $a[2];
 		$str = intersect(\@spans, $seq);
 		$str =~ /^(\d+)/;
 		$overlap2 = $1;
 	    }
-	    if($overlap1 >= $min_overlap && $overlap2 >= $min_overlap) {
+	    if($overlap1 >= $min_overlap1 && $overlap2 >= $min_overlap2) {
 		print OUTFILE1 "$hash2{$id}[1]\n";
 	    }
 	    else {

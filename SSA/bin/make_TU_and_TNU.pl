@@ -82,16 +82,6 @@ $line = <INFILE>;
 close(INFILE);
 chomp($line);
 @a = split(/\t/,$line);
-$readlength = length($a[4]);
-if($readlength < 80) {
-    $min_overlap = 35;
-} else {
-    $min_overlap = 45;
-}
-
-if($min_overlap >= .8 * $readlength) {
-    $min_overlap = int(.6 * $readlength);
-}
 
 open(INFILE, $ARGV[0]) or die "\nError: input file '$ARGV[0]' is not a valid file.\n\n";
 open(ANNOTFILE, $ARGV[1]) or die "\nError: gene models file '$ARGV[1]' is not a valid file.\n\n";
@@ -146,6 +136,8 @@ $linecnt = 0;
 $seqnum = -1;
 $numa=0;
 $numb=0;
+$firstflag_a = 1;
+$firstflag_b = 1;
 while(1 == 1) {
     $line = <INFILE>;
     $linecnt++;
@@ -155,6 +147,8 @@ while(1 == 1) {
     $seqnum = $1;
     $type = $2;
     if($seqnum != $seqnum_prev && $seqnum_prev >= 0) {
+	$firstflag_a = 1;
+	$firstflag_b = 1;
 	undef %consistent_mappers;
 # NOTE: the following three if's cover all cases we care about, because if numa > 1 and numb = 0, then that's
 # not really ambiguous, blat might resolve it
@@ -199,7 +193,7 @@ while(1 == 1) {
 		}
 		else {  # significant overlap, report to "Unique" file, if it's long enough
 		    @ss = split(/\t/,$str);
-		    if($ss[0] >= $min_overlap) {
+		    if($ss[0] >= $min_overlap_a) {
 			$seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 			print OUTFILE1 "seq.$seqnum_prev";
 			print OUTFILE1 "a\t$CHR\t$ss[1]\t$seq_new\t$a[2]\n";
@@ -505,7 +499,7 @@ while(1 == 1) {
 			$size1 = $1;
 			$str2 =~ s/^(\d+)\t/$CHR\t/;
 			$size2 = $1;
-			if($size1 >= $min_overlap && $size2 >= $min_overlap) {
+			if($size1 >= $min_overlap_a && $size2 >= $min_overlap_b) {
 			    $str1 =~ /^[^\t]+\t(\d+)[^\t+]-(\d+)\t/;
 			    $start1 = $1;
 			    $end1 = $2;
@@ -540,7 +534,7 @@ while(1 == 1) {
 		    if($str ne "NONE") {
 			$str =~ s/^(\d+)\t/$CHR\t/;
 			$size = $1;
-			if($size >= $min_overlap) {
+			if($size >= $min_overlap_a && $size >= $min_overlap_b) {
 			    @ss = split(/\t/,$str);
 			    $seq_new = addJunctionsToSeq($ss[2], $ss[1]);
 			    print OUTFILE1 "seq.$seqnum_prev\t$ss[0]\t$ss[1]\t$seq_new\t$STRAND\n";
@@ -581,6 +575,8 @@ while(1 == 1) {
 	undef @b_read_mapping_to_genome;
 	$numa=0;
 	$numb=0;
+	$min_overlap_a=0;
+	$min_overlap_b=0;
     }
     if(!($line =~ /\S/)) {
 	close(INFILE);
@@ -589,6 +585,36 @@ while(1 == 1) {
 	last;
     }
     @a = split(/\t/,$line);
+    
+    if($a[0] =~ /a/) {
+	if($firstflag_a == 1) {
+	    $readlength_a = length($a[4]);
+	    if($readlength_a < 80) {
+		$min_overlap_a = 35;
+	    } else {
+		$min_overlap_a = 45;
+	    }
+	    if($min_overlap_a >= .8 * $readlength_a) {
+		$min_overlap_a = int(.6 * $readlength_a);
+	    }
+	    $firstflag_a = 0;
+	}
+    }
+    if($a[0] =~ /b/) {
+	if($firstflag_b == 1) {
+	    $readlength_b = length($a[4]);
+	    if($readlength_b < 80) {
+		$min_overlap_b = 35;
+	    } else {
+		$min_overlap_b = 45;
+	    }
+	    if($min_overlap_b >= .8 * $readlength_b) {
+		$min_overlap_b = int(.6 * $readlength_b);
+	    }
+	    $firstflag_b = 0;
+	}
+    }
+
     $qstrand = $a[1];
     $displacement = $a[3];
 # $a[2] looks like this: uc002bea.2:chr15:78885397-78913322_-

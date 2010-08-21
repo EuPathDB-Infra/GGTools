@@ -29,6 +29,37 @@ Note: All entries can be absolute path, or relative path to where the RUM_runner
 if(@ARGV < 5) {
     die "
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                 _   _   _   _   _   _   
+               // \\// \\// \\// \\// \\// \\/                       
+              //\\_//\\_//\\_//\\_//\\_//\\_// 
+        o_O__O_ o      
+       | ====== |       .-----------.
+       `--------'       |||||||||||||
+        || ~~ ||        |-----------|
+        || ~~ ||        | .-------. |
+        ||----||        ! | UPENN | !
+       //      \\\\        \\`-------'/  
+      // /!  !\\ \\\\        \\_     _/
+     !!__________!!         \\   /  
+     ||  ~~~~~~  ||          `-'
+     || _        ||
+     |||_|| ||\\/|||
+     ||| \\|_||  |||
+     ||          ||
+     ||  ~~~~~~  ||   
+     ||__________||    
+.----|||        |||------------------.
+     ||\\\\      //||                 /|
+     |============|                //
+     `------------'               //
+---------------------------------'/
+---------------------------------'
+
+        ______________________________________
+     -  The RNA-Seq Unified Mapper (RUM) Usage  -
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Usage: RUM_runner.pl <configfile> <reads file(s)> <output dir> <num chunks>
                      <name> [options]
 
@@ -47,30 +78,48 @@ Usage: RUM_runner.pl <configfile> <reads file(s)> <output dir> <num chunks>
                    and underscores, no whitespace or other characters.
 
 Options: -single    : Data is single-end (default is paired-end).
+
          -fast      : Run with blat params that run about 3 times faster but
                       a tad less sensitive
+
          -noooc     : Run without blat ooc file
+
          -ooc       : Run with blat ooc file
+
          -limitNUhard x : Limits the number of ambiguous mappers to a max of x
+
          -limitNU   : Limits the number of ambiguous mappers to a max of 100
                       locations.  If you have short reads and a large genome
                       then this will probably be necessary (45 bases is short
                       for mouse, 70 bases is long, between it's hard to say).
-         -chipseq   : Run in chipseq mode, meaning don't map across splice
+
+         -dna   : Run in dna mode, meaning don't map across splice
                       junctions.
+
          -minidentity x : run blat with minIdentity=x (default x=93)
+
          -countmismatches : report in the last column the number of mismatches,
                             ignoring insertions
+
+         -variable_read_lengths : set this if your reads are not all of the 
+                                  same length
+
          -qsub      : Use qsub to fire the job off to multiple nodes.  This
                       means you're on a cluster that understands qsub.  If not
                       using -qsub, you can still break it into multiple chunks,
                       it will just fire each chunk off to a separate processor.
                       Don't use more chunks than you have processors though,
                       because that will just slow it down.
+
          -kill      : To kill a job, run with all the same parameters but add
                       -kill.  Note: it is not sufficient to just terminate
                       RUM_runner.pl, that will leave other phantom processes.
                       Use -kill instead.
+
+         -max_inertionss_per_read n : Allow at most n insertions in one read.  
+                      The default is n=1.  Setting n>1 is only allowed for single
+                      end reads.  Don't raise it unless you know what you are
+                      doing, because it can greatly increase the false alignments.
 
 Running RUM_runner.pl with the one argument 'config' will explain how to make
 the config file.
@@ -83,6 +132,9 @@ things considerably.
 
 You can put an 's' after the number of chunks if they have already been broken
 into chunks, so as to avoid repeating this time-consuming step.
+
+Usage (again): RUM_runner.pl <configfile> <reads file(s)> <output dir> <num chunks>
+                     <name> [options]
 
 ";
 }
@@ -106,7 +158,7 @@ if($name ne $name_o) {
 }
 $paired_end = "true";
 $fast = "false";
-$chipseq = "false";
+$dna = "false";
 $limitNU = "false";
 $limitNUhard = "false";
 $ooc = "true";
@@ -114,16 +166,29 @@ $ooc_yes = "false";
 $qsub = "false";
 $minidentity=93;
 $kill = "false";
+$variable_read_lengths = "false";
 $countmismatches = "false";
+$num_insertions_allowed = 1;
 if(@ARGV > 5) {
     for($i=5; $i<@ARGV; $i++) {
 	$optionrecognized = 0;
+        if($ARGV[$i] eq "-max_ins_per_read") {
+	    $i++;
+	    $num_insertions_allowed = $ARGV[$i];
+            if($ARGV[$i] =~ /^\d+$/) {
+	        $optionrecognized = 1;
+	    }
+        }
 	if($ARGV[$i] eq "-single") {
 	    $paired_end = "false";
 	    $optionrecognized = 1;
 	}
 	if($ARGV[$i] eq "-countmismatches") {
 	    $countmismatches = "true";
+	    $optionrecognized = 1;
+	}
+	if($ARGV[$i] eq "-variable_read_lengths") {
+	    $variable_read_lengths = "true";
 	    $optionrecognized = 1;
 	}
 	if($ARGV[$i] eq "-fast") {
@@ -134,8 +199,8 @@ if(@ARGV > 5) {
 	    $kill = "true";
 	    $optionrecognized = 1;
 	}
-	if($ARGV[$i] eq "-chipseq") {
-	    $chipseq = "true";
+	if($ARGV[$i] eq "-dna") {
+	    $dna = "true";
 	    $optionrecognized = 1;
 	}
 	if($ARGV[$i] eq "-limitNU") {
@@ -202,9 +267,39 @@ if($kill eq "true") {
     exit();
 }
 
-print STDERR "\n\n -----------------------------------------------------------------------------\n";
-print STDERR     "| Welcome to the RUM distiller: a pipeline for RNA-Seq alignment and analysis |\n";
-print STDERR     " -----------------------------------------------------------------------------\n\n";
+print STDERR "
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                 _   _   _   _   _   _   
+               // \\// \\// \\// \\// \\// \\/                       
+              //\\_//\\_//\\_//\\_//\\_//\\_// 
+        o_O__O_ o      
+       | ====== |       .-----------.
+       `--------'       |||||||||||||
+        || ~~ ||        |-----------|
+        || ~~ ||        | .-------. |
+        ||----||        ! | UPENN | !
+       //      \\\\        \\`-------'/  
+      // /!  !\\ \\\\        \\_     _/
+     !!__________!!         \\   /  
+     ||  ~~~~~~  ||          `-'
+     || _        ||
+     |||_|| ||\\/|||
+     ||| \\|_||  |||
+     ||          ||
+     ||  ~~~~~~  ||   
+     ||__________||    
+.----|||        |||------------------.
+     ||\\\\      //||                 /|
+     |============|                //
+     `------------'               //
+---------------------------------'/
+---------------------------------'
+  ____________________________________________________________
+- The RNA-Seq Unified Mapper (RUM) Pipeline has been initiated -
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+";
+
 sleep(2);
 print STDERR "Please wait while I check that everything is in order.\n\n";
 sleep(2);
@@ -256,6 +351,10 @@ chomp($oocfile);
 $genomefa = $genome_blat;
 close(INFILE);
 
+if($num_insertions_allowed > 1 && $paired_end eq "true") {
+    die "\nError: for paired end data, you cannot set -max_ins_per_read to be greater than 1.\n\n";
+}
+
 if(($readsfile =~ /,,,/) && $paired_end eq "false") {
     die "\nError: You've given two files separated by three commas, this means we are expecting paired end\ndata but you set -single.\n\n";
 }
@@ -298,7 +397,7 @@ print LOGFILE "name: $name\n";
 print LOGFILE "paired_end: $paired_end\n";
 print LOGFILE "fast: $fast\n";
 print LOGFILE "limitNU: $limitNU\n";
-print LOGFILE "chipseq: $chipseq\n";
+print LOGFILE "dna: $dna\n";
 print LOGFILE "qsub: $qsub\n";
 print LOGFILE "blat minidentity: $minidentity\n";
 $ooc_log = "true";
@@ -317,8 +416,11 @@ if($numchunks =~ /(\d+)s/) {
 $head = `head -2 $readsfile | tail -1`;
 chomp($head);
 @a = split(//,$head);
-$readlength = @a;
-
+if($variable_read_lengths eq "false") {
+   $readlength = @a;
+} else {
+   $readlength = "v";
+}
 print LOGFILE "readlength: $readlength\n";
 print LOGFILE "\nstart: $date\n";
 
@@ -400,7 +502,7 @@ if($paired_end eq "true" && ($type1 ne "a" || $type2 ne "b")) {
     exit();
 }
 
-if($readlength < 55 && $limitNU eq "false") {
+if($readlength ne "variable" && $readlength < 55 && $limitNU eq "false") {
     print STDERR "\n\nWARNING: you have pretty short reads ($readlength bases).  If you have a large\n";
     print STDERR "genome such as mouse or human then the files of ambiguous mappers could grow\n";
     print STDERR "very large, in this case it's recommended to run with the -limitNU option.  You\n";
@@ -409,28 +511,17 @@ if($readlength < 55 && $limitNU eq "false") {
     print STDERR "-limitNU\n\n";
 }
 
-if($readlength < 80) {
-    $min_size_intersection_allowed = 35;
-    $match_length_cutoff = 35;
-} else {
-    $min_size_intersection_allowed = 45;
-    $match_length_cutoff = 50;
-}
-if($min_size_intersection_allowed >= .8 * $readlength) {
-    $min_size_intersection_allowed = int(.6 * $readlength);
-    $match_length_cutoff = int(.6 * $readlength);
-}
-
-$min_score = $match_length_cutoff - 12;
-if($chipseq eq "false") {
-    $pipeline_template = `cat pipeline_template.sh`;
-} else {
-    $pipeline_template = `cat pipeline_template_chipseq.sh`;
+$pipeline_template = `cat pipeline_template.sh`;
+if($dna eq "true") {
+    $pipeline_template =~ s/# cp /cp /gs;
+    $pipeline_template =~ s/xxx1.*xxx2//s;
 }
 if($fasta_already_fragmented eq "false") {
     print STDERR "Splitting files ...\n\n";
+    $qualflag = 0;
     $x = breakup_file($readsfile, $numchunks);
     if($quals eq "true") {
+        $qualflag = 1;
 	$x = breakup_file($qualsfile, $numchunks);
     }
 }
@@ -449,6 +540,11 @@ for($i=1; $i<=$numchunks; $i++) {
     } else {
 	$pipeline_file =~ s!perl SCRIPTSDIR/limit_NU.pl OUTDIR/RUM_NU_temp2.CHUNK LIMITNUCUTOFF > OUTDIR/RUM_NU_temp3.CHUNK\n!!gs;
     }
+    if($num_insertions_allowed != 1) {
+	$pipeline_file =~ s!MAXINSERTIONSALLOWED!-num_insertions_allowed $num_insertions_alllowed!gs;
+    } else {
+	$pipeline_file =~ s!MAXINSERTIONSALLOWED!!gs;
+    }
     $pipeline_file =~ s!OUTDIR!$output_dir!gs;
     if($quals eq "false") {
 	$pipeline_file =~ s!QUALSFILE.CHUNK!none!gs;
@@ -464,12 +560,9 @@ for($i=1; $i<=$numchunks; $i++) {
     $pipeline_file =~ s!SCRIPTSDIR!$scripts_dir!gs;
     $pipeline_file =~ s!TRANSCRIPTOMEBOWTIE!$transcriptome_bowtie!gs;
     $pipeline_file =~ s!GENEANNOTFILE!$gene_annot_file!gs;
-    $pipeline_file =~ s!MATCHLENGTHCUTOFF!$match_length_cutoff!gs;
-    $pipeline_file =~ s!MININTERSECTION!$min_size_intersection_allowed!gs;
     $pipeline_file =~ s!BLATEXE!$blat_exe!gs;
     $pipeline_file =~ s!MDUSTEXE!$mdust_exe!gs;
     $pipeline_file =~ s!GENOMEBLAT!$genome_blat!gs;
-    $pipeline_file =~ s!MINSCORE!$min_score!gs;
     $pipeline_file =~ s!GENOMEFA!$genomefa!gs;
     $pipeline_file =~ s!READLENGTH!$readlength!gs;
     if($countmismatches eq "true") {
@@ -681,12 +774,16 @@ sub breakup_file () {
 	    $line = <INFILE>;
 	    chomp($line);
 	    $line =~ s/\^M$//s;
-	    $line =~ s/[^ACGTNab]$//s;
+	    if($qualflag == 0) {
+		$line =~ s/[^ACGTNab]$//s;
+	    }
 	    print OUTFILE "$line\n";
 	    $line = <INFILE>;
 	    chomp($line);
 	    $line =~ s/\^M$//s;
-	    $line =~ s/[^ACGTNab]$//s;
+	    if($qualflag == 0) {
+		$line =~ s/[^ACGTNab]$//s;
+	    }
 	    print OUTFILE "$line\n";
 	}
 	close(OUTFILE);

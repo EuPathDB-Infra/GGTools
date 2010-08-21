@@ -37,7 +37,6 @@ for($i=3; $i<@ARGV; $i++) {
 	$unique_records = "true";
 	$optionrecognized = 1;
     }
-
     if($optionrecognized == 0) {
 	die "\nERROR: option '$ARGV[$i]' not recognized\n";
     }

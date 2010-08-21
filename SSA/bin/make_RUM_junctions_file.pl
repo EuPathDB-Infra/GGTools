@@ -161,19 +161,26 @@ sub printjunctions () {
 	$end2 = $end + 50;
 	$start2 = $start - 50;
 	$ilen = $end - $start + 50;
-
+	$LEN1 = 50;
+	$LEN2 = 50;
+	if($start2 < 0) {
+	    $adjust = $start2;
+	    $start2 = 0;
+	    $LEN1 = $LEN1 + $adjust;
+	    $ilen = $ilen + $adjust;
+	}
 	if($goodoverlapU{$intron} > 0 && $goodsplicesignal{$intron} == 1) {
 	    $N = $goodoverlapU{$intron} + $goodsplicesignal{$intron};
 	    print OUTFILE1 "$intron\t$N\t$knownintron{$intron}\t$goodsplicesignal{$intron}\t$amb{$intron}\t$goodoverlapU{$intron}\t$badoverlapU{$intron}\t$goodoverlapNU{$intron}\t$badoverlapNU{$intron}\n";
-	    print OUTFILE2 "$chr\t$start2\t$end2\t$N\t50\t+\t$start2\t$end2\t0,0,128\t2\t50,50\t0,$ilen\n";
+	    print OUTFILE2 "$chr\t$start2\t$end2\t$N\t50\t+\t$start2\t$end2\t0,0,128\t2\t$LEN1,$LEN2\t0,$ilen\n";
 	    if($knownintron{$intron}==1) {
-		print OUTFILE3 "$chr\t$start2\t$end2\t$N\t50\t+\t$start2\t$end2\t0,0,128\t2\t50,50\t0,$ilen\n";
+		print OUTFILE3 "$chr\t$start2\t$end2\t$N\t50\t+\t$start2\t$end2\t0,0,128\t2\t$LEN1,$LEN2\t0,$ilen\n";
 	    } else {
-		print OUTFILE3 "$chr\t$start2\t$end2\t$N\t$M\t50\t+\t$start2\t$end2\t0,205,102\t2\t50,50\t0,$ilen\n";
+		print OUTFILE3 "$chr\t$start2\t$end2\t$N\t$M\t50\t+\t$start2\t$end2\t0,205,102\t2\t$LEN1,$LEN2\t0,$ilen\n";
 	    }
 	} else {
 	    print OUTFILE1 "$intron\t0\t$knownintron{$intron}\t$goodsplicesignal{$intron}\t$amb{$intron}\t$goodoverlapU{$intron}\t$badoverlapU{$intron}\t$goodoverlapNU{$intron}\t$badoverlapNU{$intron}\n";
-	    print OUTFILE2 "$chr\t$start2\t$end2\t0\t$M\t50\t+\t$start2\t$end2\t255,69,0\t2\t50,50\t0,$ilen\n";
+	    print OUTFILE2 "$chr\t$start2\t$end2\t0\t$M\t50\t+\t$start2\t$end2\t255,69,0\t2\t$LEN1,$LEN2\t0,$ilen\n";
 	}
     }
 }

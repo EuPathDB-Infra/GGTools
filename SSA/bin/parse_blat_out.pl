@@ -87,7 +87,6 @@ while($line2 = <BLATHITS>) {
     $line1 = $line2;
 }
 close(BLATHITS);
-print "blatsorted = $blatsorted\n";
 
 if($blatsorted eq "false") {
     print STDERR "The blat file is not sorted properly, I'm sorting it now.\n";
