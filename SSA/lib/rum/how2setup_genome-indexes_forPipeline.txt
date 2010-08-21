@@ -82,10 +82,6 @@ Now build bowtie indexes:
 > bowtie-build NAME_refseq_ucscknown_genes.fa NAME_genes
 > bowtie-build NAME_genome.fa NAME_genome
 
-Make the ooc file:
-
-blat NAME_genome_sequence.fa /dev/null /dev/null -tileSize=11 -makeOoc=11.ooc_NAME -repMatch=1024
-
 The files you need to keep are the following 14:
 
 NAME_reefseq_ucscknown_gene_info.txt
