@@ -28,4 +28,5 @@ while($line = <INFILE>) {
         print $line;
     }
 }
+print "\n";
 close(INFILE);

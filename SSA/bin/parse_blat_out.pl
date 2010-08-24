@@ -215,7 +215,6 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	    $min_size_intersection_allowed = int(.6 * $readlength);
 	    $match_length_cutoff = int(.6 * $readlength);
 	}
-
 	@a_x = split(/\t/,$line);
 	$seqname = $a[9];
 	$seqnum = $seqname;
@@ -464,21 +463,23 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	}	    
 	@a = split(/\t/,$line);
 	@a_x = split(/\t/,$line);
-	$readlength = $a[10];
-	if($readlength < 80) {
-	    $min_size_intersection_allowed = 35;
-	    $match_length_cutoff = 35;
-	} else {
-	    $min_size_intersection_allowed = 45;
-	    $match_length_cutoff = 50;
-	}
-	if($min_size_intersection_allowed >= .8 * $readlength) {
-	    $min_size_intersection_allowed = int(.6 * $readlength);
-	    $match_length_cutoff = int(.6 * $readlength);
-	}
 	$seqname = $a[9];
 	$seqnum = $seqname;
 	$seqnum =~ s/[^\d]//g;
+	if($seqnum == $seq_count) {
+	    $readlength = $a[10];
+	    if($readlength < 80) {
+		$min_size_intersection_allowed = 35;
+		$match_length_cutoff = 35;
+	    } else {
+		$min_size_intersection_allowed = 45;
+		$match_length_cutoff = 50;
+	    }
+	    if($min_size_intersection_allowed >= .8 * $readlength) {
+		$min_size_intersection_allowed = int(.6 * $readlength);
+		$match_length_cutoff = int(.6 * $readlength);
+	    }
+	}
     }
     $sname[0] = "seq." . $seq_count . "a";
     $sname[1] = "seq." . $seq_count . "b";
@@ -1390,9 +1391,27 @@ sub intersect () {
 	$seq =~ s/://g;
 	@s_i = split(//,$seq);
 	$newseq = "";
-
+	
 	$ADD = 0;
-	for($i_i=$prefix_size; $i_i<$prefix_size + $maxspanlength + $ADD; $i_i++) {
+	@INS_i = split(/\+/,$seq);
+	$insertions_length_in_prefix=0;
+
+	if(@INS_i > 0) {
+	    $running_length_i = length($INS_i[0]);
+	    $ind_i=0;
+	    until($running_length_i > $prefix_size) {
+		$ind_i = $ind_i + 2;
+		$running_length_i = $running_length_i + length($INS_i[$ind_i]);
+	    }
+	    for($cnt_i=1; $cnt_i<$ind_i; $cnt_i=$cnt_i+2) {
+		$insertions_length_in_prefix = $insertions_length_in_prefix + length($INS_i[$cnt_i]) + 2;
+	    }
+	}
+
+	for($i_i=$prefix_size+$insertions_length_in_prefix; $i_i<$prefix_size + $maxspanlength + $ADD + $insertions_length_in_prefix; $i_i++) {
+	    # check here for odd number of + signs before $i_i=$prefix_size, otherwise
+	    # get caught in an infinite loop at the until below.  In other words the
+	    # prefix ended right in the middle of an insertion (pesky insertions).
 	    if($s_i[$i_i] eq "+") {
 		$newseq = $newseq . $s_i[$i_i];
 		$i_i++;

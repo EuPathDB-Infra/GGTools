@@ -10,6 +10,9 @@ if(@ARGV < 7) {
 
 Usage: make_RUM_junctions_file.pl <rum_unique> <rum_nu> <genome seq> <gene annotations> <all junctions outfile rum-format> <all junctions outfile bed-format> <high quality junctions outfile bed-format> [options]
 
+Where:
+   <gene annotations> is the RUM gene models file, put 'none' if there are no known gene models.
+
 Options:
    -faok  : the fasta file already has sequence all on one line
    -minintron n : the size of the smallest intron allowed 0<n (default = 15 bp)
@@ -40,24 +43,26 @@ print OUTFILE3 "track\tname=rum_junctions_hq\tdescription=\"RUM high quality jun
 
 # read in known junctions to color them green in the hq track:
 
-open(INFILE, $gene_annot) or die "\nError: cannot open file '$gene_annot' for reading\n\n";
-while($line = <INFILE>) {
-    @a = split(/\t/, $line);
-    $chr = $a[0];
-    $a[5] =~ s/\s*,\s*$//;
-    $a[6] =~ s/\s*,\s*$//;
-    $a[5] =~ s/^\s*,\s*//;
-    $a[6] =~ s/^\s*,\s*//;
-    @starts = split(/\s*,\s*/,$a[5]);
-    @ends = split(/\s*,\s*/,$a[6]);
-    for($i=0; $i<@starts-1; $i++) {
-	$S = $ends[$i] + 1;
-	$E = $starts[$i+1];
-	$intron = $chr . ":" . $S . "-" . $E;
-	$knownintron{$intron} = 1;
+if($gene_annot ne "none") {
+    open(INFILE, $gene_annot) or die "\nError: cannot open file '$gene_annot' for reading\n\n";
+    while($line = <INFILE>) {
+	@a = split(/\t/, $line);
+	$chr = $a[0];
+	$a[5] =~ s/\s*,\s*$//;
+	$a[6] =~ s/\s*,\s*$//;
+	$a[5] =~ s/^\s*,\s*//;
+	$a[6] =~ s/^\s*,\s*//;
+	@starts = split(/\s*,\s*/,$a[5]);
+	@ends = split(/\s*,\s*/,$a[6]);
+	for($i=0; $i<@starts-1; $i++) {
+	    $S = $ends[$i] + 1;
+	    $E = $starts[$i+1];
+	    $intron = $chr . ":" . $S . "-" . $E;
+	    $knownintron{$intron} = 1;
+	}
     }
+    close(INFILE);
 }
-close(INFILE);
 
 $faok = "false";
 $minintron = 15;

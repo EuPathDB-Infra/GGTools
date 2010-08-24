@@ -28,6 +28,7 @@ while($line = <INFILE>) {
         $line =~ s/ 5'pad=0 3'pad=0//;
         $line =~ s/ repeatMasking=none//;
         $line =~ s/ /_/g;
+	$line =~ s/:[^:]+$//;
         $line = ">" . $line;
     }
     print "$line\n";

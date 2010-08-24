@@ -46,10 +46,17 @@ if($noHtag eq "true") {
     open(INFILE, $ARGV[0]) or die "\nError: Cannot open '$ARGV[0]' for reading\n\n";
     while($line = <INFILE>) {
 	$line =~ /^seq.(\d+.)/;
-	$number_occurrences{$1}++;
+	$sname = $1;
+	@a = split(/\t/,$line);
+	if(!($a[2] eq "*")) {
+	    $number_occurrences{$sname}++;
+	}
     }
 }
 close(INFILE);
+
+# need 0, 2, 3, 4, 5, 6, 7 to be correct or this script won't work
+
 
 $bitflag[0] = "the read is paired in sequencing";
 $bitflag[1] = "the read is mapped in a proper pair";
@@ -100,8 +107,10 @@ until($line eq '') {
 	if($number_occurrences{$seqname} > 1) {
 	    $number_of_alignments = 2; # just need it to be anything bigger than 1
 	} else {
-	    $number_of_alignments = 0;
+	    $number_of_alignments = $number_occurrences{$seqname};
 	}
+    } else {
+	$number_of_alignments = 0;
     }
 
     $seq = $a[9];
@@ -189,7 +198,6 @@ until($line eq '') {
 	    $strand = "+";
 	}
     }    
-
     if($paired eq "false") {
 	$seq_with_junctions = addJunctionsToSeq($seq, $spans);
 	if($number_of_alignments == 1) {
