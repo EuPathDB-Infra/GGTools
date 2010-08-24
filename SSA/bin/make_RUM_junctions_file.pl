@@ -36,10 +36,10 @@ open(OUTFILE1, ">$outfile1") or die "\nError: cannot open file '$outfile1' for w
 print OUTFILE1 "intron\tscore\tknown\tcanonical_splice_signals\t\tambiguous\tlong_overlap_unique_reads\tshort_overlap_unique_reads\tlong_overlap_nu_reads\tshort_overlap_nu_reads\n";
 
 open(OUTFILE2, ">$outfile2") or die "\nError: cannot open file '$outfile2' for writing\n\n";
-print OUTFILE2 "track\tname=rum_junctions_all\tdescription=\"RUM junctions (all)\" itemRgb=\"On\"\n";
+print OUTFILE2 "track\tname=rum_junctions_all\tvisibility=3\tdescription=\"RUM junctions (all)\" itemRgb=\"On\"\n";
 
 open(OUTFILE3, ">$outfile3") or die "\nError: cannot open file '$outfile3' for writing\n\n";
-print OUTFILE3 "track\tname=rum_junctions_hq\tdescription=\"RUM high quality junctions\" itemRgb=\"On\"\n";
+print OUTFILE3 "track\tname=rum_junctions_hq\tvisibility=3\tdescription=\"RUM high quality junctions\" itemRgb=\"On\"\n";
 
 # read in known junctions to color them green in the hq track:
 
