@@ -524,6 +524,7 @@ if($fasta_already_fragmented eq "false") {
 	$x = breakup_file($qualsfile, $numchunks);
     }
 }
+
 print STDERR "Reads fasta file already fragmented: $fasta_already_fragmented\n";
 print STDERR "Number of Chunks: $numchunks\n";
 print STDERR "Reads File: $readsfile\n";
@@ -764,9 +765,10 @@ sub breakup_file () {
     $bflag = 0;
 
     for($i=1; $i<$numpieces; $i++) {
-	$outfilename = $FILE;
-	$outfilename =~ s!.*/!!;
-	$outfilename = $output_dir . "/" . $FILE . "." . $i;
+	$F2 = $FILE;
+	$F2 =~ s!.*/!!;
+	$outfilename = $output_dir . "/" . $F2 . "." . $i;
+
 	open(OUTFILE, ">$outfilename");
 	for($j=0; $j<$piecesize; $j++) {
 	    $line = <INFILE>;
