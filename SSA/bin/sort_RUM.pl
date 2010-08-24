@@ -24,6 +24,7 @@ $temp3unsortedfile = $ARGV[0] . "_unsorted_temp3";
 
 open(OUTFILE1, ">$temp1sortedfile");
 open(OUTFILE2, ">$temp1unsortedfile");
+$still_unsorted_flag = 0;
 while($line = <INFILE>) {
     $line =~ /^seq.(\d+)/;
     $seqnum = $1;
@@ -38,6 +39,7 @@ while($line = <INFILE>) {
 close(OUTFILE1);
 close(OUTFILE2);
 close(INFILE);
+
 
 $num_merges = 0;
 $still_unsorted_flag = 1;
@@ -83,43 +85,48 @@ sub merge () {
     chomp($line2);
     $line2 =~ /^seq.(\d+)/;
     $seqnum2 = $1;
-    while($flag == 0) {
-	while($seqnum1 <= $seqnum2 && $line1 ne '') {
-	    print OUTFILE "$line1\n";
-	    $line1 = <INFILE1>;
-	    chomp($line1);
-	    $line1 =~ /^seq.(\d+)/;
-	    $seqnum1 = $1;
-	    if($line1 eq '') {
-		if($line2 =~ /\S/) {
-		    chomp($line2);
-		    print OUTFILE "$line2\n";
-		}
-		while($line2 = <INFILE2>) {
-		    print OUTFILE $line2;		    
-		}
-	    }
-	}
-	while($seqnum2 <= $seqnum1 && $line2 ne '') {
-	    print OUTFILE "$line2\n";
-	    $line2 = <INFILE2>;
-	    chomp($line2);
-	    $line2 =~ /^seq.(\d+)/;
-	    $seqnum2 = $1;
-	    if($line2 eq '') {
-		if($line1 =~ /\S/) {
-		    chomp($line1);
-		    print OUTFILE "$line1\n";
-		}
-		while($line1 = <INFILE1>) {
-		    print OUTFILE $line1;
+    if($line2 eq '') {
+	$flag = 1;
+	unlink("$temp2sortedfile");
+    } else {
+	while($flag == 0) {
+	    while($seqnum1 <= $seqnum2 && $line1 ne '') {
+		print OUTFILE "$line1\n";
+		$line1 = <INFILE1>;
+		chomp($line1);
+		$line1 =~ /^seq.(\d+)/;
+		$seqnum1 = $1;
+		if($line1 eq '') {
+		    if($line2 =~ /\S/) {
+			chomp($line2);
+			print OUTFILE "$line2\n";
+		    }
+		    while($line2 = <INFILE2>) {
+			print OUTFILE $line2;		    
+		    }
 		}
 	    }
+	    while($seqnum2 <= $seqnum1 && $line2 ne '') {
+		print OUTFILE "$line2\n";
+		$line2 = <INFILE2>;
+		chomp($line2);
+		$line2 =~ /^seq.(\d+)/;
+		$seqnum2 = $1;
+		if($line2 eq '') {
+		    if($line1 =~ /\S/) {
+			chomp($line1);
+			print OUTFILE "$line1\n";
+		    }
+		    while($line1 = <INFILE1>) {
+			print OUTFILE $line1;
+		    }
+		}
+	    }
+	    if($line1 eq '' && $line2 eq '') {
+		$flag = 1;
+	    }
 	}
-	if($line1 eq '' && $line2 eq '') {
-	    $flag = 1;
-	}
+	`mv $temp3sortedfile $temp1sortedfile`;
+	unlink("$temp2sortedfile");
     }
-    `mv $temp3sortedfile $temp1sortedfile`;
-    unlink("$temp2sortedfile");
 }
