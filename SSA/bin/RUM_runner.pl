@@ -21,8 +21,6 @@ Note: All entries can be absolute path, or relative path to where the RUM_runner
    e.g. indexes/mm9_genome_sequence_single-line-seqs.fa
 8) perl scripts directory, can be relative path to where the RUM_runner.pl script is, or absolute path
    e.g.: scripts
-9) 11.ooc file location, can be relative path to where the RUM_runner.pl script is, or absolute path
-   e.g: indexes/11.ooc_mm9
 
 ";
 }
@@ -82,10 +80,6 @@ Options: -single    : Data is single-end (default is paired-end).
          -fast      : Run with blat params that run about 3 times faster but
                       a tad less sensitive
 
-         -noooc     : Run without blat ooc file
-
-         -ooc       : Run with blat ooc file
-
          -limitNUhard x : Limits the number of ambiguous mappers to a max of x
 
          -limitNU   : Limits the number of ambiguous mappers to a max of 100
@@ -93,8 +87,14 @@ Options: -single    : Data is single-end (default is paired-end).
                       then this will probably be necessary (45 bases is short
                       for mouse, 70 bases is long, between it's hard to say).
 
-         -dna   : Run in dna mode, meaning don't map across splice
-                      junctions.
+         -dna   : Run in dna mode, meaning don't map across splice junctions.
+
+         -quantify : use this if using the -dna flag but you still want quantified
+                     features.  If this is set you must have the gene models file
+                     specified in the rum config file.
+
+         -junctions : use this if using the -dna flag but you still want junction
+                      calls.
 
          -minidentity x : run blat with minIdentity=x (default x=93)
 
@@ -111,15 +111,15 @@ Options: -single    : Data is single-end (default is paired-end).
                       Don't use more chunks than you have processors though,
                       because that will just slow it down.
 
-         -kill      : To kill a job, run with all the same parameters but add
-                      -kill.  Note: it is not sufficient to just terminate
-                      RUM_runner.pl, that will leave other phantom processes.
-                      Use -kill instead.
-
          -max_inertionss_per_read n : Allow at most n insertions in one read.  
                       The default is n=1.  Setting n>1 is only allowed for single
                       end reads.  Don't raise it unless you know what you are
                       doing, because it can greatly increase the false alignments.
+
+         -kill      : To kill a job, run with all the same parameters but add
+                      -kill.  Note: it is not sufficient to just terminate
+                      RUM_runner.pl, that will leave other phantom processes.
+                      Use -kill instead.
 
 Running RUM_runner.pl with the one argument 'config' will explain how to make
 the config file.
@@ -161,14 +161,14 @@ $fast = "false";
 $dna = "false";
 $limitNU = "false";
 $limitNUhard = "false";
-$ooc = "true";
-$ooc_yes = "false";
 $qsub = "false";
 $minidentity=93;
 $kill = "false";
 $variable_read_lengths = "false";
 $countmismatches = "false";
 $num_insertions_allowed = 1;
+$junctions = "false";
+$quatify = "false";
 if(@ARGV > 5) {
     for($i=5; $i<@ARGV; $i++) {
 	$optionrecognized = 0;
@@ -181,6 +181,14 @@ if(@ARGV > 5) {
         }
 	if($ARGV[$i] eq "-single") {
 	    $paired_end = "false";
+	    $optionrecognized = 1;
+	}
+	if($ARGV[$i] eq "-junctions") {
+	    $junctions = "true";
+	    $optionrecognized = 1;
+	}
+	if($ARGV[$i] eq "-quantify") {
+	    $quantify = "true";
 	    $optionrecognized = 1;
 	}
 	if($ARGV[$i] eq "-countmismatches") {
@@ -205,14 +213,6 @@ if(@ARGV > 5) {
 	}
 	if($ARGV[$i] eq "-limitNU") {
 	    $limitNU = "true";
-	    $optionrecognized = 1;
-	}
-	if($ARGV[$i] eq "-noooc") {
-	    $ooc = "false";
-	    $optionrecognized = 1;
-	}
-	if($ARGV[$i] eq "-ooc") {
-	    $ooc_yes = "true";
 	    $optionrecognized = 1;
 	}
 	if($ARGV[$i] eq "-qsub") {
@@ -242,6 +242,10 @@ if(@ARGV > 5) {
 	    exit();
 	}
     }
+}
+if($dna eq "false") {
+    $junctions = "true";
+    $quantify = "true";
 }
 
 if($kill eq "true") {
@@ -346,8 +350,6 @@ chomp($genome_blat);
 $scripts_dir = <INFILE>;
 $scripts_dir =~ s!/$!!;
 chomp($scripts_dir);
-$oocfile = <INFILE>;
-chomp($oocfile);
 $genomefa = $genome_blat;
 close(INFILE);
 
@@ -400,11 +402,8 @@ print LOGFILE "limitNU: $limitNU\n";
 print LOGFILE "dna: $dna\n";
 print LOGFILE "qsub: $qsub\n";
 print LOGFILE "blat minidentity: $minidentity\n";
-$ooc_log = "true";
-if($ooc_yes eq "false" && ($ooc eq "false" || $fast eq "false")) {
-    $ooc_log = "false";
-}
-print LOGFILE "ooc: $ooc_log\n";
+print LOGFILE "output junctions: $junctions\n";
+print LOGFILE "output quantified values: $quantify\n";
 
 if($numchunks =~ /(\d+)s/) {
     $numchunks = $1;
@@ -573,13 +572,6 @@ for($i=1; $i<=$numchunks; $i++) {
     if($limitNU eq "true") {
 	$pipeline_file =~ s! -a ! -k 100 !gs;	
     }
-    $ooc_log = "true";
-    if($ooc_yes eq "false" && ($ooc eq "false" || $fast eq "false")) {
-	$pipeline_file =~ s!-ooc=OOCFILE!!gs;
-    }
-    if($ooc eq "true" || $ooc_yes eq "true") {
-	$pipeline_file =~ s!OOCFILE!$oocfile!gs;
-    }
     if($fast eq "false") {
 	$pipeline_file =~ s!SPEED!-stepSize=5!gs;
     }
@@ -690,27 +682,31 @@ for($i=2; $i<=$numchunks; $i++) {
 }
 print LOGFILE "finished creating RUM_Unique/RUM_NU/RUM.sam: $date\n";
 print LOGFILE "starting M2C: $date\n";
-$M2C_log = "M2C_$name" . ".log";
+$PPlog = "postprocessing_$name" . ".log";
 $shellscript = "#!/bin/sh\n";
 $shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl $output_dir/RUM_Unique $output_dir/RUM_NU > $output_dir/mapping_stats.txt\n";
-$shellscript = $shellscript . "echo making bed > $output_dir/$M2C_log\n";
-$shellscript = $shellscript . "echo `date` >> $output_dir/$M2C_log\n";
+$shellscript = $shellscript . "echo making bed > $output_dir/$PPlog\n";
+$shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
 $shellscript = $shellscript . "perl $scripts_dir/make_bed.pl $output_dir/RUM_Unique $output_dir/RUM_Unique.bed -zbho\n";
-$shellscript = $shellscript . "echo starting M2C >> $output_dir/$M2C_log\n";
-$shellscript = $shellscript . "echo `date` >> $output_dir/$M2C_log\n";
+$shellscript = $shellscript . "echo starting M2C >> $output_dir/$PPlog\n";
+$shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
 $covfilename = $name . ".cov";
 $logfilename = $name . ".log";
 $shellscript = $shellscript . "java -Xmx2000m M2C $output_dir/RUM_Unique.bed $output_dir/RUM_$covfilename $output_dir/RUM_$logfilename -ucsc -name \"$name\" -start_coordinate_infile 0 -openinterval_infile -chunks 4\n";
-$shellscript = $shellscript . "echo starting to quantify features >> $output_dir/$M2C_log\n";
-$shellscript = $shellscript . "echo `date` >> $output_dir/$M2C_log\n";
-$shellscript = $shellscript . "perl $scripts_dir/quantify_one_sample.pl $output_dir/RUM_$name";
-$shellscript = $shellscript . ".cov $gene_annot_file -zero -open > $output_dir/feature_quantifications_$name\n";
-$shellscript = $shellscript . "echo starting to compute junctions >> $output_dir/$M2C_log\n";
-$shellscript = $shellscript . "echo `date` >> $output_dir/$M2C_log\n";
-$shellscript = $shellscript . "perl $scripts_dir/make_RUM_junctions_file.pl $output_dir/RUM_Unique $output_dir/RUM_NU $genomefa $gene_annot_file $output_dir/junctions_all.rum $output_dir/junctions_all.bed $output_dir/junctions_high-quality.bed -faok\n";
-$shellscript = $shellscript . "echo finished >> $output_dir/$M2C_log\n";
-$shellscript = $shellscript . "echo `date` >> $output_dir/$M2C_log\n";
-$str = "m2c_$name" . ".sh";
+if($quantify eq "true") {
+   $shellscript = $shellscript . "echo starting to quantify features >> $output_dir/$PPlog\n";
+   $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
+   $shellscript = $shellscript . "perl $scripts_dir/quantify_one_sample.pl $output_dir/RUM_$name";
+   $shellscript = $shellscript . ".cov $gene_annot_file -zero -open > $output_dir/feature_quantifications_$name\n";
+}
+if($junctions eq "true") {
+   $shellscript = $shellscript . "echo starting to compute junctions >> $output_dir/$PPlog\n";
+   $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
+   $shellscript = $shellscript . "perl $scripts_dir/make_RUM_junctions_file.pl $output_dir/RUM_Unique $output_dir/RUM_NU $genomefa $gene_annot_file $output_dir/junctions_all.rum $output_dir/junctions_all.bed $output_dir/junctions_high-quality.bed -faok\n";
+}
+$shellscript = $shellscript . "echo finished >> $output_dir/$PPlog\n";
+$shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
+$str = "postprocessing_$name" . ".sh";
 open(OUTFILE2, ">$output_dir/$str");
 print OUTFILE2 $shellscript;
 close(OUTFILE2);
@@ -726,8 +722,8 @@ print STDERR "\nWorking, now another wait...\n\n";
 $doneflag = 0;
 while($doneflag == 0) {
     $doneflag = 1;
-    if (-e "$output_dir/$M2C_log") {
-	$x = `cat $output_dir/$M2C_log`;
+    if (-e "$output_dir/$PPlog") {
+	$x = `cat $output_dir/$PPlog`;
 	if(!($x =~ /finished/s)) {
 	    $doneflag = 0;
 	}
@@ -768,7 +764,9 @@ sub breakup_file () {
     $bflag = 0;
 
     for($i=1; $i<$numpieces; $i++) {
-	$outfilename = $FILE . "." . $i;
+	$outfilename = $FILE;
+	$outfilename =~ s!.*/!!;
+	$outfilename = $output_dir . "/" . $FILE . "." . $i;
 	open(OUTFILE, ">$outfilename");
 	for($j=0; $j<$piecesize; $j++) {
 	    $line = <INFILE>;
@@ -795,4 +793,34 @@ sub breakup_file () {
     }
     close(OUTFILE);
     return 0;
+}
+
+sub checkstatus () {
+    ($CHUNK) = @_;
+    $log = `cat $output_dir/rum_log.$CHUNK`;
+    @LOG = split(/\n/, $log);
+    $LOG[1] =~ /(\d+)$/;
+    $started_at = $1;
+    if($log =~ /finished first bowtie run/s) {
+	$LOG[3] =~ /(\d+)$/;
+	$firstbowtie_at = $1;
+	$firstbowtie_filesize = -s "$output_dir/X.$CHUNK";
+	if($firstbowtie_filesize == 0) {
+	    print STDERR "Warning: genome bowtie outfile for chunk $CHUNK is empty.\n";
+	}
+    } else {
+	$firstbowtie_lastmodified =(stat ($output_dir/X.$CHUNK))[9];
+	if($firstbowtie_lastmodified - $started_at > 600) {
+
+	}
+    }
+    if($log =~ /finished parsing genome bowtie run/s) {
+	$LOG[3] =~ /(\d+)$/;
+	$firstbowtie_at = $1;
+	$firstbowtie_filesize = -s "$output_dir/X.$CHUNK";
+	if($firstbowtie_filesize == 0) {
+	    print STDERR "Warning: genome bowtie outfile for chunk $CHUNK is empty.\n";
+	}
+    }
+
 }
