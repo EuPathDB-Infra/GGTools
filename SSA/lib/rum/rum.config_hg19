@@ -1,9 +1,8 @@
-indexes/hg19_ucsc_refseq_gene_info.txt
+indexes/hg19_refseq_ucscknown_gene_info.txt
 bin/bowtie
 bin/blat
 bin/mdust
-indexes/hg19
-indexes/hg19_genes_ucsc_refseq
+indexes/hg19_genome
+indexes/hg19_refseq_ucscknown_gene
 indexes/hg19_genome_sequence_one-line-seqs.fa
 scripts
-indexes/11.ooc_hg19

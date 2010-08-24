@@ -2,8 +2,7 @@ indexes/mm9_ucsc_refseq_gene_info.txt
 bin/bowtie
 bin/blat
 bin/mdust
-indexes/mm9
+indexes/mm9_genome
 indexes/mm9_genes_ucsc_refseq
 indexes/mm9_genome_sequence_one-line-seqs.fa
 scripts
-indexes/11.ooc_mm9
