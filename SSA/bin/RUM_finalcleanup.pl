@@ -14,9 +14,7 @@ Options:
    -countmismatches : report in the final column the number of mismatches, ignoring insertions
 
 This script modifies the RUM_Unique and RUM_NU files to clean
-up things like mismatches at the ends of alignments.  This is necessary
-because Bowtie extends alignments to terminal mismatches and does not
-report the location of the mismatches in the output.
+up things like mismatches at the ends of alignments.
 
 ";
 
@@ -42,7 +40,25 @@ if($faok eq "false") {
     print STDERR "Modifying genome fa file\n";
     $r = int(rand(1000));
     $f = "temp_" . $r . ".fa";
-    `perl modify_fa_to_have_seq_on_one_line.pl $ARGV[4] > $f`;
+    open(OUTFILE, ">$f");
+    open(INFILE, $ARGV[4]);
+    $flag = 0;
+    while($line = <INFILE>) {
+	if($line =~ />/) {
+	    if($flag == 0) {
+		print OUTFILE $line;
+		$flag = 1;
+	    } else {
+		print OUTFILE "\n$line";
+	    }
+	} else {
+	    chomp($line);
+	    print OUTFILE $line;
+	}
+    }
+    print OUTFILE "\n";
+    close(OUTFILE);
+    close(INFILE);
     open(GENOMESEQ, $f);
 } else {
     open(GENOMESEQ, $ARGV[4]);
