@@ -117,8 +117,9 @@ while($FLAG == 0) {
 	    $sizeflag = 1;
 	} else {
 	    chomp($line);
-	    $line =~ />(.*):1-(\d+)_strand=./;
+	    $line =~ />(.*)/;
 	    $chr = $1;
+	    $chr =~ s/:[^:]*$//;
 	    print STDERR "chr=$chr\n";
 	    $ref_seq = <GENOMESEQ>;
 	    chomp($ref_seq);

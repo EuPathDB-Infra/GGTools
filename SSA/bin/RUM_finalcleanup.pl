@@ -82,7 +82,7 @@ while($FLAG == 0) {
 	    chomp($line);
 	    $line =~ />(.*)/;
 	    $chr = $1;
-	    $chr =~ s/:[^:]*//;
+	    $chr =~ s/:[^:]*$//;
 	    $ref_seq = <GENOMESEQ>;
 	    chomp($ref_seq);
 	    $CHR2SEQ{$chr} = $ref_seq;
