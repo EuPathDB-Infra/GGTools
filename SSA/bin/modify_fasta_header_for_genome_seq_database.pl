@@ -10,7 +10,7 @@ Usage: modify_fasta_header_for_genome_seq_database.pl <fasta file>
 This expects a fasta file with header that looks like:
 >hg19_ct_UserTrack_3545_+ range=chrUn_gl000248:1-39786 5'pad=0 3'pad=0 strand=+ repeatMasking=none
 and it modifies it to look like this:
->chrUn_gl000248:1-39786_+
+>chrUn_gl000248
 
 This script is part of the pipeline of scripts used to create RUM indexes.
 You should probably not be running it alone.  See the library file:

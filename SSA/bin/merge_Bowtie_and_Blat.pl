@@ -225,8 +225,9 @@ open(OUTFILE2, ">>$f0") or die "\nError: unable to open file '$f0' for writing\n
 $f1 = $ARGV[2];
 open(INFILE, $f1) or die "\nError: unable to open file '$f1' for reading\n\n";
 while($line = <INFILE>) {
-    $line =~ /^seq.(\d+)/;
-    $bowtie_ambiguous_mappers{$1}++;
+    if($line =~ /^seq.(\d+)/) {
+	$bowtie_ambiguous_mappers{$1}++;
+    }
 }
 close(INFILE);
 $f2 = $ARGV[0];

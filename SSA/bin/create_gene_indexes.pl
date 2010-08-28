@@ -23,6 +23,8 @@ $N2 = $ARGV[1];
 $N3 = $NAME . "_genes.fa";
 $N4 = $NAME . "_gene_info.txt";
 
+print "perl make_fasta_files_for_master_list_of_genes.pl temp.fa master_list_of_exons.txt $N1 $N4 > $N3\n";
+
 `perl make_master_file_of_genes.pl gene_info_files > gene_info_merged_unsorted.txt`;
 `perl fix_geneinfofile_for_neg_introns.pl gene_info_merged_unsorted.txt 5 6 4 > gene_info_merged_unsorted_fixed.txt`;
 `perl sort_geneinfofile.pl gene_info_merged_unsorted_fixed.txt > gene_info_merged_sorted_fixed.txt`;

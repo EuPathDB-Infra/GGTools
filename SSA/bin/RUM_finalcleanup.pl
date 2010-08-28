@@ -5,9 +5,12 @@
 
 $|=1;
 
-if(@ARGV < 5) {
+if(@ARGV < 6) {
     die "
-Usage: RUM_finalcleanup.pl <rum_unique> <rum_nu> <cleaned rum_unique outfile> <cleaned rum_nu outfile> <genome seq> [options]
+Usage: RUM_finalcleanup.pl <rum_unique> <rum_nu> <cleaned rum_unique outfile> <cleaned rum_nu outfile> <genome seq> <sam header> [options]
+
+Where: 
+  <sam header> is the name of the outfile that has the header that will be used in the sam file
 
 Options:
    -faok  : the fasta file already has sequence all on one line
@@ -21,7 +24,7 @@ up things like mismatches at the ends of alignments.
 }
 $faok = "false";
 $countmismatches = "false";
-for($i=5; $i<@ARGV; $i++) {
+for($i=6; $i<@ARGV; $i++) {
     $optionrecognized = 0;
     if($ARGV[$i] eq "-faok") {
 	$faok = "true";
@@ -67,6 +70,7 @@ open(OUTFILE, ">$ARGV[2]");
 close(OUTFILE);
 open(OUTFILE, ">$ARGV[3]");
 close(OUTFILE);
+open(SAMHEADER, ">$ARGV[5]");
 
 $FLAG = 0;
 while($FLAG == 0) {
@@ -85,6 +89,8 @@ while($FLAG == 0) {
 	    $chr =~ s/:[^:]*$//;
 	    $ref_seq = <GENOMESEQ>;
 	    chomp($ref_seq);
+	    $chrsize = length($ref_seq);
+	    print SAMHEADER "\@SQ\tSN:$chr\tLN:$chrsize\n";
 	    $CHR2SEQ{$chr} = $ref_seq;
 	    $totalsize = $totalsize + length($ref_seq);
 	    if($totalsize > 1000000000) {  # don't store more than 1 gb of sequence in memory at once...
@@ -96,6 +102,7 @@ while($FLAG == 0) {
     &clean($ARGV[1], $ARGV[3]);
 }
 close(GENOMESEQ);
+close(SAMHEADER);
 
 sub clean () {
     ($infilename, $outfilename) = @_;

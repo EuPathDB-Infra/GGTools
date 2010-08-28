@@ -22,7 +22,7 @@ $final_gene_info_file = $ARGV[3];
 open(INFILE, $ARGV[0]);  # fasta file must have seq all on one line
 $line = <INFILE>;
 chomp($line);
-$line =~ />(.*):/;
+$line =~ />(.*)/;
 $chr = $1; 
 print STDERR "$line\n";
 $chr_hash1{$chr}++;
@@ -37,7 +37,7 @@ until($line eq '') {
     $line = <INFILE>;
     chomp($line);
     print STDERR "$line\n";
-    $line =~ />(.*):/;
+    $line =~ />(.*)/;
     $chr = $1; 
     $chr_hash1{$chr}++;
 }

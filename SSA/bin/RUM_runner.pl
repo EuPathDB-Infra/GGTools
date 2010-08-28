@@ -38,7 +38,7 @@ if(@ARGV < 5) {
         || ~~ ||        | .-------. |
         ||----||        ! | UPENN | !
        //      \\\\        \\`-------'/  
-      // /!  !\\ \\\\        \\_     _/
+      // /!  !\\ \\\\        \\_  O  _/
      !!__________!!         \\   /  
      ||  ~~~~~~  ||          `-'
      || _        ||
@@ -111,7 +111,7 @@ Options: -single    : Data is single-end (default is paired-end).
                       Don't use more chunks than you have processors though,
                       because that will just slow it down.
 
-         -max_inertionss_per_read n : Allow at most n insertions in one read.  
+         -max_insertions_per_read n : Allow at most n insertions in one read.  
                       The default is n=1.  Setting n>1 is only allowed for single
                       end reads.  Don't raise it unless you know what you are
                       doing, because it can greatly increase the false alignments.
@@ -163,6 +163,8 @@ $limitNU = "false";
 $limitNUhard = "false";
 $qsub = "false";
 $minidentity=93;
+$postprocess = "false";
+$blatonly = "false";
 $kill = "false";
 $variable_read_lengths = "false";
 $countmismatches = "false";
@@ -172,7 +174,7 @@ $quatify = "false";
 if(@ARGV > 5) {
     for($i=5; $i<@ARGV; $i++) {
 	$optionrecognized = 0;
-        if($ARGV[$i] eq "-max_ins_per_read") {
+        if($ARGV[$i] eq "-max_insertions_per_read") {
 	    $i++;
 	    $num_insertions_allowed = $ARGV[$i];
             if($ARGV[$i] =~ /^\d+$/) {
@@ -185,6 +187,14 @@ if(@ARGV > 5) {
 	}
 	if($ARGV[$i] eq "-junctions") {
 	    $junctions = "true";
+	    $optionrecognized = 1;
+	}
+	if($ARGV[$i] eq "-postprocess") {
+	    $postprocess = "true";
+	    $optionrecognized = 1;
+	}
+	if($ARGV[$i] eq "-blatonly") {
+	    $blatonly = "true";
 	    $optionrecognized = 1;
 	}
 	if($ARGV[$i] eq "-quantify") {
@@ -510,162 +520,175 @@ if($readlength ne "variable" && $readlength < 55 && $limitNU eq "false") {
     print STDERR "-limitNU\n\n";
 }
 
-$pipeline_template = `cat pipeline_template.sh`;
-if($dna eq "true") {
-    $pipeline_template =~ s/# cp /cp /gs;
-    $pipeline_template =~ s/xxx1.*xxx2//s;
-}
-if($fasta_already_fragmented eq "false") {
-    print STDERR "Splitting files ...\n\n";
-    $qualflag = 0;
-    $x = breakup_file($readsfile, $numchunks);
-    if($quals eq "true") {
-        $qualflag = 1;
-	$x = breakup_file($qualsfile, $numchunks);
-    }
+if($blatonly eq "true" && $dna eq "true") {
+    $dna = "false";  # because blat only is dna only anyway, and setting them both breaks things below
 }
 
-print STDERR "Reads fasta file already fragmented: $fasta_already_fragmented\n";
-print STDERR "Number of Chunks: $numchunks\n";
-print STDERR "Reads File: $readsfile\n";
-print STDERR "Paired End: $paired_end\n";
+if($postprocess eq "false") {
+    $pipeline_template = `cat pipeline_template.sh`;
+    if($dna eq "true") {
+        $pipeline_template =~ s/# cp /cp /gs;
+        $pipeline_template =~ s/xxx1.*xxx2//s;
+    }
+    if($blatonly eq "true") {
+        $pipeline_template =~ s/xxx0.*xxx2//s;
+        $pipeline_template =~ s!# cp OUTDIR/GU.CHUNK OUTDIR/BowtieUnique.CHUNK!echo `` >> OUTDIR/BowtieUnique.CHUNK!s;
+        $pipeline_template =~ s!# cp OUTDIR/GNU.CHUNK OUTDIR/BowtieNU.CHUNK!echo `` >> OUTDIR/BowtieNU.CHUNK!s;
+    }
+    if($fasta_already_fragmented eq "false") {
+        print STDERR "Splitting files ...\n\n";
+        $qualflag = 0;
+        $x = breakup_file($readsfile, $numchunks);
+        if($quals eq "true") {
+            $qualflag = 1;
+    	$x = breakup_file($qualsfile, $numchunks);
+        }
+    }
 
-print STDERR "\nEverything seems okay, I am going to fire off the job.\n\n";
+    print STDERR "Reads fasta file already fragmented: $fasta_already_fragmented\n";
+    print STDERR "Number of Chunks: $numchunks\n";
+    print STDERR "Reads File: $readsfile\n";
+    print STDERR "Paired End: $paired_end\n";
 
-for($i=1; $i<=$numchunks; $i++) {
-    $pipeline_file = $pipeline_template;
-    if($limitNUhard eq "true") {
-	$pipeline_file =~ s!LIMITNUCUTOFF!$NU_limit!gs;
-	$pipeline_file =~ s!sort_RUM.pl OUTDIR.RUM_NU_temp2.CHUNK!sort_RUM.pl OUTDIR/RUM_NU_temp3.CHUNK!gs;
-    } else {
-	$pipeline_file =~ s!perl SCRIPTSDIR/limit_NU.pl OUTDIR/RUM_NU_temp2.CHUNK LIMITNUCUTOFF > OUTDIR/RUM_NU_temp3.CHUNK\n!!gs;
-    }
-    if($num_insertions_allowed != 1) {
-	$pipeline_file =~ s!MAXINSERTIONSALLOWED!-num_insertions_allowed $num_insertions_alllowed!gs;
-    } else {
-	$pipeline_file =~ s!MAXINSERTIONSALLOWED!!gs;
-    }
-    $pipeline_file =~ s!OUTDIR!$output_dir!gs;
-    if($quals eq "false") {
-	$pipeline_file =~ s!QUALSFILE.CHUNK!none!gs;
-    } else {
-	$pipeline_file =~ s!QUALSFILE!$qualsfile!gs;
-    }
-    $pipeline_file =~ s!CHUNK!$i!gs;
-    $pipeline_file =~ s!MINIDENTITY!$minidentity!gs;
-    $pipeline_file =~ s!BOWTIEEXE!$bowtie_exe!gs;
-    $pipeline_file =~ s!GENOMEBOWTIE!$genome_bowtie!gs;
-    $pipeline_file =~ s!BOWTIEEXE!$bowtie_exe!gs;
-    $pipeline_file =~ s!READSFILE!$readsfile!gs;
-    $pipeline_file =~ s!SCRIPTSDIR!$scripts_dir!gs;
-    $pipeline_file =~ s!TRANSCRIPTOMEBOWTIE!$transcriptome_bowtie!gs;
-    $pipeline_file =~ s!GENEANNOTFILE!$gene_annot_file!gs;
-    $pipeline_file =~ s!BLATEXE!$blat_exe!gs;
-    $pipeline_file =~ s!MDUSTEXE!$mdust_exe!gs;
-    $pipeline_file =~ s!GENOMEBLAT!$genome_blat!gs;
-    $pipeline_file =~ s!GENOMEFA!$genomefa!gs;
-    $pipeline_file =~ s!READLENGTH!$readlength!gs;
-    if($countmismatches eq "true") {
-	$pipeline_file =~ s!COUNTMISMATCHES!-countmismatches!gs;
-    } else {
-	$pipeline_file =~ s!COUNTMISMATCHES!!gs;
-    }
-    if($limitNU eq "true") {
-	$pipeline_file =~ s! -a ! -k 100 !gs;	
-    }
-    if($fast eq "false") {
-	$pipeline_file =~ s!SPEED!-stepSize=5!gs;
-    }
-    else {
-	$pipeline_file =~ s!SPEED!!gs;
-    }
-    if($paired_end eq "true") {
-	$pipeline_file =~ s!PAIREDEND!paired!gs;
-    } else {
-	$pipeline_file =~ s!PAIREDEND!single!gs;
-    }
-    $outfile = "pipeline." . $i . ".sh";
-    open(OUTFILE, ">$output_dir/$outfile") or die "\nError: cannot open '$output_dir/$outfile' for writing\n\n";
-    print OUTFILE $pipeline_file;
-    close(OUTFILE);
-
-    if($qsub eq "true") {
-	`qsub -l mem_free=6G -pe DJ 4 $output_dir/$outfile`;
-    }
-    else {
-	system("/bin/bash $output_dir/$outfile &");
-    }
-    print STDERR "Chunk $i initiated\n";
-    $status{$i} = 1;
-}
-if($numchunks > 1) {
-    print STDERR "\nAll chunks initiated, now the long wait...\n";
-    print STDERR "\nI'm going to watch for all chunks to finish, then I will merge everything...\n";
-    sleep(2);
-    if($qsub eq "false") {
-	print STDERR "\nThe next thing to print here will be the status reports from bowtie.\n";
-	print STDERR "     * don't be alarmed.\n\n";
-    }
-} else {
-    print STDERR "\nThe job has been initiated, now the long wait...\n";
-    sleep(2);
-    if($qsub eq "false") {
-	print STDERR "\nThe next thing to print here will be the status reports from bowtie.\n";
-	print STDERR "     * don't be alarmed.\n\n";
-    }
-}
-
-$currenttime = time();
-$lastannouncetime = $currenttime;
-$numannouncements = 0;
-$doneflag = 0;
-
-while($doneflag == 0) {
-    $doneflag = 1;
-    $numdone = 0;
+    $readsfile =~ s!.*/!!;
+    $readsfile = $output_dir . "/" . $readsfile;
+    
+    print STDERR "\nEverything seems okay, I am going to fire off the job.\n\n";
+    
     for($i=1; $i<=$numchunks; $i++) {
-	$logfile = "$output_dir/rum_log.$i";
-	if (-e $logfile) {
-	    $x = `cat $logfile`;
-	    if(!($x =~ /pipeline complete/s)) {
-		$doneflag = 0;
-	    } else {
-		$numdone++;
-		if($status{$i} == 1) {
-		    $status{$i} = 2;
-		    print STDERR "\n *** Chunk $i has finished.\n";
-		}
-	    }
-	}
-	else {
-	    $doneflag = 0;
-	}
+        $pipeline_file = $pipeline_template;
+        if($limitNUhard eq "true") {
+    	$pipeline_file =~ s!LIMITNUCUTOFF!$NU_limit!gs;
+    	$pipeline_file =~ s!sort_RUM.pl OUTDIR.RUM_NU_temp2.CHUNK!sort_RUM.pl OUTDIR/RUM_NU_temp3.CHUNK!gs;
+        } else {
+    	$pipeline_file =~ s!perl SCRIPTSDIR/limit_NU.pl OUTDIR/RUM_NU_temp2.CHUNK LIMITNUCUTOFF > OUTDIR/RUM_NU_temp3.CHUNK\n!!gs;
+        }
+        if($num_insertions_allowed != 1) {
+    	$pipeline_file =~ s!MAXINSERTIONSALLOWED!-num_insertions_allowed $num_insertions_alllowed!gs;
+        } else {
+    	$pipeline_file =~ s!MAXINSERTIONSALLOWED!!gs;
+        }
+        $pipeline_file =~ s!OUTDIR!$output_dir!gs;
+        if($quals eq "false") {
+    	$pipeline_file =~ s!QUALSFILE.CHUNK!none!gs;
+        } else {
+    	$pipeline_file =~ s!QUALSFILE!$qualsfile!gs;
+        }
+        $pipeline_file =~ s!CHUNK!$i!gs;
+        $pipeline_file =~ s!MINIDENTITY!$minidentity!gs;
+        $pipeline_file =~ s!BOWTIEEXE!$bowtie_exe!gs;
+        $pipeline_file =~ s!GENOMEBOWTIE!$genome_bowtie!gs;
+        $pipeline_file =~ s!BOWTIEEXE!$bowtie_exe!gs;
+        $pipeline_file =~ s!READSFILE!$readsfile!gs;
+        $pipeline_file =~ s!SCRIPTSDIR!$scripts_dir!gs;
+        $pipeline_file =~ s!TRANSCRIPTOMEBOWTIE!$transcriptome_bowtie!gs;
+        $pipeline_file =~ s!GENEANNOTFILE!$gene_annot_file!gs;
+        $pipeline_file =~ s!BLATEXE!$blat_exe!gs;
+        $pipeline_file =~ s!MDUSTEXE!$mdust_exe!gs;
+        $pipeline_file =~ s!GENOMEBLAT!$genome_blat!gs;
+        $pipeline_file =~ s!GENOMEFA!$genomefa!gs;
+        $pipeline_file =~ s!READLENGTH!$readlength!gs;
+        if($countmismatches eq "true") {
+    	$pipeline_file =~ s!COUNTMISMATCHES!-countmismatches!gs;
+        } else {
+    	$pipeline_file =~ s!COUNTMISMATCHES!!gs;
+        }
+        if($limitNU eq "true") {
+    	$pipeline_file =~ s! -a ! -k 100 !gs;	
+        }
+        if($fast eq "false") {
+    	$pipeline_file =~ s!SPEED!-stepSize=5!gs;
+        }
+        else {
+    	$pipeline_file =~ s!SPEED!!gs;
+        }
+        if($paired_end eq "true") {
+    	$pipeline_file =~ s!PAIREDEND!paired!gs;
+        } else {
+    	$pipeline_file =~ s!PAIREDEND!single!gs;
+        }
+        $outfile = "pipeline." . $i . ".sh";
+        open(OUTFILE, ">$output_dir/$outfile") or die "\nError: cannot open '$output_dir/$outfile' for writing\n\n";
+        print OUTFILE $pipeline_file;
+        close(OUTFILE);
+    
+        if($qsub eq "true") {
+    	`qsub -l mem_free=6G -pe DJ 4 $output_dir/$outfile`;
+        }
+        else {
+    	system("/bin/bash $output_dir/$outfile &");
+        }
+        print STDERR "Chunk $i initiated\n";
+        $status{$i} = 1;
     }
-    if($doneflag == 0) {
-	sleep(30);
-	$currenttime = time();
-	if($currenttime - $lastannouncetime > 3600) {
-	    $lastannouncetime = $currenttime;
-	    $numannouncements++;
-	    if($numannouncements == 1) {
-		if($numdone == 1) {
-		    print STDERR "\nIt has been $numannouncements hour, $numdone chunk has finished.\n";
-		} else {
-		    print STDERR "\nIt has been $numannouncements hour, $numdone chunks have finished.\n";
-		}
-	    } else {
-		if($numdone == 1) {
-		    print STDERR "\nIt has been $numannouncements hours, $numdone chunk has finished.\n";
-		} else {
-		    print STDERR "\nIt has been $numannouncements hours, $numdone chunks have finished.\n";
-		}
+    if($numchunks > 1) {
+        print STDERR "\nAll chunks initiated, now the long wait...\n";
+        print STDERR "\nI'm going to watch for all chunks to finish, then I will merge everything...\n";
+        sleep(2);
+        if($qsub eq "false" && $blatonly eq "false") {
+    	    print STDERR "\nThe next thing to print here will be the status reports from bowtie.\n";
+            print STDERR "     * don't be alarmed.\n\n";
+        }
+    } else {
+        print STDERR "\nThe job has been initiated, now the long wait...\n";
+        sleep(2);
+        if($qsub eq "false" && $blatonly eq "false") {
+    	    print STDERR "\nThe next thing to print here will be the status reports from bowtie.\n";
+    	    print STDERR "     * don't be alarmed.\n\n";
+        }
+    }
+    
+    $currenttime = time();
+    $lastannouncetime = $currenttime;
+    $numannouncements = 0;
+    $doneflag = 0;
+    
+    while($doneflag == 0) {
+        $doneflag = 1;
+        $numdone = 0;
+        for($i=1; $i<=$numchunks; $i++) {
+            $logfile = "$output_dir/rum_log.$i";
+            if (-e $logfile) {
+    	        $x = `cat $logfile`;
+    	        if(!($x =~ /pipeline complete/s)) {
+    		    $doneflag = 0;
+    	        } else {
+    		    $numdone++;
+    		    if($status{$i} == 1) {
+    		        $status{$i} = 2;
+		        print STDERR "\n *** Chunk $i has finished.\n";
+		    }
+	        }
 	    }
-	}
+    	    else {
+	        $doneflag = 0;
+	    }
+        }
+        if($doneflag == 0) {
+	    sleep(30);
+	    $currenttime = time();
+    	    if($currenttime - $lastannouncetime > 3600) {
+	        $lastannouncetime = $currenttime;
+	        $numannouncements++;
+	        if($numannouncements == 1) {
+		    if($numdone == 1) {
+		        print STDERR "\nIt has been $numannouncements hour, $numdone chunk has finished.\n";
+		    } else {
+		        print STDERR "\nIt has been $numannouncements hour, $numdone chunks have finished.\n";
+		    }
+	        } else {
+		    if($numdone == 1) {
+		        print STDERR "\nIt has been $numannouncements hours, $numdone chunk has finished.\n";
+		    } else {
+		        print STDERR "\nIt has been $numannouncements hours, $numdone chunks have finished.\n";
+		    }
+	        }
+    	    }
+        }
     }
 }
 
-print STDERR "All chunks have finished, now to move on to the merging,\n";
-print STDERR "creating the coverage plot and the quantified values, etc..\n\n";
+print STDERR "All chunks have finished.\n\nNext I have to merge everything, create the coverage plot and\ncalculate the quantified values, etc.  This will take some time...\n\n";
 
 $date = `date`;
 print LOGFILE "finished creating RUM_Unique.*/RUM_NU.*: $date\n";
@@ -677,8 +700,8 @@ $x = `cp $output_dir/RUM_NU.1 $output_dir/RUM_NU`;
 for($i=2; $i<=$numchunks; $i++) {
     $x = `cat $output_dir/RUM_NU.$i >> $output_dir/RUM_NU`;
 }
-$x = `cp $output_dir/RUM.sam.1 $output_dir/RUM.sam`;
-for($i=2; $i<=$numchunks; $i++) {
+$x = `cp $output_dir/sam_header.1 $output_dir/RUM.sam`;
+for($i=1; $i<=$numchunks; $i++) {
     $x = `cat $output_dir/RUM.sam.$i >> $output_dir/RUM.sam`;
 }
 print LOGFILE "finished creating RUM_Unique/RUM_NU/RUM.sam: $date\n";
@@ -764,9 +787,9 @@ sub breakup_file () {
     }
     $bflag = 0;
 
+    $F2 = $FILE;
+    $F2 =~ s!.*/!!;
     for($i=1; $i<$numpieces; $i++) {
-	$F2 = $FILE;
-	$F2 =~ s!.*/!!;
 	$outfilename = $output_dir . "/" . $F2 . "." . $i;
 
 	open(OUTFILE, ">$outfilename");
@@ -788,7 +811,8 @@ sub breakup_file () {
 	}
 	close(OUTFILE);
     }
-    $outfilename = $FILE . "." . $numpieces;
+    $outfilename = $output_dir . "/" . $F2 . "." . $numpieces;
+
     open(OUTFILE, ">$outfilename");
     while($line = <INFILE>) {
 	print OUTFILE $line;
