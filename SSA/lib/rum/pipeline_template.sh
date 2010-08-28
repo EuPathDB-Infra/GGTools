@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# xxx0
+
+# genome bowtie starts here.  Remove from xxx0 to xxx2 for blat only mapping
+
 echo "starting..." > OUTDIR/rum_log.CHUNK
 echo `date` `date +%s` >> OUTDIR/rum_log.CHUNK
 BOWTIEEXE -a --best --strata -f GENOMEBOWTIE READSFILE.CHUNK -v 3 --suppress 6,7,8 -p 1 > OUTDIR/X.CHUNK
@@ -50,7 +54,7 @@ echo `date` `date +%s` >> OUTDIR/rum_log.CHUNK
 perl SCRIPTSDIR/merge_Bowtie_and_Blat.pl OUTDIR/BowtieUnique.CHUNK OUTDIR/BlatUnique.CHUNK OUTDIR/BowtieNU.CHUNK OUTDIR/BlatNU.CHUNK OUTDIR/RUM_Unique_temp.CHUNK OUTDIR/RUM_NU_temp.CHUNK PAIREDEND -readlength READLENGTH
 echo "finished merging Bowtie and Blat" >> OUTDIR/rum_log.CHUNK
 echo `date` `date +%s` >> OUTDIR/rum_log.CHUNK
-perl SCRIPTSDIR/RUM_finalcleanup.pl OUTDIR/RUM_Unique_temp.CHUNK OUTDIR/RUM_NU_temp.CHUNK OUTDIR/RUM_Unique_temp2.CHUNK OUTDIR/RUM_NU_temp2.CHUNK GENOMEFA -faok COUNTMISMATCHES
+perl SCRIPTSDIR/RUM_finalcleanup.pl OUTDIR/RUM_Unique_temp.CHUNK OUTDIR/RUM_NU_temp.CHUNK OUTDIR/RUM_Unique_temp2.CHUNK OUTDIR/RUM_NU_temp2.CHUNK GENOMEFA OUTDIR/sam_header.CHUNK -faok COUNTMISMATCHES
 echo "finished cleaning up final results" >> OUTDIR/rum_log.CHUNK
 echo `date` `date +%s` >> OUTDIR/rum_log.CHUNK
 perl SCRIPTSDIR/sort_RUM.pl OUTDIR/RUM_Unique_temp2.CHUNK OUTDIR/RUM_Unique.CHUNK
