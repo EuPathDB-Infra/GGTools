@@ -493,7 +493,7 @@ if(($readsfile =~ /,,,/) && ($paired_end eq "true") && ($postprocess eq "false")
 	die "\nError: You specified the same file for the forward and reverse reads, must be an error...\n\n";
     }
 
-    print STDERR "Reformatting reads file...\n";
+    print STDERR "Reformatting reads file... please be patient.\n";
     `perl $scripts_dir/parse2fasta.pl $a[0] $a[1] > $output_dir/reads.fa`;
     `perl $scripts_dir/fastq2qualities.pl $a[0] $a[1] > $output_dir/quals.fa`;
     $X = `head -2 $output_dir/quals.fa | tail -1`;
@@ -554,7 +554,7 @@ $type2 = $4;
 if($postprocess eq "false") {
     if($paired_end eq 'false') {
         if($type1 ne "a") {
-	   print STDERR "Reformatting reads file...\n";
+	   print STDERR "Reformatting reads file... please be patient.\n";
 	   `perl scripts/parse2fasta.pl $readsfile > $output_dir/reads.fa`;
 	   `perl scripts/fastq2qualities.pl $readsfile > $output_dir/quals.fa`;
 	   $X = `head -2 $output_dir/quals.fa | tail -1`;
@@ -664,12 +664,13 @@ if($postprocess eq "false") {
         $pipeline_template =~ s!# cp OUTDIR/GNU.CHUNK OUTDIR/BowtieNU.CHUNK!echo `` >> OUTDIR/BowtieNU.CHUNK!s;
     }
     if($fasta_already_fragmented eq "false") {
-        print STDERR "Splitting files ...\n\n";
+        print STDERR "Splitting files ... please be patient.\n\n";
         $qualflag = 0;
         $x = breakup_file($readsfile, $numchunks);
         if($quals eq "true") {
+            print STDERR "Half done splitting...\n\n";
             $qualflag = 1;
-    	$x = breakup_file($qualsfile, $numchunks);
+    	    $x = breakup_file($qualsfile, $numchunks);
         }
     }
 
@@ -754,15 +755,15 @@ if($postprocess eq "false") {
         print STDERR "\nI'm going to watch for all chunks to finish, then I will merge everything...\n";
         sleep(2);
         if($qsub eq "false" && $blatonly eq "false") {
-    	    print STDERR "\nThe next thing to print here will be the status reports from bowtie.\n";
-            print STDERR "     * don't be alarmed.\n\n";
+    	    print STDERR "\nThe next thing to print here will (probably) be the status reports from bowtie for each chunk.\n";
+    	    print STDERR "     * Don't be alarmed by the number of reads that 'failed to align'\n       that's just referring to one stage, the end result will be better.\n\n";
         }
     } else {
         print STDERR "\nThe job has been initiated, now the long wait...\n";
         sleep(2);
         if($qsub eq "false" && $blatonly eq "false") {
-    	    print STDERR "\nThe next thing to print here will be the status reports from bowtie.\n";
-    	    print STDERR "     * don't be alarmed.\n\n";
+    	    print STDERR "\nThe next thing to print here will (probably) be the status reports from bowtie for each chunk.\n";
+    	    print STDERR "     * Don't be alarmed by the number of reads that 'failed to align'\n       that's just referring to stage, the end result will be better.\n\n";
         }
     }
     
@@ -816,7 +817,7 @@ if($postprocess eq "false") {
     }
 }
 
-print STDERR "All chunks have finished.\n\nNext I have to merge everything, create the coverage plot and\ncalculate the quantified values, etc.  This will take some time...\n\n";
+print STDERR "\nWhew, all chunks have finished.\n\nNext I will merge everything, create the coverage plots and\ncalculate the quantified values, etc.  This could take some time...\n\n";
 
 $date = `date`;
 print LOGFILE "finished creating RUM_Unique.*/RUM_NU.*: $date\n";

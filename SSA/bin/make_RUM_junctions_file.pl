@@ -98,6 +98,8 @@ specified by -signal) are colored a shade lighter.
 ";
 }
 
+print STDERR "\nMaking junctions files...\n";
+
 $allowable_overlap = 8;
 $rumU = $ARGV[0];
 $rumNU = $ARGV[1];
@@ -331,6 +333,7 @@ sub printjunctions () {
 
 sub getjunctions () {
     open(INFILE, $rumU) or die "\nError: cannot open file '$rumU' for reading\n\n";
+    print STDERR "please wait...\n";
     while($line = <INFILE>) {
 	if(!($line =~ /, /)) {
 	    next;
@@ -415,7 +418,8 @@ sub getjunctions () {
 	}
     }
     close(INFILE);
-    print STDERR "finished Unique\n";
+#    print STDERR "finished Unique\n";
+    print STDERR "please wait some more...\n";
     open(INFILE, $rumNU) or die "\nError: cannot open file '$rumNU' for reading\n\n";
     while($line = <INFILE>) {
 	if(!($line =~ /, /)) {
@@ -501,7 +505,7 @@ sub getjunctions () {
 	}
     }
     close(INFILE);
-    print STDERR "finished NU\n";
+#    print STDERR "finished NU\n";
 }
 
 sub reversesignal () {

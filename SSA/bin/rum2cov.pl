@@ -16,6 +16,8 @@ and *do not* use the -separate option.
 ";
 }
 
+print STDERR "\nMaking coverage plot $ARGV[1]...\n\n";
+
 $infile = $ARGV[0];
 $outfile = $ARGV[1];
 $name = $infile . " Coverage";
@@ -31,10 +33,10 @@ for($i=2; $i<@ARGV; $i++) {
     }
 }
 
-print OUTFILE "track type=bedGraph name=\"$name\" description=\"$name\" visibility=full color=255,0,0 priority=10\n";
 
 open(INFILE, $infile) or die "ERROR: could not open the file '$infile' for reading";
 open(OUTFILE, ">$outfile") or die "ERROR: could not open the file '$outfile' for writing";
+print OUTFILE "track type=bedGraph name=\"$name\" description=\"$name\" visibility=full color=255,0,0 priority=10\n";
 
 $flag = 0;
 &getStartEndandSpans_of_nextline();

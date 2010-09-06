@@ -118,7 +118,8 @@ for($i=0; $i<$skip; $i++) {
     $line = <INFILE>;
 }
 print "basereads_total= $basereads_total\n";
-print STDERR "skipping $skip line(s) of header\n";
+print STDERR "Quantifying ...\n";
+#print STDERR "skipping $skip line(s) of header\n";
 while($line = <INFILE>) {
     chomp($line);
     @a = split(/\t/,$line);
