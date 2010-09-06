@@ -3,6 +3,15 @@ if(@ARGV<2) {
     die "
 Usage: fix_sam.pl <sam file> <last seq num>
 
+This fixes many probelems with people's SAM output
+on data formatted by parse2fasta.pl.  If you kept
+the sequence names intact then this should fix many
+other problems.  It will not, however, fix the bit-
+flag if that is messed up.
+
+This depends on the script:
+sort_where_lines_start_seq.numa_or_seq.numb.pl
+
 ";
 }
 
