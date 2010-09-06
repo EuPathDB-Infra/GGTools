@@ -1,5 +1,5 @@
 $|=1;
-
+$timestart = time();
 if(@ARGV < 2) {
     die "
 Usage: sort_RUM_by_location.pl <rum file> <sorted file> [options]
@@ -51,7 +51,7 @@ for($i=2; $i<@ARGV; $i++) {
     }
 }
 
-print STDERR "ram = $ram\n";
+#print STDERR "ram = $ram\n";
 
 if($ram >= 7) {
     $max_count_at_once = 10000000;
@@ -82,10 +82,11 @@ while($line = <INFILE>) {
 close(INFILE);
 
 $cnt=0;
+print "\n$infile reads per chromosome:\n\nchr_name\tnum_reads\n";
 foreach $chr (sort cmpChrs keys %chr_counts) {
     $CHR[$cnt] = $chr;
     $cnt++;
-    print STDERR "$chr\t$chr_counts{$chr}\n";
+    print "$chr\t$chr_counts{$chr}\n";
 }
 $chunk = 0;
 $cnt=0;
@@ -106,9 +107,12 @@ while($cnt < @CHR) {
     }
     $chunk++;
 }
-foreach $chr (sort cmpChrs keys %CHUNK) {
-    print STDERR "$chr\t$CHUNK{$chr}\n";
-}
+
+# DEBUG
+#foreach $chr (sort cmpChrs keys %CHUNK) {
+#    print STDERR "$chr\t$CHUNK{$chr}\n";
+#}
+# DEBUG
 
 $numchunks = $chunk;
 for($chunk=0;$chunk<$numchunks;$chunk++) {
@@ -119,7 +123,9 @@ while($line = <INFILE>) {
     chomp($line);
     @a = split(/\t/,$line);
     $FF = $F1{$CHUNK{$a[1]}};
-    print $FF "$line\n";
+    if($line =~ /\S/) {
+	print $FF "$line\n";
+    }
 }
 for($chunk=0;$chunk<$numchunks;$chunk++) {
     close $F1{$chunk};
@@ -127,6 +133,7 @@ for($chunk=0;$chunk<$numchunks;$chunk++) {
 
 $cnt=0;
 $chunk=0;
+print STDERR "\nsorting reads by chromosome and location...\n";
 while($cnt < @CHR) {
     undef %chrs_current;
     undef %hash;
@@ -169,7 +176,7 @@ while($cnt < @CHR) {
 		    @b = split(/\t/,$line2);
 		    $b[0] =~ /(\d+)/;
 		    $seqnum2 = $1;
-		    if($seqnum1 == $seqnum2) {
+		    if($seqnum1 == $seqnum2 && $b[0] =~ /b/) {
 			if($a[3] eq "+") {
 			    $b[2] =~ /-(\d+)$/;
 			    $end = $1;
@@ -204,17 +211,19 @@ while($cnt < @CHR) {
 	    } else {
 		$tempfilename = $CHR[$cnt] . "_temp.1";
 	    }
-	    print "$tempfilename = $tempfilename\n";
+#	    print "$tempfilename = $tempfilename\n";
 	    open(OUTFILE,">$tempfilename");
 	    foreach $line (sort {$hash{$a}[0]<=>$hash{$b}[0] || ($hash{$a}[0]==$hash{$b}[0] && $hash{$a}[1]<=>$hash{$b}[1])} keys %hash) {
 		chomp($line);
-		print OUTFILE $line;
-		print OUTFILE "\n";
+		if($line =~ /\S/) {
+		    print OUTFILE $line;
+		    print OUTFILE "\n";
+		}
 	    }
 	    close(OUTFILE);
 
 	    # merge with previous chunk (if necessary):
-	    print "chunk_num = $chunk_num\n";
+#	    print "chunk_num = $chunk_num\n";
 	    if($chunk_num > 1) {
 		&merge();
 	    }
@@ -261,7 +270,7 @@ while($cnt < @CHR) {
 	    @b = split(/\t/,$line2);
 	    $b[0] =~ /(\d+)/;
 	    $seqnum2 = $1;
-	    if($seqnum1 == $seqnum2) {
+	    if($seqnum1 == $seqnum2 && $b[0] =~ /b/) {
 		if($a[3] eq "+") {
 		    $b[2] =~ /-(\d+)$/;
 		    $end = $1;
@@ -293,8 +302,10 @@ while($cnt < @CHR) {
     foreach $chr (sort cmpChrs keys %hash) {
 	foreach $line (sort {$hash{$chr}{$a}[0]<=>$hash{$chr}{$b}[0] || ($hash{$chr}{$a}[0]==$hash{$chr}{$b}[0] && $hash{$chr}{$a}[1]<=>$hash{$chr}{$b}[1])} keys %{$hash{$chr}}) {
 	    chomp($line);
-	    print FINALOUT $line;
-	    print FINALOUT "\n";
+	    if($line =~ /\S/) {
+		print FINALOUT $line;
+		print FINALOUT "\n";
+	    }
 	}
 	close(FINALOUT);
 	open(FINALOUT, ">>$outfile"); # did this just to flush the buffer
@@ -308,49 +319,91 @@ for($chunk=0;$chunk<$numchunks;$chunk++) {
     unlink($tempfile);
 }
 $timeend = time();
-$timelapse = $timestart - $timeend;
-print STDERR "\n$ARGV[0] took $timelapse seconds to sort.\n\n";
+$timelapse = $timeend - $timestart;
+if($timelapse < 60) {
+    print STDERR "\nIt took $timelapse seconds to sort '$infile'.\n\n";
+}
+else {
+    $sec = $timelapse % 60;
+    $min = int($timelapse / 60);
+    if($min > 1 && $sec > 1) {
+	print STDERR "\nIt took $min minutes, $sec seconds to sort '$infile'.\n\n";
+    }
+    if($min == 1 && $sec > 1) {
+	print STDERR "\nIt took $min minute, $sec seconds to sort '$infile'.\n\n";
+    }
+    if($min > 1 && $sec == 1) {
+	print STDERR "\nIt took $min minutes, $sec second to sort '$infile'.\n\n";
+    }
+    if($min == 1 && $sec == 1) {
+	print STDERR "\nIt took $min minute, $sec second to sort '$infile'.\n\n";
+    }
+}
 
 sub cmpChrs () {
-    $a2 = lc($b);
-    $b2 = lc($a);
-    if($a2 =~ /chr(\d+)$/ && !($b2 =~ /chr(\d+)$/)) {
+    $a2_c = lc($b);
+    $b2_c = lc($a);
+    if($a2_c =~ /chr(\d+)$/ && !($b2_c =~ /chr(\d+)$/)) {
 	return 1;
     }
-    if($b2 =~ /chr(\d+)$/ && !($a2 =~ /chr(\d+)$/)) {
+    if($b2_c =~ /chr(\d+)$/ && !($a2_c =~ /chr(\d+)$/)) {
 	return -1;
     }
-    if($a2 =~ /chr([a-z])$/ && !($b2 =~ /chr(\d+)$/) && !($b2 =~ /chr[a-z]+$/)) {
+    if($a2_c =~ /chr([a-z])$/ && !($b2_c =~ /chr(\d+)$/) && !($b2_c =~ /chr[a-z]+$/)) {
 	return 1;
     }
-    if($b2 =~ /chr([a-z])$/ && !($a2 =~ /chr(\d+)$/) && !($a2 =~ /chr[a-z]+$/)) {
+    if($b2_c =~ /chr([a-z])$/ && !($a2_c =~ /chr(\d+)$/) && !($a2_c =~ /chr[a-z]+$/)) {
 	return -1;
     }
-    if($a2 =~ /chr[^xy\d]/ && (($b2 =~ /chrx/) || ($b2 =~ /chry/))) {
+    if($a2_c =~ /chr[^xy\d]/ && (($b2_c =~ /chrx/) || ($b2_c =~ /chry/))) {
 	return -1;
     }
-    if($b2 =~ /chr[^xy\d]/ && (($a2 =~ /chrx/) || ($a2 =~ /chry/))) {
+    if($b2_c =~ /chr[^xy\d]/ && (($a2_c =~ /chrx/) || ($a2_c =~ /chry/))) {
 	return 1;
     }
     
-    if($a2 =~ /chr(\d+)/) {
+    if($a2_c =~ /chr(\d+)/) {
 	$numa = $1;
-	if($b2 =~ /chr(\d+)/) {
+	if($b2_c =~ /chr(\d+)/) {
 	    $numb = $1;
 	    if($numa <= $numb) {return 1;} else {return -1;}
 	} else {
 	    return 1;
 	}
     }
-    if($a2 =~ /chr([a-z]+)/) {
+    if($a2_c =~ /chr([a-z]+)/) {
 	$letter_a = $1;
-	if($b2 =~ /chr([a-z]+)/) {
+	if($b2_c =~ /chr([a-z]+)/) {
 	    $letter_b = $1;
 	    if($letter_a le $letter_b) {return 1;} else {return -1;}
 	} else {
 	    return -1;
 	}
     }
+    $flag_c = 0;
+    while($flag_c == 0) {
+	$flag_c = 1;
+	if($a2_c =~ /^([^\d]*)(\d+)/) {
+	    $stem1_c = $1;
+	    $num1_c = $2;
+	    if($b2_c =~ /^([^\d]*)(\d+)/) {
+		$stem2_c = $1;
+		$num2_c = $2;
+		if($stem1_c eq $stem2_c && $num1_c < $num2_c) {
+		    return 1;
+		}
+		if($stem1_c eq $stem2_c && $num1_c > $num2_c) {
+		    return -1;
+		}
+		if($stem1_c eq $stem2_c && $num1_c == $num2_c) {
+		    $a2_c =~ s/^$stem1_c$num1_c//;
+		    $b2_c =~ s/^$stem2_c$num2_c//;
+		    $flag_c = 0;
+		}
+	    }
+	}	
+    }
+
     return 1;
 }
 
@@ -365,7 +418,6 @@ sub merge() {
     getNext1();
     getNext2();
     while($mergeFLAG < 2) {
-#	print "--------\nout1=$out1\nout2=$out2\n";
 	chomp($out1);
 	chomp($out2);
 	if($start1 < $start2) {
@@ -416,7 +468,7 @@ sub getNext1 () {
 	@b = split(/\t/,$line2);
 	$b[0] =~ /(\d+)/;
 	$seqnum2 = $1;
-	if($seqnum1 == $seqnum2) {
+	if($seqnum1 == $seqnum2 && $b[0] =~ /b/) {
 	    if($a[3] eq "+") {
 		$b[2] =~ /-(\d+)$/;
 		$end1 = $1;
@@ -461,7 +513,7 @@ sub getNext2 () {
 	@b = split(/\t/,$line2);
 	$b[0] =~ /(\d+)/;
 	$seqnum2 = $1;
-	if($seqnum1 == $seqnum2) {
+	if($seqnum1 == $seqnum2 && $b[0] =~ /b/) {
 	    if($a[3] eq "+") {
 		$b[2] =~ /-(\d+)$/;
 		$end2 = $1;

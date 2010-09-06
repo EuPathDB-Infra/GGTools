@@ -12,6 +12,8 @@ consistent pairs together.
 ";
 }
 
+print STDERR "Sorting '$ARGV[0]'\n";
+
 $|=1;
 open(INFILE, $ARGV[0]);
 $seqnum_prev = 0;
@@ -70,7 +72,8 @@ while($still_unsorted_flag == 1) {
 $sortedfile = $ARGV[1];
 `mv $temp1sortedfile $sortedfile`;
 unlink("$temp1unsortedfile");
-print "number of merges required to sort '$ARGV[0]': $num_merges\n";
+# print "number of merges required to sort '$ARGV[0]': $num_merges\n";
+print STDERR "Done sorting '$ARGV[0]'\n";
 
 sub merge () {
     open(INFILE1, "$temp1sortedfile");

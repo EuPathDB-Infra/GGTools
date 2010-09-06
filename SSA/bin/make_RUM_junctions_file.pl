@@ -3,6 +3,67 @@
 # Written by Gregory R. Grant
 # University of Pennsylvania, 2010
 
+# Splice Junctions:
+# ----------------
+# The Canonical:
+#  GTAG
+$donor[0] = "GT";
+$donor_rev[0] = "AC";
+$acceptor[0] = "AG";
+$acceptor_rev[0] = "CT";
+# Other Characterized:
+#  GCAG
+$donor[1] = "GC";
+$donor_rev[1] = "GC";
+$acceptor[1] = "AG";
+$acceptor_rev[1] = "CT";
+#  GCTG
+$donor[2] = "GC";
+$donor_rev[2] = "GC";
+$acceptor[2] = "TG";
+$acceptor_rev[2] = "CA";
+#  GCAA
+$donor[3] = "GC";
+$donor_rev[3] = "GC";
+$acceptor[3] = "AA";
+$acceptor_rev[3] = "TT";
+#  GCCG
+$donor[4] = "GC";
+$donor_rev[4] = "GC";
+$acceptor[4] = "CG";
+$acceptor_rev[4] = "CG";
+#  GTTG
+$donor[5] = "GT";
+$donor_rev[5] = "AC";
+$acceptor[5] = "TG";
+$acceptor_rev[5] = "CA";
+#  GTAA
+$donor[6] = "GT";
+$donor_rev[6] = "AC";
+$acceptor[6] = "AA";
+$acceptor_rev[6] = "TT";
+# U12-dependent:
+#  ATAC
+$donor[7] = "AT";
+$donor_rev[7] = "AT";
+$acceptor[7] = "AC";
+$acceptor_rev[7] = "GT";
+#  ATAA
+$donor[8] = "AT";
+$donor_rev[8] = "AT";
+$acceptor[8] = "AA";
+$acceptor_rev[8] = "TT";
+#  ATAG
+$donor[9] = "AT";
+$donor_rev[9] = "AT";
+$acceptor[9] = "AG";
+$acceptor_rev[9] = "CT";
+#  ATAT
+$donor[10] = "AT";
+$donor_rev[10] = "AT";
+$acceptor[10] = "AT";
+$acceptor_rev[10] = "AT";
+
 $|=1;
 
 if(@ARGV < 7) {
@@ -15,15 +76,29 @@ Where:
 
 Options:
    -faok  : the fasta file already has sequence all on one line
+
    -minintron n : the size of the smallest intron allowed 0<n (default = 15 bp)
+
+   -overlap n : there must be at least this many bases spanning either side of a junction
+                to qualify as high quality (default = 8 bp)
+
+   -signal wxyz : Use this alternate splice signal, wx is the donor and yz the acceptor.
+                  Multiple may be specified, separated by commas w/o whitespace.  If not
+                  specified, the standard signals will be used, with the canonical colored
+                  darker in the high quality junctions file.
 
 This script finds the junctions in the RUM_Unique and RUM_NU files
 and reports them to a junctions file that can be uploaded to the UCSC
 browser.
 
+In the high quality junctions, junctions in the annotation file are colored blue,
+others are colored green.  Those with standard splice signals (or those
+specified by -signal) are colored a shade lighter.
+
 ";
 }
 
+$allowable_overlap = 8;
 $rumU = $ARGV[0];
 $rumNU = $ARGV[1];
 $genome_sequence = $ARGV[2];
@@ -33,7 +108,7 @@ $outfile2 = $ARGV[5];
 $outfile3 = $ARGV[6];
 
 open(OUTFILE1, ">$outfile1") or die "\nError: cannot open file '$outfile1' for writing\n\n";
-print OUTFILE1 "intron\tscore\tknown\tcanonical_splice_signals\t\tambiguous\tlong_overlap_unique_reads\tshort_overlap_unique_reads\tlong_overlap_nu_reads\tshort_overlap_nu_reads\n";
+print OUTFILE1 "intron\tscore\tknown\tstandard_splice_signal\tsignal_not_canonical\tambiguous\tlong_overlap_unique_reads\tshort_overlap_unique_reads\tlong_overlap_nu_reads\tshort_overlap_nu_reads\n";
 
 open(OUTFILE2, ">$outfile2") or die "\nError: cannot open file '$outfile2' for writing\n\n";
 print OUTFILE2 "track\tname=rum_junctions_all\tvisibility=3\tdescription=\"RUM junctions (all)\" itemRgb=\"On\"\n";
@@ -66,9 +141,27 @@ if($gene_annot ne "none") {
 
 $faok = "false";
 $minintron = 15;
-
 for($i=7; $i<@ARGV; $i++) {
     $optionrecognized = 0;
+    if($ARGV[$i] eq "-signal") {
+	$i++;
+	@AR = split(/,/,$ARGV[$i]);
+	undef @donor;
+	undef @donor_rev;
+	undef @acceptor;
+	undef @acceptor_rev;
+	for($j=0; $j<@AR; $j++) {
+	    if($AR[$j] =~ /^([ACGT][ACGT])([ACGT][ACGT])$/) {
+		$donor[$j] = $1;
+		$acceptor[$j] = $2;
+		$donor_rev[$j] = reversesignal($donor[$j]);
+		$acceptor_rev[$j] = reversesignal($acceptor[$j]);
+	    } else {
+		die "\nError: the -signal argument is misformatted, check signal $i: '$AR[$j]'\n\n";
+	    }
+	}
+	$optionrecognized = 1;
+    }    
     if($ARGV[$i] eq "-faok") {
 	$faok = "true";
 	$optionrecognized = 1;
@@ -77,8 +170,18 @@ for($i=7; $i<@ARGV; $i++) {
 	$minintron = $ARGV[$i+1];
 	if(!($minintron =~ /^\d+$/)) {
 	    die "\nError: -minintron must be an integer greater than zero, you gave '$minintron'.\n\n";
-	} else {
+	} elsif($minintron==0) {
 	    die "\nError: -minintron must be an integer greater than zero, you gave '$minintron'.\n\n";
+	}
+	$i++;
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-overlap") {
+	$allowable_overlap = $ARGV[$i+1];
+	if(!($allowable_overlap =~ /^\d+$/)) {
+	    die "\nError: -overlap must be an integer greater than zero, you gave '$allowable_overlap'.\n\n";
+	} elsif($allowable_overlap==0) {
+	    die "\nError: -overlap must be an integer greater than zero, you gave '$allowable_overlap'.\n\n";
 	}
 	$i++;
 	$optionrecognized = 1;
@@ -97,6 +200,18 @@ if($faok eq "false") {
 } else {
     open(GENOMESEQ, $genome_sequence) or die "\nError: cannot open file '$genome_sequence' for reading\n\n";
 }
+
+# DEBUG
+# for($i=0; $i<@donor; $i++) {
+#     print "donor[$i] = $donor[$i]\n";
+#     print "donor_rev[$i] = $donor_rev[$i]\n";
+# }
+# for($i=0; $i<@acceptor; $i++) {
+#     print "acceptor[$i] = $acceptor[$i]\n";
+#     print "acceptor_rev[$i] = $acceptor_rev[$i]\n";
+# }
+# exit();
+# DEBUG
 
 $FLAG = 0;
 while($FLAG == 0) {
@@ -124,7 +239,8 @@ while($FLAG == 0) {
 	    $ref_seq = <GENOMESEQ>;
 	    chomp($ref_seq);
 	    $CHR2SEQ{$chr} = $ref_seq;
-	    $totalsize = $totalsize + length($ref_seq);
+	    $CHR2SIZE{$chr} = length($ref_seq);
+	    $totalsize = $totalsize + $CHR2SIZE{$chr};
 	    if($totalsize > 1000000000) {  # don't store more than 1 gb of sequence in memory at once...
 		$sizeflag = 1;
 	    }
@@ -175,21 +291,43 @@ sub printjunctions () {
 	    $LEN1 = $LEN1 + $adjust;
 	    $ilen = $ilen + $adjust;
 	}
+	if($end2 >= $CHR2SIZE{$chr}) {
+	    $adjust = $end2 - $CHR2SIZE{$chr} + 1;
+	    $end2 = $end2 - $adjust;
+	    $LEN2 = $LEN2 - $adjust;
+	}
+	if($goodsplicesignal{$intron} > 0) {
+	    $goodsplicesignal{$intron} = 1;
+	}
+	$known_noncanonical_signal{$intron} = $known_noncanonical_signal{$intron} + 0;
 	if($goodoverlapU{$intron} > 0 && $goodsplicesignal{$intron} == 1) {
-	    $N = $goodoverlapU{$intron} + $goodsplicesignal{$intron};
-	    print OUTFILE1 "$intron\t$N\t$knownintron{$intron}\t$goodsplicesignal{$intron}\t$amb{$intron}\t$goodoverlapU{$intron}\t$badoverlapU{$intron}\t$goodoverlapNU{$intron}\t$badoverlapNU{$intron}\n";
-	    print OUTFILE2 "$chr\t$start2\t$end2\t$N\t50\t+\t$start2\t$end2\t0,0,128\t2\t$LEN1,$LEN2\t0,$ilen\n";
+	    $N = $goodoverlapU{$intron} + $goodsplicesignal{$intron} - 1;
+	    print OUTFILE1 "$intron\t$N\t$knownintron{$intron}\t$goodsplicesignal{$intron}\t$known_noncanonical_signal{$intron}\t$amb{$intron}\t$goodoverlapU{$intron}\t$badoverlapU{$intron}\t$goodoverlapNU{$intron}\t$badoverlapNU{$intron}\n";
+	    print OUTFILE2 "$chr\t$start2\t$end2\t$N\t$N\t+\t$start2\t$end2\t0,0,128\t2\t$LEN1,$LEN2\t0,$ilen\n";
 	    if($knownintron{$intron}==1) {
-		print OUTFILE3 "$chr\t$start2\t$end2\t$N\t50\t+\t$start2\t$end2\t0,0,128\t2\t$LEN1,$LEN2\t0,$ilen\n";
+		if($known_noncanonical_signal{$intron}+0==1) {
+		    print OUTFILE3 "$chr\t$start2\t$end2\t$N\t$N\t+\t$start2\t$end2\t24,116,205\t2\t$LEN1,$LEN2\t0,$ilen\n";
+		} else {
+		    print OUTFILE3 "$chr\t$start2\t$end2\t$N\t$N\t+\t$start2\t$end2\t16,78,139\t2\t$LEN1,$LEN2\t0,$ilen\n";
+		}
 	    } else {
-		print OUTFILE3 "$chr\t$start2\t$end2\t$N\t$M\t50\t+\t$start2\t$end2\t0,205,102\t2\t$LEN1,$LEN2\t0,$ilen\n";
+		if($known_noncanonical_signal{$intron}+0==1) {
+		    print OUTFILE3 "$chr\t$start2\t$end2\t$N\t$N\t+\t$start2\t$end2\t0,255,127\t2\t$LEN1,$LEN2\t0,$ilen\n";
+		} else {
+		    print OUTFILE3 "$chr\t$start2\t$end2\t$N\t$N\t+\t$start2\t$end2\t0,205,102\t2\t$LEN1,$LEN2\t0,$ilen\n";
+		}
 	    }
 	} else {
-	    print OUTFILE1 "$intron\t0\t$knownintron{$intron}\t$goodsplicesignal{$intron}\t$amb{$intron}\t$goodoverlapU{$intron}\t$badoverlapU{$intron}\t$goodoverlapNU{$intron}\t$badoverlapNU{$intron}\n";
-	    print OUTFILE2 "$chr\t$start2\t$end2\t0\t$M\t50\t+\t$start2\t$end2\t255,69,0\t2\t$LEN1,$LEN2\t0,$ilen\n";
+	    print OUTFILE1 "$intron\t0\t$knownintron{$intron}\t$goodsplicesignal{$intron}\t$known_noncanonical_signal{$intron}\t$amb{$intron}\t$goodoverlapU{$intron}\t$badoverlapU{$intron}\t$goodoverlapNU{$intron}\t$badoverlapNU{$intron}\n";
+	    $NN = $goodoverlapU{$intron} + $goodoverlapNU{$intron} + $badoverlapU{$intron} + $badoverlapNU{$intron};
+	    print OUTFILE2 "$chr\t$start2\t$end2\t$NN\t$NN\t+\t$start2\t$end2\t255,69,0\t2\t$LEN1,$LEN2\t0,$ilen\n";
 	}
     }
 }
+
+# chr2    181747872       181748112       0       0       +       181747872       181748112       255,69,0    50,50    0,190
+# 181748087
+
 
 sub getjunctions () {
     open(INFILE, $rumU) or die "\nError: cannot open file '$rumU' for reading\n\n";
@@ -235,10 +373,15 @@ sub getjunctions () {
 		    $intron_lastbase = substr($CHR2SEQ{$chr}, $iend-1, 1);
 		    $splice_signal_upstream = substr($CHR2SEQ{$chr}, $istart-1, 2);
 		    $splice_signal_downstream = substr($CHR2SEQ{$chr}, $iend-2, 2);
-		    if(($splice_signal_upstream eq "GT" && $splice_signal_downstream eq "AG") || ($splice_signal_upstream eq "CT" && $splice_signal_downstream eq "AC")) {
-			$goodsplicesignal{$intron} = 1;
-		    } else {
-			$goodsplicesignal{$intron} = 0;
+		    for($sig=0; $sig<@donor; $sig++) {
+			if(($splice_signal_upstream eq $donor[$sig] && $splice_signal_downstream eq $acceptor[$sig]) || ($splice_signal_upstream eq $acceptor_rev[$sig] && $splice_signal_downstream eq $donor_rev[$sig])) {
+			    $goodsplicesignal{$intron} = $goodsplicesignal{$intron} + 1;
+			    if($sig>0) {
+				$known_noncanonical_signal{$intron} = 1;
+			    }
+			} else {
+			    $goodsplicesignal{$intron} = $goodsplicesignal{$intron} + 0;
+			}
 		    }
 		    if($leftexon_lastbase eq $intron_lastbase) {
 			$istart_alt = $istart-1;
@@ -257,7 +400,7 @@ sub getjunctions () {
 			$allintrons{$altintron} = 1;
 		    }
 		}
-		if($elen1 <= 7 || $elen2 <= 7) {
+		if($elen1 <= $allowable_overlap || $elen2 <= $allowable_overlap) {
 		    $badoverlapU{$intron}++;
 		    if($altintron =~ /\S/) {
 			$badoverlapU{$altintron}++;			    
@@ -316,10 +459,13 @@ sub getjunctions () {
 		    $intron_lastbase = substr($CHR2SEQ{$chr}, $iend-1, 1);
 		    $splice_signal_upstream = substr($CHR2SEQ{$chr}, $istart-1, 2);
 		    $splice_signal_downstream = substr($CHR2SEQ{$chr}, $iend-2, 2);
-		    if(($splice_signal_upstream eq "GT" && $splice_signal_downstream eq "AG") || ($splice_signal_upstream eq "CT" && $splice_signal_downstream eq "AC")) {
-			$goodsplicesignal{$intron} = 1;
-		    } else {
-			$goodsplicesignal{$intron} = 0;
+		    for($sig=0; $sig<@donor; $sig++) {
+			if(($splice_signal_upstream eq $donor[$sig] && $splice_signal_downstream eq $acceptor[$sig]) || ($splice_signal_upstream eq $acceptor_rev[$sig] && $splice_signal_downstream eq $donor_rev[$sig])) {
+			    $goodsplicesignal{$intron} = $goodsplicesignal{$intron} + 1;
+			    $known_noncanonical_signal{$intron} = 1;
+			} else {
+			    $goodsplicesignal{$intron} = $goodsplicesignal{$intron} + 0;
+			}
 		    }
 		    if($leftexon_lastbase eq $intron_lastbase) {
 			$istart_alt = $istart-1;
@@ -340,7 +486,7 @@ sub getjunctions () {
 		}
 #		    print "elen1 = $elen1\n";
 #		    print "elen2 = $elen2\n";
-		if($elen1 <=7 || $elen2 <= 7) {
+		if($elen1 <=$allowable_overlap || $elen2 <= $allowable_overlap) {
 		    $badoverlapNU{$intron}++;
 		    if($altintron =~ /\S/) {
 			$badoverlapNU{$altintron}++;			    
@@ -356,4 +502,27 @@ sub getjunctions () {
     }
     close(INFILE);
     print STDERR "finished NU\n";
+}
+
+sub reversesignal () {
+    ($IT) = @_;
+    $IT =~ /(.)(.)/;
+    $base_r[0] = $1;
+    $base_r[1] = $2;
+    $return_string = "";
+    for($rr=0; $rr<2; $rr++) {
+	if($base_r[$rr] eq "A") {
+	    $return_string = "T" . $return_string;
+	}
+	if($base_r[$rr] eq "T") {
+	    $return_string = "A" . $return_string;
+	}
+	if($base_r[$rr] eq "C") {
+	    $return_string = "G" . $return_string;
+	}
+	if($base_r[$rr] eq "G") {
+	    $return_string = "C" . $return_string;
+	}
+    }
+    return $return_string;
 }

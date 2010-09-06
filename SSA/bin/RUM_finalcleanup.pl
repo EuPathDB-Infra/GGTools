@@ -70,9 +70,9 @@ open(OUTFILE, ">$ARGV[2]");
 close(OUTFILE);
 open(OUTFILE, ">$ARGV[3]");
 close(OUTFILE);
-open(SAMHEADER, ">$ARGV[5]");
 
 $FLAG = 0;
+
 while($FLAG == 0) {
     undef %CHR2SEQ;
     $sizeflag = 0;
@@ -90,7 +90,7 @@ while($FLAG == 0) {
 	    $ref_seq = <GENOMESEQ>;
 	    chomp($ref_seq);
 	    $chrsize = length($ref_seq);
-	    print SAMHEADER "\@SQ\tSN:$chr\tLN:$chrsize\n";
+	    $samheader{$chr} = "\@SQ\tSN:$chr\tLN:$chrsize\n";
 	    $CHR2SEQ{$chr} = $ref_seq;
 	    $totalsize = $totalsize + length($ref_seq);
 	    if($totalsize > 1000000000) {  # don't store more than 1 gb of sequence in memory at once...
@@ -102,7 +102,80 @@ while($FLAG == 0) {
     &clean($ARGV[1], $ARGV[3]);
 }
 close(GENOMESEQ);
+
+open(SAMHEADER, ">$ARGV[5]");
+foreach $chr (sort cmpChrs keys %samheader) {
+    $outstr = $samheader{$chr};
+    print SAMHEADER $outstr;
+}
 close(SAMHEADER);
+
+sub cmpChrs () {
+    $a2_c = lc($b);
+    $b2_c = lc($a);
+    if($a2_c =~ /chr(\d+)$/ && !($b2_c =~ /chr(\d+)$/)) {
+	return 1;
+    }
+    if($b2_c =~ /chr(\d+)$/ && !($a2_c =~ /chr(\d+)$/)) {
+	return -1;
+    }
+    if($a2_c =~ /chr([a-z])$/ && !($b2_c =~ /chr(\d+)$/) && !($b2_c =~ /chr[a-z]+$/)) {
+	return 1;
+    }
+    if($b2_c =~ /chr([a-z])$/ && !($a2_c =~ /chr(\d+)$/) && !($a2_c =~ /chr[a-z]+$/)) {
+	return -1;
+    }
+    if($a2_c =~ /chr[^xy\d]/ && (($b2_c =~ /chrx/) || ($b2_c =~ /chry/))) {
+	return -1;
+    }
+    if($b2_c =~ /chr[^xy\d]/ && (($a2_c =~ /chrx/) || ($a2_c =~ /chry/))) {
+	return 1;
+    }
+    
+    if($a2_c =~ /chr(\d+)/) {
+	$numa = $1;
+	if($b2_c =~ /chr(\d+)/) {
+	    $numb = $1;
+	    if($numa <= $numb) {return 1;} else {return -1;}
+	} else {
+	    return 1;
+	}
+    }
+    if($a2_c =~ /chr([a-z]+)/) {
+	$letter_a = $1;
+	if($b2_c =~ /chr([a-z]+)/) {
+	    $letter_b = $1;
+	    if($letter_a le $letter_b) {return 1;} else {return -1;}
+	} else {
+	    return -1;
+	}
+    }
+    $flag_c = 0;
+    while($flag_c == 0) {
+	$flag_c = 1;
+	if($a2_c =~ /^([^\d]*)(\d+)/) {
+	    $stem1_c = $1;
+	    $num1_c = $2;
+	    if($b2_c =~ /^([^\d]*)(\d+)/) {
+		$stem2_c = $1;
+		$num2_c = $2;
+		if($stem1_c eq $stem2_c && $num1_c < $num2_c) {
+		    return 1;
+		}
+		if($stem1_c eq $stem2_c && $num1_c > $num2_c) {
+		    return -1;
+		}
+		if($stem1_c eq $stem2_c && $num1_c == $num2_c) {
+		    $a2_c =~ s/^$stem1_c$num1_c//;
+		    $b2_c =~ s/^$stem2_c$num2_c//;
+		    $flag_c = 0;
+		}
+	    }
+	}	
+    }
+
+    return 1;
+}
 
 sub clean () {
     ($infilename, $outfilename) = @_;

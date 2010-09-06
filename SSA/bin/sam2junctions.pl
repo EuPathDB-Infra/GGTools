@@ -1,3 +1,9 @@
+if(@ARGV<1) {
+    die "
+Usage: sam2junctions.pl <sam file>
+
+";
+}
 
 open(INFILE, $ARGV[0]) or die "\nError: Cannot open '$ARGV[0]' for reading\n\n";
 $line = <INFILE>;

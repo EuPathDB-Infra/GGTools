@@ -1,3 +1,7 @@
+
+# Written by Gregory R Grant
+# University of Pennsylvania, 2010
+
 $date = `date`;
 
 if(@ARGV == 1 && @ARGV[0] eq "config") {
@@ -96,6 +100,10 @@ Options: -single    : Data is single-end (default is paired-end).
          -junctions : use this if using the -dna flag but you still want junction
                       calls.
 
+         -ram n : specify the max number of Gb of ram you want to dedicate to each
+                  chunk, if less than eight.  If you have at least 8 per chunk then
+                  don't worry about this.
+
          -minidentity x : run blat with minIdentity=x (default x=93)
 
          -countmismatches : report in the last column the number of mismatches,
@@ -103,6 +111,10 @@ Options: -single    : Data is single-end (default is paired-end).
 
          -variable_read_lengths : set this if your reads are not all of the 
                                   same length
+
+         -altgenes x : x is a file with gene models to use for calling junctions
+                       novel.  If not specified will use the gene models file
+                       specified in the config file. 
 
          -qsub      : Use qsub to fire the job off to multiple nodes.  This
                       means you're on a cluster that understands qsub.  If not
@@ -139,6 +151,7 @@ Usage (again): RUM_runner.pl <configfile> <reads file(s)> <output dir> <num chun
 ";
 }
 
+
 $configfile = $ARGV[0];
 $readsfile = $ARGV[1];
 $output_dir = $ARGV[2];
@@ -151,7 +164,7 @@ if($name =~ /^-/) {
 
 $name_o = $ARGV[4];
 $name =~ s/\s+/_/g;
-$name =~ s/[^a-zA-Z0-9_]//g;
+$name =~ s/[^a-zA-Z0-9_-]//g;
 
 if($name ne $name_o) {
     print STDERR "\nWarning: name changed from '$name_o' to '$name'.\n\n";
@@ -171,12 +184,22 @@ $countmismatches = "false";
 $num_insertions_allowed = 1;
 $junctions = "false";
 $quatify = "false";
+$ram = 8;
+$user_ram = "false";
 if(@ARGV > 5) {
     for($i=5; $i<@ARGV; $i++) {
 	$optionrecognized = 0;
         if($ARGV[$i] eq "-max_insertions_per_read") {
 	    $i++;
 	    $num_insertions_allowed = $ARGV[$i];
+            if($ARGV[$i] =~ /^\d+$/) {
+	        $optionrecognized = 1;
+	    }
+        }
+        if($ARGV[$i] eq "-ram") {
+	    $i++;
+	    $ram = $ARGV[$i];
+            $user_ram = "true";
             if($ARGV[$i] =~ /^\d+$/) {
 	        $optionrecognized = 1;
 	    }
@@ -227,6 +250,14 @@ if(@ARGV > 5) {
 	}
 	if($ARGV[$i] eq "-qsub") {
 	    $qsub = "true";
+	    $optionrecognized = 1;
+	}
+	if($ARGV[$i] eq "-altgenes") {
+	    $altgenes = "true";
+            $i++;
+            $altgene_file = $ARGV[$i];
+            open(TESTIN, $altgene_file) or die "\nError: cannot open '$altgene_file' for reading.\n\n";
+            close(TESTIN);
 	    $optionrecognized = 1;
 	}
 	if($ARGV[$i] eq "-minidentity") {
@@ -319,6 +350,79 @@ print STDERR "Please wait while I check that everything is in order.\n\n";
 sleep(2);
 print STDERR "This could take a few minutes.\n\n";
 sleep(2);
+print STDERR "I'm going to try to figure out how much RAM you have.\nIf you see some error messages here, don't worry, these are harmless.\n\n";
+sleep(2);
+# figure out how much RAM is available:
+if($user_ram eq "false") {
+     $did_not_figure_out_ram = "false";
+     $ramcheck = `free -g`;  # this should work on linux
+     $ramcheck =~ /Mem:\s+(\d+)/s;
+     $totalram = $1;
+     if(!($totalram =~ /\d+/)) { # so above still didn't work, trying even harder
+         $x = `grep memory /var/run/dmesg.boot`; # this should work on freeBSD
+         $x =~ /avail memory = (\d+)/;
+         $totalram = int($1 / 1000000000);
+         if($totalram == 0) {
+     	$totalram = "";
+         }
+     }
+     if(!($totalram =~ /\d+/)) { # so above didn't work, trying harder
+         $x = `top -l 1 | grep free`;  # this should work on a mac
+         $x =~ /(\d+)(.)\s+used, (\d+)(.) free/;
+         $used = $1;
+         $type1 = $2;
+         $free = $3;
+         $type2 = $4;
+         if($type1 eq "K" || $type1 eq "k") {
+     	$used = int($used / 1000000);
+         }
+         if($type2 eq "K" || $type2 eq "k") {
+     	$free = int($free / 1000000);
+         }
+         if($type1 eq "M" || $type1 eq "m") {
+     	$used = int($used / 1000);
+         }
+         if($type2 eq "M" || $type2 eq "m") {
+     	$free = int($free / 1000);
+         }
+         $totalram = $used + $free;
+         if($totalram == 0) {
+     	$totalram = "";
+         }
+     }
+     if(!($totalram =~ /\d+/)) { # so above didn't work, warning user
+         $did_not_figure_out_ram = "true";
+         print "\nWarning: I could not determine how much RAM you have.  If you have less\nthan eight gigs per chunk and a large genome, or a lot of reads, then you shoud specify that\nusing the -ram option, or this might not work.\nFor a genome like human you'll need at least 5 or 6 Gb per chunk.\n\n";
+         $RAMperchunk = 6;
+     } else {
+         $RAMperchunk = int($totalram / $numchunks);
+         if($RAMperchunk == 1) {
+             print "\nWarning: you have one gig of RAM per chunk.  If you\nhave a large genome or a lot of reads then this might not work.\nFor a genome like human you'll need at least 5 or 6 Gb per chunk.\n\n";
+         }elsif($RAMperchunk == 0) {
+             print "\nWarning: you have less than one gig of RAM per chunk.  If you\nhave a large genome or a lot of reads then this might not work.\nFor a genome like human you'll need at least 5 or 6 Gb per chunk.\n\n";
+            $RAMperchunk = 1;
+         }elsif($RAMperchunk < 7 && $RAMperchunk > 1) {
+             print "\nWarning: you have only $RAMperchunk gigs of RAM per chunk.  If you\nhave a large genome or a lot of reads then this might not work.\nFor a genome like human you'll need at least 5 or 6 Gb per chunk.\n\n";
+         }
+    }
+    $ram = $RAMperchunk;
+}
+if($did_not_figure_out_ram eq "false") {
+    if($RAMperchunk >= 7) {
+        print STDERR "It seems like you have $totalram Gb of RAM on your machine.\n";
+        print STDERR "That's a generous amount, so unless you have too much other\nstuff running, RAM should not be a problem.\n";
+    } else {
+        print STDERR "It seems like you have $totalram Gb of RAM on your machine.\n";
+    }
+    sleep(3);
+    if($RAMperchunk >= 6) {
+         print STDERR "\nI'm going to try to use about $ram Gb of RAM per chunk.  Seems like that should work.\nIf that fails, try using the -ram option to lower it.  For a genome like human, you're\ngoing to need at least 5 or 6 Gb per chunk.\n\n";
+    } else {
+         print STDERR "\nI'm going to try to use about $ram Gb of RAM per chunk.\nIf that fails, try using the -ram option to lower it.  For a genome like human, you're\ngoing to need at least 5 or 6 Gb per chunk.\n\n";
+    }
+} else {
+    print STDERR "\nI'm going to try to use about $ram Gb of RAM per chunk.  I couldn't figure out much you have so that's a (hopeful) guess.\nIf this fails, try using the -ram option to lower it.  For a genome like human, you're\ngoing to need at least 5 or 6 Gb per chunk.\n\n";
+}
 
 $check = `ps x | grep RUM_runner.pl`;
 @a = split(/\n/,$check);
@@ -374,7 +478,7 @@ if(!($readsfile =~ /,,,/) && !(-e $readsfile)) {
     die "\nError: The reads file '$readsfile' does not seem to exist\n\n";
 }
 $quals = "false";
-if(($readsfile =~ /,,,/) && ($paired_end eq "true")) {
+if(($readsfile =~ /,,,/) && ($paired_end eq "true") && ($postprocess eq "false")) {
     @a = split(/,,,/, $readsfile);
     if(@a > 2) {
 	die "\nError: You've given more than two files separated by three commas, should be at most two files.\n\n";
@@ -398,6 +502,14 @@ if(($readsfile =~ /,,,/) && ($paired_end eq "true")) {
     }
     $readsfile = "$output_dir/reads.fa";
     $qualsfile = "$output_dir/quals.fa";
+}
+if($postprocess eq "true") {
+    $readsfile = "$output_dir/reads.fa";
+    $qualsfile = "$output_dir/quals.fa";
+    $X = `head -2 $output_dir/quals.fa | tail -1`;
+    if($X =~ /\S/ && !($X =~ /Sorry, can't figure these files out/)) {
+	$quals = "true"
+    }
 }
 
 open(LOGFILE, ">$output_dir/rum.log");
@@ -439,24 +551,40 @@ $num1 = $1;
 $type1 = $2;
 $num2 = $3;
 $type2 = $4;
-if($paired_end eq 'false') {
-    if($type1 ne "a") {
-	print STDERR "Reformatting reads file...\n";
-	`perl scripts/parse2fasta.pl $readsfile > $output_dir/reads.fa`;
-	`perl scripts/fastq2qualities.pl $readsfile > $output_dir/quals.fa`;
-	$X = `head -2 $output_dir/quals.fa | tail -1`;
-	if(!($X =~ /Sorry, can't figure/)) {
-	    $quals = "true"
-	}
-	$readsfile = "$output_dir/reads.fa";
-	$qualsfile = "$output_dir/quals.fa";
-	$head = `head -4 $readsfile`;
-	$head =~ /seq.(\d+)(.).*seq.(\d+)(.)/s;
-	$num1 = $1;
-	$type1 = $2;
-	$num2 = $3;
-	$type2 = $4;
+if($postprocess eq "false") {
+    if($paired_end eq 'false') {
+        if($type1 ne "a") {
+	   print STDERR "Reformatting reads file...\n";
+	   `perl scripts/parse2fasta.pl $readsfile > $output_dir/reads.fa`;
+	   `perl scripts/fastq2qualities.pl $readsfile > $output_dir/quals.fa`;
+	   $X = `head -2 $output_dir/quals.fa | tail -1`;
+           if($X =~ /\S/ && !($X =~ /Sorry, can't figure these files out/)) {
+	       $quals = "true"
+	   }
+	   $readsfile = "$output_dir/reads.fa";
+ 	   $qualsfile = "$output_dir/quals.fa";
+	   $head = `head -4 $readsfile`;
+	   $head =~ /seq.(\d+)(.).*seq.(\d+)(.)/s;
+	   $num1 = $1;
+	   $type1 = $2;
+	   $num2 = $3;
+	   $type2 = $4;
+        }
     }
+}
+if($postprocess eq "true") {
+    $readsfile = "$output_dir/reads.fa";
+    $qualsfile = "$output_dir/quals.fa";
+    $X = `head -2 $output_dir/quals.fa | tail -1`;
+    if($X =~ /\S/ && !($X =~ /Sorry, can't figure these files out/)) {
+	$quals = "true"
+    }
+    $head = `head -4 $readsfile`;
+    $head =~ /seq.(\d+)(.).*seq.(\d+)(.)/s;
+    $num1 = $1;
+    $type1 = $2;
+    $num2 = $3;
+    $type2 = $4;
 }
 
 if($type1 ne "a") {
@@ -705,28 +833,33 @@ for($i=1; $i<=$numchunks; $i++) {
     $x = `cat $output_dir/RUM.sam.$i >> $output_dir/RUM.sam`;
 }
 print LOGFILE "finished creating RUM_Unique/RUM_NU/RUM.sam: $date\n";
-print LOGFILE "starting M2C: $date\n";
+print LOGFILE "starting the post processing: $date\n";
 $PPlog = "postprocessing_$name" . ".log";
 $shellscript = "#!/bin/sh\n";
 $shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl $output_dir/RUM_Unique $output_dir/RUM_NU > $output_dir/mapping_stats.txt\n";
-$shellscript = $shellscript . "echo making bed > $output_dir/$PPlog\n";
+$shellscript = $shellscript . "echo sorting RUM_Unique > $output_dir/$PPlog\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
-$shellscript = $shellscript . "perl $scripts_dir/make_bed.pl $output_dir/RUM_Unique $output_dir/RUM_Unique.bed -zbho\n";
-$shellscript = $shellscript . "echo starting M2C >> $output_dir/$PPlog\n";
+$shellscript = $shellscript . "perl $scripts_dir/sort_RUM_by_location.pl $output_dir/RUM_Unique $output_dir/RUM_Unique.sorted -ram $ram >> $output_dir/mapping_stats.txt\n";
+$shellscript = $shellscript . "echo sorting RUM_NU > $output_dir/$PPlog\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
-$covfilename = $name . ".cov";
-$logfilename = $name . ".log";
-$shellscript = $shellscript . "java -Xmx2000m M2C $output_dir/RUM_Unique.bed $output_dir/RUM_$covfilename $output_dir/RUM_$logfilename -ucsc -name \"$name\" -start_coordinate_infile 0 -openinterval_infile -chunks 4\n";
+$shellscript = $shellscript . "perl $scripts_dir/sort_RUM_by_location.pl $output_dir/RUM_NU $output_dir/RUM_NU.sorted -ram $ram >> $output_dir/mapping_stats.txt\n";
+$shellscript = $shellscript . "echo making coverage plots >> $output_dir/$PPlog\n";
+$shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
+$shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_Unique.sorted $output_dir/RUM_Unique.cov -name \"$name Unique Mappers\"\n";
+$shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_NU.sorted $output_dir/RUM_NU.cov -name \"$name Non-Unique Mappers\"\n";
 if($quantify eq "true") {
    $shellscript = $shellscript . "echo starting to quantify features >> $output_dir/$PPlog\n";
    $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
-   $shellscript = $shellscript . "perl $scripts_dir/quantify_one_sample.pl $output_dir/RUM_$name";
-   $shellscript = $shellscript . ".cov $gene_annot_file -zero -open > $output_dir/feature_quantifications_$name\n";
+   $shellscript = $shellscript . "perl $scripts_dir/quantify_one_sample.pl $output_dir/RUM_Unique.cov $gene_annot_file -zero -open > $output_dir/feature_quantifications_$name\n";
 }
 if($junctions eq "true") {
    $shellscript = $shellscript . "echo starting to compute junctions >> $output_dir/$PPlog\n";
    $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
-   $shellscript = $shellscript . "perl $scripts_dir/make_RUM_junctions_file.pl $output_dir/RUM_Unique $output_dir/RUM_NU $genomefa $gene_annot_file $output_dir/junctions_all.rum $output_dir/junctions_all.bed $output_dir/junctions_high-quality.bed -faok\n";
+   if($altgenes eq "true") {
+       $shellscript = $shellscript . "perl $scripts_dir/make_RUM_junctions_file.pl $output_dir/RUM_Unique $output_dir/RUM_NU $genomefa $altgene_file $output_dir/junctions_all.rum $output_dir/junctions_all.bed $output_dir/junctions_high-quality.bed -faok\n";
+   } else {
+       $shellscript = $shellscript . "perl $scripts_dir/make_RUM_junctions_file.pl $output_dir/RUM_Unique $output_dir/RUM_NU $genomefa $gene_annot_file $output_dir/junctions_all.rum $output_dir/junctions_all.bed $output_dir/junctions_high-quality.bed -faok\n";
+   }
 }
 $shellscript = $shellscript . "echo finished >> $output_dir/$PPlog\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";

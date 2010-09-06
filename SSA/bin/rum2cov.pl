@@ -1,10 +1,11 @@
 $|=1;
 $timestart = time();
-if(@ARGV < 1) {
+if(@ARGV < 2) {
     die "
-Usage: rum2cov.pl <rum file> [option]
+Usage: rum2cov.pl <rum file> <coverage file> [option]
 
 Where <rum file> is the *sorted* RUM_Unique or RUM_NU file.
+      <coverage file> is the name of the output file, should end in .cov
 
 Option:
        -name x   : the name of the track
@@ -16,6 +17,7 @@ and *do not* use the -separate option.
 }
 
 $infile = $ARGV[0];
+$outfile = $ARGV[1];
 $name = $infile . " Coverage";
 for($i=2; $i<@ARGV; $i++) {
     $optionrecognized = 0;
@@ -29,9 +31,11 @@ for($i=2; $i<@ARGV; $i++) {
     }
 }
 
-print "track type=bedGraph name=\"$name\" description=\"$name\" visibility=full color=255,0,0 priority=10\n";
+print OUTFILE "track type=bedGraph name=\"$name\" description=\"$name\" visibility=full color=255,0,0 priority=10\n";
 
-open(INFILE, $infile);
+open(INFILE, $infile) or die "ERROR: could not open the file '$infile' for reading";
+open(OUTFILE, ">$outfile") or die "ERROR: could not open the file '$outfile' for writing";
+
 $flag = 0;
 &getStartEndandSpans_of_nextline();
 $current_chr = $chr;
@@ -57,13 +61,13 @@ while($flag < 2) {
 		if($position_coverage{$j}+0 != $current_cov) { # span ends here
 		    if($current_cov > 0) {
 			$k=$j-1;
-			print "\t$k\t$current_cov\n";  # don't adjust the right point because half-open
+			print OUTFILE "\t$k\t$current_cov\n";  # don't adjust the right point because half-open
 			$span_ended = 1;
 		    }
 		    $current_cov = $position_coverage{$j}+0;
 		    if($current_cov > 0) { # start a new span
 			$k = $j-1; # so as to be half zero based
-			print "$chr\t$k";
+			print OUTFILE "$chr\t$k";
 			$span_ended = 0;
 		    }
 		}
@@ -77,19 +81,19 @@ while($flag < 2) {
 	    if($position_coverage{$j}+0 != $current_cov) { # span ends here
 		if($current_cov > 0) {
 		    $k=$j-1;
-		    print "\t$k\t$current_cov\n";  # don't adjust the right point because half-open
+		    print OUTFILE "\t$k\t$current_cov\n";  # don't adjust the right point because half-open
 		    $span_ended = 1;
 		}
 		$current_cov = $position_coverage{$j}+0;
 		if($current_cov > 0) { # start a new span
 		    $k = $j-1; # so as to be half zero based
-		    print "$chr_prev\t$k";
+		    print OUTFILE "$chr_prev\t$k";
 		    $span_ended = 0;
 		}
 	    }
 	}
 	if($span_ended == 0) {
-	    print "\t$end_max\t$current_cov\n";  # don't adjust the right point because half-open
+	    print OUTFILE "\t$end_max\t$current_cov\n";  # don't adjust the right point because half-open
 	}
 	undef %position_coverage;
 	$current_chr = $chr;
@@ -105,22 +109,22 @@ if($timelapse < 0) {
     $timelapse = 0;
 }
 if($timelapse < 60) {
-    print STDERR "\nIt took $timelapse seconds to create the coverage file.\n\n";
+    print STDERR "\nIt took $timelapse seconds to create the coverage file $outfile.\n\n";
 }
 else {
     $sec = $timelapse % 60;
     $min = int($timelapse / 60);
     if($min > 1 && $sec > 1) {
-	print STDERR "\nIt took $min minutes, $sec seconds to create the coverage file.\n\n";
+	print STDERR "\nIt took $min minutes, $sec seconds to create the coverage file $outfile.\n\n";
     }
     if($min == 1 && $sec > 1) {
-	print STDERR "\nIt took $min minute, $sec seconds to create the coverage file.\n\n";
+	print STDERR "\nIt took $min minute, $sec seconds to create the coverage file $outfile.\n\n";
     }
     if($min > 1 && $sec == 1) {
-	print STDERR "\nIt took $min minutes, $sec second to create the coverage file.\n\n";
+	print STDERR "\nIt took $min minutes, $sec second to create the coverage file $outfile.\n\n";
     }
     if($min == 1 && $sec == 1) {
-	print STDERR "\nIt took $min minute, $sec second to create the coverage file.\n\n";
+	print STDERR "\nIt took $min minute, $sec second to create the coverage file $outfile.\n\n";
     }
 }
 
@@ -134,8 +138,18 @@ sub getStartEndandSpans_of_nextline () {
     $start_prev = $start;
     if($line eq '') {
 	$flag = 1;
-	$chr = "";
-	return;
+	for($tryagain=0; $tryagain<10; $tryagain++) {
+	    $line = <INFILE>;
+	    chomp($line);
+	    if($line ne '') {
+		$tryagain = 10;
+		$flag = 0;
+	    }
+	}
+	if($flag == 1) {
+	    $chr = "";
+	    return;
+	}
     }
     @a_g = split(/\t/,$line);
     $chr = $a_g[1];
@@ -150,7 +164,7 @@ sub getStartEndandSpans_of_nextline () {
 	@b_g = split(/\t/,$line2);
 	$b_g[0] =~ /(\d+)/;
 	$seqnum2 = $1;
-	if($seqnum1 == $seqnum2) {
+	if($seqnum1 == $seqnum2 && $b_g[0] =~ /b/) {
 	    if($a_g[3] eq "+") {
 		$b_g[2] =~ /-(\d+)$/;
 		$end = $1;
