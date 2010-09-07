@@ -62,76 +62,118 @@ if(@ARGV < 5) {
      -  The RNA-Seq Unified Mapper (RUM) Usage  -
         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Usage: RUM_runner.pl <configfile> <reads file(s)> <output dir> <num chunks>
+Usage: RUM_runner.pl <config file> <reads file(s)> <output dir> <num chunks>
                      <name> [options]
 
-<reads file(s)> :  For unpaired data, the single file of reads.
-                   For paired data either: 
+<config file>   :  This file tells RUM where to find the various executables
+                   and indexes.  Config files are included in the download for
+                   a given organism, for example rum.config_mm9 for mouse
+                   build mm9, which will work if you leave everything in its
+                   default location.  To modify or make your own config file,
+                   run with the single argument 'config' for more information.
+
+<reads file(s)> :  What to put here depends on whether your data is paired or
+                   unpaired:
+
+                   1) For unpaired data, the single file of reads.
+                      - Don't forget to set the -single option in this case
+                   2) For paired data, either: 
                       - The files of forward and reverse reads, separated
-                        by three commas ',,,'.
+                        by three commas ',,,' (with no spaces).
                       - One file formatted using parse2fasta.pl.
-                   Files can be either fasta or fastq.
 
-<num chunks>    :  The number of pieces to break the job into.  Use one
-                   chunk unless you are on a cluster, or have multiple
-                   processors with lots of RAM.
+                   NOTE ON FILE FORMATS: Files can be either fasta or fastq,
+                   the type is inferred.
 
-<name>          :  A string that will identify this run - use only alphanumeric
-                   and underscores, no whitespace or other characters.
+<output dir>    :  Where to write the temp, interemediate, and results files.
 
-Options: -single    : Data is single-end (default is paired-end).
+<num chunks>    :  The number of pieces to break the job into.  Use one chunk
+                   unless you are on a cluster, or have multiple cores
+                   with lots of RAM.  Have at least one processing core per
+                   chunk.  A genome like human will also need about 5 to 6 Gb
+                   of RAM per chunk.  Even with a small genome, if you have
+                   tens of millions of reads, you will still need a few Gb of
+                   RAM to get through the post-processing.
 
-         -fast      : Run with blat params that run about 3 times faster but
-                      a tad less sensitive
+<name>          :  A string to identify this run - use only alphanumeric,
+                   underscores, and dashes.  No whitespace or other characters.
 
-         -limitNUhard x : Limits the number of ambiguous mappers to a max of x
+Options: There are many options, but RUM is typically run with the defaults.
+         Just don't forget to set -single if you have single-end data.  The
+         option -kill is also quite useful to stop a run, because killing just
+         the main program will not always kill the spawned processes.
 
-         -limitNU   : Limits the number of ambiguous mappers to a max of 100
-                      locations.  If you have short reads and a large genome
-                      then this will probably be necessary (45 bases is short
-                      for mouse, 70 bases is long, between it's hard to say).
+       -single    : Data is single-end (default is paired-end).
 
-         -dna   : Run in dna mode, meaning don't map across splice junctions.
+       -dna       : Run in dna mode, meaning don't map across splice junctions.
 
-         -quantify : use this if using the -dna flag but you still want quantified
-                     features.  If this is set you must have the gene models file
-                     specified in the rum config file.
+       -fast      : Run with blat params that run about 3 times faster but
+                    a tad less sensitive
 
-         -junctions : use this if using the -dna flag but you still want junction
-                      calls.
+       -variable_read_lengths : Set this if your reads are not all of the same
+                                length
 
-         -ram n : specify the max number of Gb of ram you want to dedicate to each
-                  chunk, if less than eight.  If you have at least 8 per chunk then
-                  don't worry about this.
+       -limitNU x : Limits the number of ambiguous mappers in the final output
+                    to a max of x
 
-         -minidentity x : run blat with minIdentity=x (default x=93)
+       -limitBowtieNU : Limits the number of ambiguous mappers in the Bowtie
+                        run to a max of 100.  If you have short reads and a
+                        large genome, or a very repetitive genome, this might
+                        be necessary to keep the bowtie files from getting out
+                        of hand - 10Gb per lane is not abnormal but 100Gb might
+                        be. (note: 45 bases is considered short for mouse, 70
+                        bases considered long, between it's hard to say).
 
-         -countmismatches : report in the last column the number of mismatches,
-                            ignoring insertions
+       -quantify : Use this *if* using the -dna flag and you still want quantified
+                   features.  If this is set you must have the gene models file
+                   specified in the rum config file.  Without the -dna flag
+                   quantified features are generated by default so you don't
+                   need to set this. 
 
-         -variable_read_lengths : set this if your reads are not all of the 
-                                  same length
+       -junctions : Use this *if* using the -dna flag and you still want junction
+                    calls.  If this is set you should have the gene models file
+                    specified in the rum config file (if you have one).  Without
+                    the -dna flag junctions generated by default so you don't
+                    need to set this. 
 
-         -altgenes x : x is a file with gene models to use for calling junctions
-                       novel.  If not specified will use the gene models file
-                       specified in the config file. 
+       -ram n : Specify the max number of Gb of ram you want to dedicate to each
+                chunk, if less than seven.  If you have at least 6 or 7 per chunk
+                then don't worry about this.  The program will try to figure out
+                the amount of available RAM automatically, so this option is
+                mainly just a backup for when RAM is limited but the program is
+                unable to figure that out - in this case a warning message will
+                be generated.
 
-         -qsub      : Use qsub to fire the job off to multiple nodes.  This
-                      means you're on a cluster that understands qsub.  If not
-                      using -qsub, you can still break it into multiple chunks,
-                      it will just fire each chunk off to a separate processor.
-                      Don't use more chunks than you have processors though,
-                      because that will just slow it down.
+       -minidentity x : run blat with minIdentity=x (default x=93).  You
+                        shouldn't need to change this.
 
-         -max_insertions_per_read n : Allow at most n insertions in one read.  
-                      The default is n=1.  Setting n>1 is only allowed for single
-                      end reads.  Don't raise it unless you know what you are
-                      doing, because it can greatly increase the false alignments.
+       -countmismatches : Report in the last column the number of mismatches,
+                          ignoring insertions
 
-         -kill      : To kill a job, run with all the same parameters but add
-                      -kill.  Note: it is not sufficient to just terminate
-                      RUM_runner.pl, that will leave other phantom processes.
-                      Use -kill instead.
+       -altgenes x : x is a file with gene models to use for calling junctions
+                     novel.  If not specified will use the gene models file
+                     specified in the config file. 
+
+       -qsub      : Use qsub to fire the job off to multiple nodes on a cluster.
+                    This means you're on a cluster that understands qsub.  
+
+                      ** Note: without using -qsub, you can still specify more
+                      than one chunk.  It should fire each chunk off to a
+                      separate core.  But don't use more chunks than you have
+                      cores, because that can slow things down considerable.
+
+       -max_insertions_per_read n : Allow at most n insertions in one read.  
+                    The default is n=1.  Setting n>1 is only allowed for single
+                    end reads.  Don't raise it unless you know what you are
+                    doing, because it can greatly increase the false alignments.
+
+       -postprocess : Rerun just the post-processing steps, after the alignment,
+                      if for some reason you need to do this.
+
+       -kill      : To kill a job, run with all the same parameters but add
+                    -kill.  Note: it is not sufficient to just terminate
+                    RUM_runner.pl, that will leave other phantom processes.
+                    Use -kill instead.
 
 Running RUM_runner.pl with the one argument 'config' will explain how to make
 the config file.
@@ -244,7 +286,7 @@ if(@ARGV > 5) {
 	    $dna = "true";
 	    $optionrecognized = 1;
 	}
-	if($ARGV[$i] eq "-limitNU") {
+	if($ARGV[$i] eq "-limitBowtieNU") {
 	    $limitNU = "true";
 	    $optionrecognized = 1;
 	}
@@ -269,12 +311,12 @@ if(@ARGV > 5) {
 	    }
 	    $optionrecognized = 1;
 	}
-	if($ARGV[$i] eq "-limitNUhard") {
+	if($ARGV[$i] eq "-limitNU") {
 	    $NU_limit = $ARGV[$i+1];
 	    $i++;
 	    $limitNUhard = "true";
 	    if(!($NU_limit =~ /^\d+$/ && $NU_limit > 0)) {
-		die "\nERROR: -limitNUhard must be an integer greater than zero.\nYou have given '$NU_limit'.\n\n";
+		die "\nERROR: -limitNU must be an integer greater than zero.\nYou have given '$NU_limit'.\n\n";
 	    }
 	    $optionrecognized = 1;
 	}
@@ -438,6 +480,59 @@ for($i=0; $i<@a; $i++) {
 	}
     }
 }
+if($kill eq "true") {
+    $outdir = $output_dir;
+    $str = `ps x | grep $outdir`;
+    @candidates = split(/\n/,$str);
+    for($i=0; $i<@candidates; $i++) {
+	if($candidates[$i] =~ /^\s*(\d+)\s.*(\s|\/)$outdir\/pipeline.\d+.sh/) {
+	    $pid = $1;
+	    print STDERR "killing $pid\n";
+	    `kill -9 $pid`;
+	}
+    }
+    for($i=0; $i<@candidates; $i++) {
+	if($candidates[$i] =~ /^\s*(\d+)\s.*(\s|\/)$outdir(\s|\/)/) {
+	    if(!($candidates[$i] =~ /pipeline.\d+.sh/)) {
+		$pid = $1;
+		print STDERR "killing $pid\n";
+		`kill -9 $pid`;
+	    }
+	}
+    }
+    exit();
+}
+if($kill eq "false") {
+    sleep(2);
+    print STDERR "Checking for phantom processes from prior runs that might need to be killed.\n\n";
+    $outdir = $output_dir;
+    $str = `ps x | grep $outdir | grep -v RUM_runner.pl`;
+    @candidates = split(/\n/,$str);
+    $cleanedflag = 0;
+    for($i=0; $i<@candidates; $i++) {
+	if($candidates[$i] =~ /^\s*(\d+)\s.*(\s|\/)$outdir\/pipeline.\d+.sh/) {
+	    $pid = $1;
+	    print STDERR "killing $pid\n";
+	    `kill -9 $pid`;
+            $cleanedflag = 1;
+	}
+    }
+    for($i=0; $i<@candidates; $i++) {
+	if($candidates[$i] =~ /^\s*(\d+)\s.*(\s|\/)$outdir(\s|\/)/) {
+	    if(!($candidates[$i] =~ /pipeline.\d+.sh/)) {
+		$pid = $1;
+		print STDERR "killing $pid\n";
+		`kill -9 $pid`;
+                $cleanedflag = 1;
+	    }
+	}
+    }
+}
+if($cleanedflag == 1) {
+    sleep(2);
+    print STDERR "OK there was some cleaning up to do, hopefully that worked.\n\n";
+}
+sleep(2);
 
 for($i=1; $i<=$numchunks; $i++) {
     $logfile = "$output_dir/rum_log.$i";
