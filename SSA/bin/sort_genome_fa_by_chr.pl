@@ -48,23 +48,27 @@ sub cmpChrs () {
 	$b2_roman = $1;
 	$a2_arabic = arabic($a2_roman);
     	$b2_arabic = arabic($b2_roman);
-	if($a2_arabic >= $b2_arabic) {
+	if($a2_arabic > $b2_arabic) {
 	    return -1;
-	} else {
+	} 
+	if($a2_arabic < $b2_arabic) {
 	    return 1;
 	}
-    }
-    if($b2_c =~ /chr([ivx]+)/ && $a2_c =~ /chr([ivx]+)/) {
-	$b2_c =~ /chr([ivx]+)/;
-	$b2_roman = $1;
-	$a2_c =~ /chr([ivx]+)/;
-	$a2_roman = $1;
-	$b2_arabic = arabic($b2_roman);
-    	$a2_arabic = arabic($a2_roman);
-	if($b2_arabic >= $a2_arabic) {
-	    return 1;
-	} else {
-	    return -1;
+	if($a2_arabic == $b2_arabic) {
+	    $tempa = $a2_c;
+	    $tempb = $b2_c;
+	    $tempa =~ s/chr([ivx]+)//;
+	    $tempb =~ s/chr([ivx]+)//;
+	    undef %temphash;
+	    $temphash{$tempa}=1;
+	    $temphash{$tempb}=1;
+	    foreach $tempkey (sort cmpChrs keys %temphash) {
+		if($tempkey eq $tempa) {
+		    return 1;
+		} else {
+		    return -1;
+		}
+	    }
 	}
     }
     if($b2_c =~ /chr([ivx]+)/ && !($a2_c =~ /chr([a-z]+)/) && !($a2_c =~ /chr(\d+)/)) {
@@ -187,7 +191,6 @@ sub cmpChrs () {
             }
         }
     }
-
     if($a2_c le $b2_c) {
 	return 1;
     }
