@@ -96,7 +96,24 @@ sub cmpChrs () {
         $numa = $1;
         if($b2_c =~ /chr(\d+)/) {
             $numb = $1;
-            if($numa <= $numb) {return 1;} else {return -1;}
+            if($numa < $numb) {return 1;}
+	    if($numa > $numb) {return -1;}
+	    if($numa == $numb) {
+		$tempa = $a2_c;
+		$tempb = $b2_c;
+		$tempa =~ s/chr\d+//;
+		$tempb =~ s/chr\d+//;
+		undef %temphash;
+		$temphash{$tempa}=1;
+		$temphash{$tempb}=1;
+		foreach $tempkey (sort cmpChrs keys %temphash) {
+		    if($tempkey eq $tempa) {
+			return 1;
+		    } else {
+			return -1;
+		    }
+		}
+	    }
         } else {
             return 1;
         }
@@ -181,4 +198,3 @@ sub cmpChrs () {
 
     return 1;
 }
-
