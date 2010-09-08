@@ -30,16 +30,16 @@ output format: sequence
 output file: NAME_genome.txt
 file type returned: gzip
 
-where "NAME" should be replaced by something that identifies your name/build, eg mm9
+where "NAME" should be replaced by something that identifies your name/build, eg mm9.
+The scripts below won't work unless you follow this naming convention exactly.
 
 Hit get output, and request all upper case
 
 gunzip the file and run:
 
-> perl modify_fasta_header_for_genome_seq_database.pl NAME_genome.txt > NAME_genome.fa
-> perl modify_fa_to_have_seq_on_one_line.pl NAME_genome.fa > NAME_genome_one-line-seqs.fa
+perl create_genome_indexes.pl NAME_genome.txt
 
-Now need to make files of gene info and sequence:
+Now to make files of gene info and sequence:
  - you can use any of the annotation tracks as long as they have the five fields you are asked to select below:
  - the following illustrates using two tracks "UCSC Known" and "RefSeq".  
 
@@ -73,7 +73,7 @@ ucscknown.txt
 
 Now run:
 
-> perl create_gene_indexes.pl NAME_refseq_ucsc NAME_genome.fa 
+> perl create_gene_indexes.pl NAME_refseq_ucsc NAME_genome_one-line-seqs.fa
   - this is a master script that runs seven other scripts...
   - you will need a fair amount of RAM to do this, 10Gb was sufficient for Human
 
@@ -84,7 +84,7 @@ Now build bowtie indexes:
 
 The files you need to keep are the following 14:
 
-NAME_reefseq_ucsc_gene_info.txt
+NAME_refseq_ucsc_gene_info.txt
 NAME_genome_one-line-seqs.fa
 NAME_genes.4.ebwt
 NAME_genes.3.ebwt
