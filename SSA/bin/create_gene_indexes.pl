@@ -20,8 +20,10 @@ $NAME = $ARGV[0];
 
 $N1 = $NAME . "_gene_info_orig.txt";
 $N2 = $ARGV[1];
-$N3 = $NAME . "_genes.fa";
-$N4 = $NAME . "_gene_info.txt";
+$N3 = $NAME . "_genes_unsorted.fa";
+$N4 = $NAME . "_gene_info_unsorted.txt";
+$N5 = $NAME . "_genes.fa";
+$N6 = $NAME . "_gene_info.txt";
 
 print "perl make_fasta_files_for_master_list_of_genes.pl temp.fa master_list_of_exons.txt $N1 $N4 > $N3\n";
 
@@ -32,3 +34,8 @@ print "perl make_fasta_files_for_master_list_of_genes.pl temp.fa master_list_of_
 `perl get_master_list_of_exons_from_geneinfofile.pl $N1`;
 `perl modify_fa_to_have_seq_on_one_line.pl $N2 > temp.fa`;
 `perl make_fasta_files_for_master_list_of_genes.pl temp.fa master_list_of_exons.txt $N1 $N4 > $N3`;
+`perl sort_gene_info.pl $N4 > $N6`;
+`perl sort_gene_fa_by_chr.pl $N3 > $N5`;
+unlink($N3);
+unlink($N4);
+unlink("temp.fa");
