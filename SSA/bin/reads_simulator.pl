@@ -10,7 +10,8 @@ if(@ARGV < 1) {
     print "and gaps crossed by the simulated reads.\n";
     print "\n   options:\n";
     print "      -readlength n   : Set readlength to n>0 bases (default n = 100).\n";
-    print "      -numgenes n     : Choose n>=1 genes at random from a master pool of gene models (default n = 100000).\n";
+    print "      -numgenes n     : Choose n>=1 genes at random from the master pool of gene models specified by the\n";
+    print "                        config (default or custom) geneinfo file (default n = 100000).\n";
     print "      -error x        : Set the error rate that any given base is sequenced wrong to 0<=x<=1 (default x = 0.005).\n";
     print "      -subfreq x      : Set substitution rate to 0<=x<1 (default x = 0.001).\n";
     print "      -indelfreq x    : Set indel rate to 0<=x<1 (default x = 0.0005).\n";
@@ -44,8 +45,8 @@ if(@ARGV < 1) {
     print "   - make_config_files_for_subset_of_gene_ids.pl\n";
     print "Run it with no parameters for the usage\n";
     print "To use those config files with this program put them in the same directory as the script, or\n";
-    print "in the directory specified by -outdir (not -mastercfgdir which specifies the master config files)\n";
-    print "and use the option -filenamestem\n";
+    print "in the directory specified by -customcfgdir or -outdir (not -mastercfgdir which specifies the\n";
+    print "master config files) and use the option -filenamestem\n";
     print "\n";
     exit(0);
 }
