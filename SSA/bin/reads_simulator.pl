@@ -84,12 +84,12 @@ $customcfgdir = "";
 
 BEGIN {
     eval {
-	require Math::Random2;
+	require Math::Random;
 
 	# If you'd ordinarily "use Module::Name qw(foo bar baz);", pass
 	# the qw(foo bar baz) to import here.
 
-	import Math::Random2 qw(:all);
+	import Math::Random qw(:all);
     };
 
     # If the eval failed, we don't have the module
