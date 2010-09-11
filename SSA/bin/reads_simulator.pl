@@ -82,6 +82,24 @@ $outdir = "./";
 $mastercfgdir = "./";
 $customcfgdir = "";
 
+BEGIN {
+    eval {
+	require Math::Random2;
+
+	# If you'd ordinarily "use Module::Name qw(foo bar baz);", pass
+	# the qw(foo bar baz) to import here.
+
+	import Math::Random2 qw(:all);
+    };
+
+    # If the eval failed, we don't have the module
+    if ($@) {
+	print STDERR "\nOops, you must first install the Math::Random module for this to work...\n\n";
+	exit(0);
+    } else {
+    }
+}
+
 use Math::Random qw(:all);
 $num_reads = $ARGV[0];
 if(!($num_reads =~ /^\d+$/) || ($num_reads <= 0)) {
