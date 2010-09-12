@@ -10,8 +10,7 @@ if(@ARGV < 1) {
     print "and gaps crossed by the simulated reads.\n";
     print "\n   options:\n";
     print "      -readlength n   : Set readlength to n>0 bases (default n = 100).\n";
-    print "      -numgenes n     : Choose n>=1 genes at random from the master pool of gene models specified by the\n";
-    print "                        config (default or custom) geneinfo file (default n = 100000).\n";
+    print "      -numgenes n     : Choose n>=1 genes at random from amaster pool of gene models (default n = 100000).\n                        This only works with the four config files that have no stem (see below for more info).\n";
     print "      -error x        : Set the error rate that any given base is sequenced wrong to 0<=x<=1 (default x = 0.005).\n";
     print "      -subfreq x      : Set substitution rate to 0<=x<1 (default x = 0.001).\n";
     print "      -indelfreq x    : Set indel rate to 0<=x<1 (default x = 0.0005).\n";
@@ -21,12 +20,12 @@ if(@ARGV < 1) {
     print "      -nalt n         : Set the number of novel splice forms per gene to n>1 (default n = 2).\n";
     print "      -palt x         : Set the percentage of signal coming from novel splice\n                        forms to 0<=x<=1 (default x = 0.2).\n";
     print "      -sn             : Add sequence number to the first column of the bed file.\n";
-    print "      -filenamestem x : The stem x will be added to the four default filenames for the four\n                        required files.  Use this if you have made your own config files (see\n                        below about config files and custom config files).\n";
+    print "      -configstem x   : The stem x will be added to the four default filenames for the four\n                        required files.  Use this if you have made your own config files (see\n                        below about config files and custom config files).\n";
     print "                        E.g. \"simulator_config_geneinfo\" becomes \"simulator_config_geneinfo_x\".\n";
     print "      -cntstart n     : Start the read counter at n (default n = 1).\n";
     print "      -outdir x       : x is a path to a directory to write to.  Default is the current directory.\n";
     print "      -mastercfgdir x : x is a path to a directory where the master config files are.  Default is the\n                        current directory.\n";
-    print "      -customcfgdir x : If you are using -filenamestem option, then x is a path to a directory where the\n";
+    print "      -customcfgdir x : If you are using -configstem option, then x is a path to a directory where the\n";
     print "                        custom config files are.  Default is the directory specified by -outdir, which.\n";
     print "                        itself defaults to the current directory.\n";
     print "      -usesubs x      : x is a file of substitutions in the format output by this program in case you want\n";
@@ -34,7 +33,7 @@ if(@ARGV < 1) {
     print "      -useindels x    : x is a file of indels in the format output by this program in case you want\n";
     print "                        to resuse them for another run with the same gene models.\n";
     print "      -usealts x      : x is a file of transcripts in the format output by this program in case you want\n";
-    print "                        to resuse them for another run with the same gene models.\n";
+    print "                        to resuse them for another run with the same gene models.  This must be used in\n                        conjunction with -configstem for the same four files used the first time (those\n                        will be the files ending in 'temp' if you used the master pool the first time).\n";
     print "\n";
     print "This program depends on four files:\n";
     print "  1) simulator_config_geneinfo\n";
@@ -45,8 +44,8 @@ if(@ARGV < 1) {
     print "   - make_config_files_for_subset_of_gene_ids.pl\n";
     print "Run it with no parameters for the usage\n";
     print "To use those config files with this program put them in the same directory as the script, or\n";
-    print "in the directory specified by -customcfgdir or -outdir (not -mastercfgdir which specifies the\n";
-    print "master config files) and use the option -filenamestem\n";
+    print "in the directory specified by -outdir (not -mastercfgdir which specifies the master config files)\n";
+    print "and use the option -configstem\n";
     print "\n";
     exit(0);
 }
@@ -82,24 +81,6 @@ $outdir = "./";
 $mastercfgdir = "./";
 $customcfgdir = "";
 
-BEGIN {
-    eval {
-	require Math::Random;
-
-	# If you'd ordinarily "use Module::Name qw(foo bar baz);", pass
-	# the qw(foo bar baz) to import here.
-
-	import Math::Random qw(:all);
-    };
-
-    # If the eval failed, we don't have the module
-    if ($@) {
-	print STDERR "\nOops, you must first install the Math::Random module for this to work...\n\n";
-	exit(0);
-    } else {
-    }
-}
-
 use Math::Random qw(:all);
 $num_reads = $ARGV[0];
 if(!($num_reads =~ /^\d+$/) || ($num_reads <= 0)) {
@@ -122,16 +103,16 @@ for($i=2; $i<@ARGV; $i++) {
 	$seq_num_in_bedfile = "true";
 	$option_recognized = 1;
     }
-    if($ARGV[$i] eq "-filenamestem") {
+    if($ARGV[$i] eq "-configstem") {
 	$i++;
 	$stem = $ARGV[$i];
 	$option_recognized = 1;
 	if($stem =~ /^(-|_)/) {
-	    print STDERR "\nError: -filenamestem cannot start with a dash or an underscore.\n\n";
+	    print STDERR "\nError: -configstem cannot start with a dash or an underscore.\n\n";
 	    exit(0);
 	}
 	if($stem =~ /[^a-zA-Z0-9._-]/) {
-	    print STDERR "\nError: -filenamestem must be only letters, numbers, dashes, periods and underscores.\n\n";
+	    print STDERR "\nError: -configstem must be only letters, numbers, dashes, periods and underscores.\n\n";
 	    exit(0);
 	}
 
