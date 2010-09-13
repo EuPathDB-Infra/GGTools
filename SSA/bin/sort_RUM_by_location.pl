@@ -1,4 +1,6 @@
+#!/usr/bin/perl
 $|=1;
+
 $timestart = time();
 if(@ARGV < 2) {
     die "
