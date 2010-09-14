@@ -3,7 +3,11 @@ if(@ARGV < 2) {
     die "
 Usage: get_reads.pl <chr> <start> <end> <chrdir> | less -S
 
-Where <chrdir> is a directory with a RUM file that has
+This script gets all the reads from a RUM_Unique or RUM_NU
+file and prints them out in a multiple alignment.  The
+consensus sequence is printed at the bottom.
+
+<chrdir> is a directory with a RUM file that has
 been broken into individual chromosomes (this is done for
 efficiency).  To do the breaking up for 'RUM_Unique', make
 a directory, say 'chrdir' and run the following:
