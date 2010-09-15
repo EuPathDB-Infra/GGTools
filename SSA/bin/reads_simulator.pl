@@ -40,10 +40,11 @@ if(@ARGV < 1) {
     print "  2) simulator_config_geneseq\n";
     print "  3) simulator_config_intronseq\n";
     print "  4) simulator_config_featurequantifications\n\n";
-    print "To create such files for a subset of genes use the script:\n";
+    print "With these files the program chooses -numgenes of them at random.  To use all the genes\nin a file, you must create custom config files with a stem because in the -configstem mode\nit uses all genes in the file.\n";
+    print "To create custom config files for a subset of genes in the master config, use the script:\n";
     print "   - make_config_files_for_subset_of_gene_ids.pl\n";
     print "Run it with no parameters for the usage\n";
-    print "To use those config files with this program put them in the same directory as the script, or\n";
+    print "To use the custom config files with this program put them in the same directory as the script, or\n";
     print "in the directory specified by -outdir (not -mastercfgdir which specifies the master config files)\n";
     print "and use the option -configstem\n";
     print "\n";
