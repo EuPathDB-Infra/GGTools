@@ -10,7 +10,7 @@ if(@ARGV < 1) {
     print "and gaps crossed by the simulated reads.\n";
     print "\n   options:\n";
     print "      -readlength n   : Set readlength to n>0 bases (default n = 100).\n";
-    print "      -numgenes n     : Choose n>=1 genes at random from amaster pool of gene models (default n = 100000).\n                        This only works with the four config files that have no stem (see below for more info).\n";
+    print "      -numgenes n     : Choose n>=1 genes at random from a master pool of gene models (default n = 100000).\n                        This only works with the four config files that have no stem (see below for more info).\n";
     print "      -error x        : Set the error rate that any given base is sequenced wrong to 0<=x<=1 (default x = 0.005).\n";
     print "      -subfreq x      : Set substitution rate to 0<=x<1 (default x = 0.001).\n";
     print "      -indelfreq x    : Set indel rate to 0<=x<1 (default x = 0.0005).\n";
