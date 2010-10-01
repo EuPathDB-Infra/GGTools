@@ -741,7 +741,7 @@ if($paired_end eq "true" && ($type1 ne "a" || $type2 ne "b")) {
 if($readlength ne "variable" && $readlength < 55 && $limitNU eq "false") {
     print STDERR "\n\nWARNING: you have pretty short reads ($readlength bases).  If you have a large\n";
     print STDERR "genome such as mouse or human then the files of ambiguous mappers could grow\n";
-    print STDERR "very large, in this case it's recommended to run with the -limitNU option.  You\n";
+    print STDERR "very large, in this case it's recommended to run with the -limitBowtieNU option.  You\n";
     print STDERR "can watch the files that start with 'X' and 'Y' to see if they are growing\n";
     print STDERR "larger than 10 gigabytes per million reads at which point you might want to use.\n";
     print STDERR "-limitNU\n\n";
