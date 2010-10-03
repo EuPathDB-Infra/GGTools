@@ -386,89 +386,89 @@ print STDERR "
 - The RNA-Seq Unified Mapper (RUM) Pipeline has been initiated -
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ";
-
-sleep(2);
-print STDERR "Please wait while I check that everything is in order.\n\n";
-sleep(2);
-print STDERR "This could take a few minutes.\n\n";
-sleep(2);
-
-if($qsub eq "true") {
-    print STDERR "You have chosen to submit the jobs using 'qsub'.  I'm going to assume each node has\nsufficient RAM for t
-his.  If you are running a mammalian genome then you should have at least 6 to 8 Gigs per node.\n\n";
-} else {
-     print STDERR "I'm going to try to figure out how much RAM you have.\nIf you see some error messages here, don't worry, these are harmless.\n\n";
+if($postprocess eq "false") {
      sleep(2);
-     # figure out how much RAM is available:
-     if($user_ram eq "false") {
-          $did_not_figure_out_ram = "false";
-          $ramcheck = `free -g`;  # this should work on linux
-          $ramcheck =~ /Mem:\s+(\d+)/s;
-          $totalram = $1;
-          if(!($totalram =~ /\d+/)) { # so above still didn't work, trying even harder
-              $x = `grep memory /var/run/dmesg.boot`; # this should work on freeBSD
-              $x =~ /avail memory = (\d+)/;
-              $totalram = int($1 / 1000000000);
-              if($totalram == 0) {
-          	$totalram = "";
-              }
-          }
-          if(!($totalram =~ /\d+/)) { # so above didn't work, trying harder
-              $x = `top -l 1 | grep free`;  # this should work on a mac
-              $x =~ /(\d+)(.)\s+used, (\d+)(.) free/;
-              $used = $1;
-              $type1 = $2;
-              $free = $3;
-              $type2 = $4;
-              if($type1 eq "K" || $type1 eq "k") {
-          	$used = int($used / 1000000);
-              }
-              if($type2 eq "K" || $type2 eq "k") {
-          	$free = int($free / 1000000);
-                   }
-              if($type1 eq "M" || $type1 eq "m") {
-          	$used = int($used / 1000);
-              }
-              if($type2 eq "M" || $type2 eq "m") {
-          	$free = int($free / 1000);
-              }
-              $totalram = $used + $free;
-              if($totalram == 0) {
-          	$totalram = "";
-              }
-          }
-          if(!($totalram =~ /\d+/)) { # so above didn't work, warning user
-              $did_not_figure_out_ram = "true";
-              print "\nWarning: I could not determine how much RAM you have.  If you have less\nthan eight gigs per chunk and a large genome, or a lot of reads, then you shoud specify that\nusing the -ram option, or this might not work.\nFor a genome like human you'll need at least 5 or 6 Gb per chunk.\n\n";
-              $RAMperchunk = 6;
-          } else {
-              $RAMperchunk = int($totalram / $numchunks);
-              if($RAMperchunk == 1) {
-                  print "\nWarning: you have one gig of RAM per chunk.  If you\nhave a large genome or a lot of reads then this might not work.\nFor a genome like human you'll need at least 5 or 6 Gb per chunk.\n\n";
-              }elsif($RAMperchunk == 0) {
-                  print "\nWarning: you have less than one gig of RAM per chunk.  If you\nhave a large genome or a lot of reads then this might not work.\nFor a genome like human you'll need at least 5 or 6 Gb per chunk.\n\n";
-                 $RAMperchunk = 1;
-              }elsif($RAMperchunk < 7 && $RAMperchunk > 1) {
-                  print "\nWarning: you have only $RAMperchunk gigs of RAM per chunk.  If you\nhave a large genome or a lot of reads then this might not work.\nFor a genome like human you'll need at least 5 or 6 Gb per chunk.\n\n";
-              }
-         }
-         $ram = $RAMperchunk;
-     }
-     if($did_not_figure_out_ram eq "false") {
-         if($RAMperchunk >= 7) {
-             print STDERR "It seems like you have $totalram Gb of RAM on your machine.\n";
-             print STDERR "That's a generous amount, so unless you have too much other\nstuff running, RAM should not be a problem.\n";
-         } else {
-             print STDERR "It seems like you have $totalram Gb of RAM on your machine.\n";
-         }
-         sleep(3);
-         if($RAMperchunk >= 6) {
-              print STDERR "\nI'm going to try to use about $ram Gb of RAM per chunk.  Seems like that should work.\nIf that fails, try using the -ram option to lower it.  For a genome like human, you're\ngoing to need at least 5 or 6 Gb per chunk.\n\n";
-         } else {
-              print STDERR "\nI'm going to try to use about $ram Gb of RAM per chunk.\nIf that fails, try using the -ram option to lower it.  For a genome like human, you're\ngoing to need at least 5 or 6 Gb per chunk.\n\n";
-         }
+     print STDERR "Please wait while I check that everything is in order.\n\n";
+     sleep(2);
+     print STDERR "This could take a few minutes.\n\n";
+     sleep(2);
+
+     if($qsub eq "true") {
+         print STDERR "You have chosen to submit the jobs using 'qsub'.  I'm going to assume each node has\nsufficient RAM for this.  If you are running a mammalian genome then you should have at least 6 to 8 Gigs per node.\n\n";
      } else {
-         print STDERR "\nI'm going to try to use about $ram Gb of RAM per chunk.  I couldn't figure out much you have so that's a (hopeful) guess.\nIf this fails, try using the -ram option to lower it.  For a genome like human, you're\ngoing to need at least 5 or 6 Gb per chunk.\n\n";
+          print STDERR "I'm going to try to figure out how much RAM you have.\nIf you see some error messages here, don't worry, these are harmless.\n\n";
+          sleep(2);
+          # figure out how much RAM is available:
+          if($user_ram eq "false") {
+               $did_not_figure_out_ram = "false";
+               $ramcheck = `free -g`;  # this should work on linux
+               $ramcheck =~ /Mem:\s+(\d+)/s;
+               $totalram = $1;
+               if(!($totalram =~ /\d+/)) { # so above still didn't work, trying even harder
+                   $x = `grep memory /var/run/dmesg.boot`; # this should work on freeBSD
+                   $x =~ /avail memory = (\d+)/;
+                   $totalram = int($1 / 1000000000);
+                   if($totalram == 0) {
+               	$totalram = "";
+                   }
+               }
+               if(!($totalram =~ /\d+/)) { # so above didn't work, trying harder
+                   $x = `top -l 1 | grep free`;  # this should work on a mac
+                   $x =~ /(\d+)(.)\s+used, (\d+)(.) free/;
+                   $used = $1;
+                   $type1 = $2;
+                   $free = $3;
+                   $type2 = $4;
+                   if($type1 eq "K" || $type1 eq "k") {
+                    	$used = int($used / 1000000);
+                   }
+                   if($type2 eq "K" || $type2 eq "k") {
+                    	$free = int($free / 1000000);
+                        }
+                   if($type1 eq "M" || $type1 eq "m") {
+               	$used = int($used / 1000);
+                   }
+                   if($type2 eq "M" || $type2 eq "m") {
+               	$free = int($free / 1000);
+                   }
+                   $totalram = $used + $free;
+                   if($totalram == 0) {
+               	$totalram = "";
+                   }
+               }
+               if(!($totalram =~ /\d+/)) { # so above didn't work, warning user
+                   $did_not_figure_out_ram = "true";
+                   print "\nWarning: I could not determine how much RAM you have.  If you have less\nthan eight gigs per chunk and a large genome, or a lot of reads, then you shoud specify that\nusing the -ram option, or this might not work.\nFor a genome like human you'll need at least 5 or 6 Gb per chunk.\n\n";
+                   $RAMperchunk = 6;
+               } else {
+                   $RAMperchunk = int($totalram / $numchunks);
+                   if($RAMperchunk == 1) {
+                       print "\nWarning: you have one gig of RAM per chunk.  If you\nhave a large genome or a lot of reads then this might not work.\nFor a genome like human you'll need at least 5 or 6 Gb per chunk.\n\n";
+                   }elsif($RAMperchunk == 0) {
+                       print "\nWarning: you have less than one gig of RAM per chunk.  If you\nhave a large genome or a lot of reads then this might not work.\nFor a genome like human you'll need at least 5 or 6 Gb per chunk.\n\n";
+                      $RAMperchunk = 1;
+                   }elsif($RAMperchunk < 7 && $RAMperchunk > 1) {
+                       print "\nWarning: you have only $RAMperchunk gigs of RAM per chunk.  If you\nhave a large genome or a lot of reads then this might not work.\nFor a genome like human you'll need at least 5 or 6 Gb per chunk.\n\n";
+                   }
+              }
+              $ram = $RAMperchunk;
+          }
+          if($did_not_figure_out_ram eq "false") {
+              if($RAMperchunk >= 7) {
+                  print STDERR "It seems like you have $totalram Gb of RAM on your machine.\n";
+                  print STDERR "That's a generous amount, so unless you have too much other\nstuff running, RAM should not be a problem.\n";
+              } else {
+                  print STDERR "It seems like you have $totalram Gb of RAM on your machine.\n";
+              }
+              sleep(3);
+              if($RAMperchunk >= 6) {
+                   print STDERR "\nI'm going to try to use about $ram Gb of RAM per chunk.  Seems like that should work.\nIf that fails, try using the -ram option to lower it.  For a genome like human, you're\ngoing to need at least 5 or 6 Gb per chunk.\n\n";
+              } else {
+                   print STDERR "\nI'm going to try to use about $ram Gb of RAM per chunk.\nIf that fails, try using the -ram option to lower it.  For a genome like human, you're\ngoing to need at least 5 or 6 Gb per chunk.\n\n";
+              }
+          } else {
+              print STDERR "\nI'm going to try to use about $ram Gb of RAM per chunk.  I couldn't figure out much you have so that's a (hopeful) guess.\nIf this fails, try using the -ram option to lower it.  For a genome like human, you're\ngoing to need at least 5 or 6 Gb per chunk.\n\n";
+          }
      }
 }
 
@@ -606,10 +606,16 @@ if(($readsfile =~ /,,,/) && ($paired_end eq "true") && ($postprocess eq "false")
 }
 if($postprocess eq "true") {
     $readsfile = "$output_dir/reads.fa";
+    if(!(-e $readsfile)) {
+        $readsfile = $readsfile = $ARGV[1];
+    }
     $qualsfile = "$output_dir/quals.fa";
-    $X = `head -2 $output_dir/quals.fa | tail -1`;
-    if($X =~ /\S/ && !($X =~ /Sorry, can't figure these files out/)) {
-	$quals = "true"
+    $quals = "false";
+    if(-e $qualsfile) {
+        $X = `head -2 $output_dir/quals.fa | tail -1`;
+        if($X =~ /\S/ && !($X =~ /Sorry, can't figure these files out/)) {
+	    $quals = "true"
+        }
     }
 }
 
@@ -674,12 +680,6 @@ if($postprocess eq "false") {
     }
 }
 if($postprocess eq "true") {
-    $readsfile = "$output_dir/reads.fa";
-    $qualsfile = "$output_dir/quals.fa";
-    $X = `head -2 $output_dir/quals.fa | tail -1`;
-    if($X =~ /\S/ && !($X =~ /Sorry, can't figure these files out/)) {
-	$quals = "true"
-    }
     $head = `head -4 $readsfile`;
     $head =~ /seq.(\d+)(.).*seq.(\d+)(.)/s;
     $num1 = $1;
@@ -917,8 +917,11 @@ if($postprocess eq "false") {
         }
     }
 }
-
-print STDERR "\nWhew, all chunks have finished.\n\nNext I will merge everything, create the coverage plots and\ncalculate the quantified values, etc.  This could take some time...\n\n";
+if($postprocess eq "false") {
+     print STDERR "\nWhew, all chunks have finished.\n\nNext I will merge everything, create the coverage plots and\ncalculate the quantified values, etc.  This could take some time...\n\n";
+} else {
+     print STDERR "\nOK, will now merge everything, create the coverage plots and\ncalculate the quantified values, etc.  This could take some time...\n\n";
+}
 
 $date = `date`;
 print LOGFILE "finished creating RUM_Unique.*/RUM_NU.*: $date\n";
