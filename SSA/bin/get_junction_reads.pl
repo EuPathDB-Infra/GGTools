@@ -4,6 +4,9 @@ if(@ARGV < 2) {
 Usage: perl get_junction_reads.pl <rum file> <chr:start-end> [option]
    or: perl get_junction_reads.pl <rum file> <chr> <start> <end> [option]
 
+Options: -i : intron coords        (see below for more info)
+         -b : bedfile ucsc coords  (see below for more info)
+
 'start' and 'end' can be any of the following:
 1) The terminal coords of the exons
    * start is the most downstream coord of the upstream exon
@@ -11,10 +14,14 @@ Usage: perl get_junction_reads.pl <rum file> <chr:start-end> [option]
 2) The terminal coords of the intron
    * start is the 
    * end is the most downstream coords of the intron
-3) The coords given in the UCSC browser when the RUM junctions
-   bed file is loaded (use the -b option in that case).
+   (use the -i option in this case).
+3) The coords given in the UCSC browser (if you click on the feature),
+   for the RUM junctions bed file (use the -b option in that case).
 
-NOTE: for best results pipe the output to 'less -S'.
+NOTE 1: For best results pipe the output to 'less -S'.
+NOTE 2: To speed things up, you might want to first filter out the reads
+        from the rum file that don't cross junctions ('grep \", \" <file>'
+        should do it).
 
 ";
 }

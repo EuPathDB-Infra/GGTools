@@ -789,7 +789,7 @@ if($postprocess eq "false") {
         $pipeline_file = $pipeline_template;
         if($limitNUhard eq "true") {
     	$pipeline_file =~ s!LIMITNUCUTOFF!$NU_limit!gs;
-    	$pipeline_file =~ s!sort_RUM.pl OUTDIR.RUM_NU_temp2.CHUNK!sort_RUM.pl OUTDIR/RUM_NU_temp3.CHUNK!gs;
+    	$pipeline_file =~ s!sort_RUM_by_id.pl OUTDIR.RUM_NU_temp2.CHUNK!sort_RUM_by_id.pl OUTDIR/RUM_NU_temp3.CHUNK!gs;
         } else {
     	$pipeline_file =~ s!perl SCRIPTSDIR/limit_NU.pl OUTDIR/RUM_NU_temp2.CHUNK LIMITNUCUTOFF > OUTDIR/RUM_NU_temp3.CHUNK\n!!gs;
         }

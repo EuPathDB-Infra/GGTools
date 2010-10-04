@@ -49,7 +49,6 @@ for($i=5; $i<@ARGV; $i++) {
     }
 }
 
-
 $rum_unique_file = $ARGV[0];
 $rum_nu_file = $ARGV[1];
 $uniquers = "true";
@@ -160,9 +159,9 @@ if($non_uniquers eq "true") {
 	$flag = 1;
     }
     if($flag == 1) {
-	die "\nError: the first line of the file '$rum_unique_file' is misformatted,\nit does not look like a RUM output file.\n";
+	die "\nError: the first line of the file '$rum_nu_file' is misformatted,\nit does not look like a RUM output file.\n";
     }
-    open(RUMNU, $rum_nu_file) or die "\nError: cannot open the file '$rum_unique_file' for reading\n\n";
+    open(RUMNU, $rum_nu_file) or die "\nError: cannot open the file '$rum_nu_file' for reading\n\n";
 }
 
 if($quals eq "true") {
