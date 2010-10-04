@@ -38,10 +38,16 @@ Hit get output, and request all upper case
 gunzip the file and run:
 
 perl create_genome_indexes.pl NAME_genome.txt
-
+------------------------------------------------------------------------------------
 Now to make files of gene info and sequence:
- - you can use any of the annotation tracks as long as they have the five fields you are asked to select below:
+ - you can use any of the annotation tracks as long as they have the five fields you
+are asked to select below:
  - the following illustrates using two tracks "UCSC Known" and "RefSeq".  
+ - If there are many annotation tracks, such as for mouse where there are more than ten,
+   you probably shouldn't include them all, by default we have been using just three of
+   them for mouse: refseq, ucsc and aceview.  Using all tracks would create a transcript
+   db that is too complex, it's better to let blat map the reads for transcripts that
+   are not present in the db rather than to expand the db too much with false transcripts.
 
 Set the table browser as follows:
 

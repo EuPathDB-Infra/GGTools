@@ -1,9 +1,8 @@
-indexes/hg19_refseq_ucsc_gene_info.txt
+indexes/hg19_refseq_ucsc_vega_gene_info.txt
 bin/bowtie
 bin/blat
 bin/mdust
 indexes/hg19_genome
-indexes/hg19_refseq_ucsc_genes
-indexes/hg19_genome_sequence_one-line-seqs.fa
+indexes/hg19_refseq_ucsc_vega_genes
+indexes/hg19_genome_one-line-seqs.fa
 scripts
-indexes/hg19_sam_header.txt
