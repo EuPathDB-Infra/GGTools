@@ -1,3 +1,5 @@
+#!/usr/bin/perl
+
 if(@ARGV<1) {
     die "
 Usage: sam2junctions.pl <sam file>

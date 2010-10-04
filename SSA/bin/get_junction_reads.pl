@@ -1,3 +1,4 @@
+#!/usr/bin/perl
 
 if(@ARGV < 2) {
     die "

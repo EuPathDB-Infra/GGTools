@@ -1,3 +1,5 @@
+#!/usr/bin/perl
+
 open(INFILE, $ARGV[0]);
 $line = <INFILE>;
 chomp($line);

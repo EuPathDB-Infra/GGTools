@@ -1,3 +1,5 @@
+#!/usr/bin/perl
+
 open(INFILE, $ARGV[0]);
 if(!($ARGV[0]=~/\S/)) {
     print "\nUsage: count_reads_mapped.pl <filename of unique mappers> <filename of non-unique mappers>\n\nFile lines should look like this:\nseq.6b  chr19   44086924-44086960, 44088066-44088143    CGTCCAATCACACGATCAAGTTCTTCATGAACTTTGG:CTTGCACCTCTGGATGCTTGACAAGGAGCAGAAGCCCGAATCTCAGGGTGGTGCTGGTTGTCTCTGTGACTGCCGTAA\n\n";
