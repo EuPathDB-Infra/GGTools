@@ -2,7 +2,7 @@
 
 $|=1;
 $timestart = time();
-if(@ARGV < 3) {
+if(@ARGV < 2) {
     die "
 Usage: sort_RUM_by_location.pl <rum file> <sorted file> [options]
 
