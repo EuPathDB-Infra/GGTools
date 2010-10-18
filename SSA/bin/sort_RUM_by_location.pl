@@ -35,7 +35,7 @@ $outfile = $ARGV[1];
 $running_indicator_file = $ARGV[1];
 $running_indicator_file =~ s![^/]+$!!;
 $running_indicator_file = $running_indicator_file . ".running";
-open(OUTFILE, ">$running_indicator_file") or die "Error: cannot open file '$running_indicator_file' for writing.\n\n";
+nnnnopen(OUTFILE, ">$running_indicator_file") or die "Error: cannot open file '$running_indicator_file' for writing.\n\n";
 print OUTFILE "0";
 close(OUTFILE);
 
@@ -97,6 +97,8 @@ if($maxchunksize_specified eq "false") {
     } elsif($ram == 1) {
 	$max_count_at_once = 1500000;
     }
+} else {
+    $max_count_at_once = $maxchunksize;
 }
 
 open(INFILE, $infile);
