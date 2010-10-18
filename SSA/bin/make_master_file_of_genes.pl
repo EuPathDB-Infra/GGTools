@@ -54,6 +54,9 @@ while($file = <FILESFILE>) {
     $CNT=0;
     while($line = <INFILE>) {
         chomp($line);
+	if($line =~ /^#/) {
+	    next;
+	}
         @a = split(/\t/,$line);
 	$a[$exonStartscol] =~ /^(\d+)/;
 	$txStart = $1;

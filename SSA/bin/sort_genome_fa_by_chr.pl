@@ -216,6 +216,7 @@ sub arabic($) {
     $roman_digit{$_} = [split(//, $roman_digit{$_}, 2)] foreach @figure;
     isroman $arg or return undef;
     ($last_digit) = 1000;
+    $arabic=0;
     ($arabic);
     foreach (split(//, uc $arg)) {
         ($digit) = $roman2arabic{$_};
@@ -232,6 +233,7 @@ sub Roman($) {
     @figure = reverse sort keys %roman_digit;
     $roman_digit{$_} = [split(//, $roman_digit{$_}, 2)] foreach @figure;
     0 < $arg and $arg < 4000 or return undef;
+    $roman = "";
     ($x, $roman);
     foreach (@figure) {
         ($digit, $i, $v) = (int($arg / $_), @{$roman_digit{$_}});

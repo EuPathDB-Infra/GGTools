@@ -37,3 +37,19 @@ $N6 = $NAME . "_gene_info.txt";
 unlink($N3);
 unlink($N4);
 unlink("temp.fa");
+
+$config = "indexes/$N6\n";
+$N6 =~ /^([^_]+)_/;
+$organism = $1;
+$config = $config . "bin/bowtie\n";
+$config = $config . "bin/blat\n";
+$config = $config . "bin/mdust\n";
+$config = $config . "indexes/$organism" . "_genome\n";
+$config = $config . "indexes/$organism" . "_genes\n";
+$config = $config . "indexes/$organism" . "_genome_one-line-seqs.fa\n";
+$config = $config . "scripts\n";
+
+$configfile = "rum.config_" . $organism;
+open(OUTFILE, ">$configfile");
+print OUTFILE $config;
+close(OUTFILE);

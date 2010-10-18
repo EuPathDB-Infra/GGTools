@@ -2,16 +2,20 @@
 
 $|=1;
 $timestart = time();
-if(@ARGV < 2) {
+if(@ARGV < 3) {
     die "
 Usage: sort_RUM_by_location.pl <rum file> <sorted file> [options]
 
 Where: <rum file> is the RUM_Unique or RUM_NU file output from
        the RUM pipeline.
+
        <sorted file> is the name of the sorted output file
 
-Options: -separate : Do not (necessarilly) keep forward and reverse
+Options: -separate : Do not (necessarily) keep forward and reverse
                      together.  By default they are kept together.
+
+         -maxchunksize n : is the max number of reads that the program tries to
+         read into memory all at once.  Default = 10,000,000
 
          -ram n    : the number of GB of RAM if less than 8, otherwise
                      will assume you have 8, give or take, and pray...
@@ -21,12 +25,22 @@ Options: -separate : Do not (necessarilly) keep forward and reverse
 ";
 }
 
+
 print STDERR "\n";
 
 $separate = "false";
 $ram = 8;
 $infile = $ARGV[0];
 $outfile = $ARGV[1];
+$running_indicator_file = $ARGV[1];
+$running_indicator_file =~ s![^/]+$!!;
+$running_indicator_file = $running_indicator_file . ".running";
+open(OUTFILE, ">$running_indicator_file") or die "Error: cannot open file '$running_indicator_file' for writing.\n\n";
+print OUTFILE "0";
+close(OUTFILE);
+
+$maxchunksize = 10000000;
+$maxchunksize_specified = "false";
 for($i=2; $i<@ARGV; $i++) {
     $optionrecognized = 0;
     if($ARGV[$i] eq "-separate") {
@@ -43,6 +57,17 @@ for($i=2; $i<@ARGV; $i++) {
 	$i++;
 	$optionrecognized = 1;
     }
+    if($ARGV[$i] eq "-maxchunksize") {
+	$maxchunksize = $ARGV[$i+1];
+	if(!($maxchunksize =~ /^\d+$/)) {
+	    die "\nError: -maxchunksize must be an integer greater than zero, you gave '$maxchunksize'.\n\n";
+	} elsif($maxchunksize==0) {
+	    die "\nError: -maxchunksize must be an integer greater than zero, you gave '$maxchunksize'.\n\n";
+	}
+	$i++;
+	$optionrecognized = 1;
+	$maxchunksize_specified = "true";
+    }
     if($ARGV[$i] eq "-name") {
 	$name = $ARGV[$i+1];
 	$i++;
@@ -52,23 +77,26 @@ for($i=2; $i<@ARGV; $i++) {
 	die "\nERROR: option '$ARGV[$i]' not recognized\n";
     }
 }
+if ($maxchunksize < 500000) {
+    die "Error: <max chunk size> must at least 500,000.\n\n";
+}
 
-#print STDERR "ram = $ram\n";
-
-if($ram >= 7) {
-    $max_count_at_once = 10000000;
-} elsif($ram >=6) {
-    $max_count_at_once = 9000000;
-} elsif($ram >=5) {
-    $max_count_at_once = 7500000;
-} elsif($ram >=4) {
-    $max_count_at_once = 6000000;
-} elsif($ram >=3) {
-    $max_count_at_once = 4500000;
-} elsif($ram >=2) {
-    $max_count_at_once = 3000000;
-} elsif($ram == 1) {
-    $max_count_at_once = 1500000;
+if($maxchunksize_specified eq "false") {
+    if($ram >= 7) {
+	$max_count_at_once = 10000000;
+    } elsif($ram >=6) {
+	$max_count_at_once = 9000000;
+    } elsif($ram >=5) {
+	$max_count_at_once = 7500000;
+    } elsif($ram >=4) {
+	$max_count_at_once = 6000000;
+    } elsif($ram >=3) {
+	$max_count_at_once = 4500000;
+    } elsif($ram >=2) {
+	$max_count_at_once = 3000000;
+    } elsif($ram == 1) {
+	$max_count_at_once = 1500000;
+    }
 }
 
 open(INFILE, $infile);
@@ -213,7 +241,7 @@ while($cnt < @CHR) {
 	    } else {
 		$tempfilename = $CHR[$cnt] . "_temp.1";
 	    }
-#	    print "$tempfilename = $tempfilename\n";
+
 	    open(OUTFILE,">$tempfilename");
 	    foreach $line (sort {$hash{$a}[0]<=>$hash{$b}[0] || ($hash{$a}[0]==$hash{$b}[0] && $hash{$a}[1]<=>$hash{$b}[1])} keys %hash) {
 		chomp($line);
@@ -345,6 +373,8 @@ else {
 	print STDERR "\nIt took $min minute, $sec second to sort '$infile'.\n\n";
     }
 }
+
+unlink($running_indicator_file);
 
 sub cmpChrs () {
     $a2_c = lc($b);
@@ -666,6 +696,7 @@ sub arabic($) {
     $roman_digit{$_} = [split(//, $roman_digit{$_}, 2)] foreach @figure;
     isroman $arg or return undef;
     ($last_digit) = 1000;
+    $arabic = 0;
     ($arabic);
     foreach (split(//, uc $arg)) {
         ($digit) = $roman2arabic{$_};
@@ -682,6 +713,7 @@ sub Roman($) {
     @figure = reverse sort keys %roman_digit;
     $roman_digit{$_} = [split(//, $roman_digit{$_}, 2)] foreach @figure;
     0 < $arg and $arg < 4000 or return undef;
+    $roman = "";
     ($x, $roman);
     foreach (@figure) {
         ($digit, $i, $v) = (int($arg / $_), @{$roman_digit{$_}});
