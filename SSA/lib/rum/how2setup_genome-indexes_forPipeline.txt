@@ -1,7 +1,7 @@
 How to create indexes for the RUM pipeline:
 ------------------------------------------
 
-Go to UCSC, choose the organism and build.
+Go to UCSC, choose the organism and assembly.
 Go to Table Browser:
 
 group: all tables
@@ -30,7 +30,7 @@ output format: sequence
 output file: NAME_genome.txt
 file type returned: gzip
 
-where "NAME" should be replaced by something that identifies your name/build, eg mm9.
+where "NAME" should be replaced by something that identifies your name/assembly, eg mm9.
 The scripts below won't work unless you follow this naming convention exactly.
 
 Hit get output, and request all upper case
@@ -86,9 +86,9 @@ Now run:
 Now build bowtie indexes:
 
 > bowtie-build NAME_refseq_ucsc_genes.fa NAME_genes
-> bowtie-build NAME_genome.fa NAME_genome
+> bowtie-build NAME_genome_one-line-seqs.fa NAME_genome
 
-The files you need to keep are the following 14:
+The files you need to keep are the following 15:
 
 NAME_refseq_ucsc_gene_info.txt
 NAME_genome_one-line-seqs.fa
@@ -104,3 +104,10 @@ NAME_genome.2.ebwt
 NAME_genome.1.ebwt
 NAME_genome.rev.2.ebwt
 NAME_genome.rev.1.ebwt
+rum.config_NAME
+
+Put all but rum.config_NAME in the indexes directory.  Put rum.config_NAME in the same
+directory as the master script RUM_runner.pl.
+
+ *** Note: edit rum.config_NAME if you have moved any scripts, executables, or indexes
+     from their default locations.
