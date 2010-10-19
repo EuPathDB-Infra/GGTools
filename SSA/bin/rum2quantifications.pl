@@ -181,8 +181,6 @@ foreach my $chr (sort cmpChrs keys %TRANSCRIPT) {
 	my $nl = $TRANSCRIPT{$chr}[$i]{length} / 1000;
 	my $n1 = int($x1 / $nl / $nr * 10000) / 10000;
 	my $n2 = int($z / $nl / $nr * 10000) / 10000;
-	$n1 = $x1 / $nl / $nr;
-	$n2 = $z / $nl / $nr;
 	if($posonly eq "false" || ($posonly eq "true" && $z > 0)) {
 	    print OUTFILE1 "--------------------------------------------------------------------\n";
 	    if($sepout eq "true") {
