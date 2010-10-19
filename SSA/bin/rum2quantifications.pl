@@ -12,7 +12,7 @@ Usage: rum2quantifications.pl <annot file> <RUM_Unique> <RUM_NU> <outfile> [opti
 
 Where:
 
-    <annot file> is one of the transcript models file for the RUM pipeline
+    <annot file> is the transcript models file for the RUM pipeline
 
     <RUM_Unique> is the sorted RUM Unique file
 
