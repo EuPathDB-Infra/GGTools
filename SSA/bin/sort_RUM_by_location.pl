@@ -35,7 +35,7 @@ $outfile = $ARGV[1];
 $running_indicator_file = $ARGV[1];
 $running_indicator_file =~ s![^/]+$!!;
 $running_indicator_file = $running_indicator_file . ".running";
-nnnnopen(OUTFILE, ">$running_indicator_file") or die "Error: cannot open file '$running_indicator_file' for writing.\n\n";
+open(OUTFILE, ">$running_indicator_file") or die "Error: cannot open file '$running_indicator_file' for writing.\n\n";
 print OUTFILE "0";
 close(OUTFILE);
 
