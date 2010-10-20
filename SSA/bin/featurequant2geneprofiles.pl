@@ -6,10 +6,8 @@
 if(@ARGV<1 || $ARGV[0] eq "/help/") {
     print "\nUsage: featurequant2geneprofiles.pl <outfile> <feature_quantification_files> [options]\n\n";
     print "Profiles are output for all genes/exons/introns, by default.  To change this use the options below.\n\n";
-    print "<feature_quantification_files> is a space separated list of feature quantification files.\n\n";
+    print "<feature_quantification_files> is a space separated list of feature quantification files,\nwhich are output from the script rum2quantifications.pl.\n\n";
     print "options:\n";
-    print "     -old      : input files are in the old format, no longer output from rum2quantifications.pl\n                 by default, but output if using the -sepout option to that script.\n";
-    print "\n";
     print "     -genes    : output values for genes only\n";
     print "\n";
     print "     -exons    : output values for exons only\n";
@@ -36,6 +34,8 @@ if(@ARGV<1 || $ARGV[0] eq "/help/") {
     print "\n";
     print "     -annot x   : x is the name of a file of annotation, first column is the id in the feature\n";
     print "                 quantification file and the second column is the annotation.\n";
+    print "\n";
+    print "     -old      : input files are in the old format, which is no longer the default output from\n                 rum2quantifications.pl, but is the output format when -sepout option to that\nscript is used.\n";
     print "\n";
     exit();
 }
