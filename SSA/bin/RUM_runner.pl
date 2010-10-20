@@ -1,4 +1,3 @@
-#!/usr/bin/perl
 
 # Written by Gregory R Grant
 # University of Pennsylvania, 2010
@@ -387,6 +386,11 @@ print STDERR "
 - The RNA-Seq Unified Mapper (RUM) Pipeline has been initiated -
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ";
+
+if($qsub eq "true") {
+     print STDERR "\nWarning: You are using qsub - so if you have installed RUM somewhere other than your\nhome directory, then you will probably need to specify everything with full paths\nor this may not work.\n\n";
+}
+
 if($postprocess eq "false") {
      sleep(2);
      print STDERR "Please wait while I check that everything is in order.\n\n";
@@ -844,7 +848,7 @@ if($postprocess eq "false") {
         close(OUTFILE);
     
         if($qsub eq "true") {
-    	`qsub -l mem_free=6G -pe DJ 4 $output_dir/$outfile`;
+    	`qsub -l mem_free=7G $output_dir/$outfile`;
         }
         else {
     	system("/bin/bash $output_dir/$outfile &");
@@ -939,6 +943,55 @@ for($i=1; $i<=$numchunks; $i++) {
     $x = `cat $output_dir/RUM.sam.$i >> $output_dir/RUM.sam`;
 }
 print LOGFILE "finished creating RUM_Unique/RUM_NU/RUM.sam: $date\n";
+if($quantify eq "true") {
+   $num_reads = 0;
+   $first = 1;
+   for($i=1; $i<=$numchunks; $i++) {
+       open(INFILE, "$output_dir/quant.$i");
+       $line = <INFILE>;
+       $line =~ /num_reads = (\d+)/;
+       $num_reads = $num_reads + $1;
+       $cnt=0;
+       while($line = <INFILE>) {
+           chomp($line);
+           @a = split(/\t/,$line);
+           $counts[$cnt]{Ucnt} = $counts[$cnt]{Ucnt} + $a[2];
+           $counts[$cnt]{NUcnt} = $counts[$cnt]{NUcnt} + $a[3];
+           if($first == 1) {
+               $counts[$cnt]{type} = $a[0];
+               $counts[$cnt]{coords} = $a[1];
+               $counts[$cnt]{len} = $a[4];
+               $counts[$cnt]{strand} = $a[5];
+               $counts[$cnt]{id} = $a[6];
+           }
+           $cnt++;
+       }
+       $first = 0;
+   }
+   $num_reads = $num_reads / 1000000;
+   open(OUTFILE, ">$output_dir/feature_quantifications_$name");
+   for($i=0; $i<$cnt; $i++) {
+       $NL = $counts[$i]{len} / 1000;
+       $ucnt_normalized = int( $counts[$i]{Ucnt} / $NL / $num_reads * 10000 ) / 10000;
+       $totalcnt_normalized = int( ($counts[$i]{NUcnt}+$counts[$i]{Ucnt}) / $NL / $num_reads * 10000 ) / 10000;
+       if($counts[$i]{type} eq 'transcript') {
+           print OUTFILE "--------------------------------------------------------------------\n";
+           print OUTFILE "$counts[$i]{id}\t$counts[$i]{strand}\n";
+	   print OUTFILE "      Type\tLocation           \tmin\tmax\tLength\n";
+	   print OUTFILE "transcript\t$counts[$i]{coords}\t$ucnt_normalized\t$totalcnt_normalized\t$counts[$i]{len}\n";
+           $exoncnt = 1;
+           $introncnt = 1;
+       } elsif($counts[$i]{type} eq 'exon') {
+	   print OUTFILE "  exon $exoncnt\t$counts[$i]{coords}\t$ucnt_normalized\t$totalcnt_normalized\t$counts[$i]{len}\n";
+           $exoncnt++;
+       } elsif($counts[$i]{type} eq 'intron') {
+	   print OUTFILE " intron $introncnt\t$counts[$i]{coords}\t$ucnt_normalized\t$totalcnt_normalized\t$counts[$i]{len}\n";
+           $introncnt++;
+       }
+   }
+   close(OUTFILE);
+}
+
 print LOGFILE "starting the post processing: $date\n";
 $PPlog = "postprocessing_$name" . ".log";
 $shellscript = "#!/bin/sh\n";
@@ -953,11 +1006,6 @@ $shellscript = $shellscript . "echo making coverage plots >> $output_dir/$PPlog\
 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
 $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_Unique.sorted $output_dir/RUM_Unique.cov -name \"$name Unique Mappers\"\n";
 $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_NU.sorted $output_dir/RUM_NU.cov -name \"$name Non-Unique Mappers\"\n";
-if($quantify eq "true") {
-   $shellscript = $shellscript . "echo starting to quantify features >> $output_dir/$PPlog\n";
-   $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
-   $shellscript = $shellscript . "perl $scripts_dir/quantify_one_sample.pl $output_dir/RUM_Unique.cov $gene_annot_file -zero -open > $output_dir/feature_quantifications_$name\n";
-}
 if($junctions eq "true") {
    $shellscript = $shellscript . "echo starting to compute junctions >> $output_dir/$PPlog\n";
    $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
@@ -975,7 +1023,7 @@ print OUTFILE2 $shellscript;
 close(OUTFILE2);
 
 if($qsub eq "true") {
-    `qsub -l mem_free=6G -pe DJ 4 $output_dir/$str`;
+    `qsub -l mem_free=7G $output_dir/$str`;
 }
 else {
     system("/bin/bash $output_dir/$str");
@@ -1088,4 +1136,136 @@ sub checkstatus () {
 	}
     }
 
+}
+
+sub merge() {
+    $tempfilename1 = $CHR[$cnt] . "_temp.0";
+    $tempfilename2 = $CHR[$cnt] . "_temp.1";
+    $tempfilename3 = $CHR[$cnt] . "_temp.2";
+    open(TEMPMERGEDOUT, ">$tempfilename3");
+    open(TEMPIN1, $tempfilename1);
+    open(TEMPIN2, $tempfilename2);
+    $mergeFLAG = 0;
+    getNext1();
+    getNext2();
+    while($mergeFLAG < 2) {
+	chomp($out1);
+	chomp($out2);
+	if($start1 < $start2) {
+	    if($out1 =~ /\S/) {
+		print TEMPMERGEDOUT "$out1\n";
+	    }
+	    getNext1();
+	} elsif($start1 == $start2) {
+	    if($end1 <= $end2) {
+		if($out1 =~ /\S/) {
+		    print TEMPMERGEDOUT "$out1\n";
+		}
+		getNext1();
+	    } else {
+		if($out2 =~ /\S/) {
+		    print TEMPMERGEDOUT "$out2\n";
+		}
+		getNext2();
+	    }
+	} else {
+	    if($out2 =~ /\S/) {
+		print TEMPMERGEDOUT "$out2\n";
+	    }
+	    getNext2();
+	}
+    }
+    close(TEMPMERGEDOUT);
+    `mv $tempfilename3 $tempfilename1`;
+    unlink($tempfilename2);
+}
+
+sub getNext1 () {
+    $line1 = <TEMPIN1>;
+    chomp($line1);
+    if($line1 eq '') {
+	$mergeFLAG++;
+	$start1 = 1000000000000;  # effectively infinity, no chromosome should be this large;
+	return "";
+    }
+    @a = split(/\t/,$line1);
+    $a[2] =~ /^(\d+)-/;
+    $start1 = $1;
+    if($a[0] =~ /a/ && $separate eq "false") {
+	$a[0] =~ /(\d+)/;
+	$seqnum1 = $1;
+	$line2 = <TEMPIN1>;
+	chomp($line2);
+	@b = split(/\t/,$line2);
+	$b[0] =~ /(\d+)/;
+	$seqnum2 = $1;
+	if($seqnum1 == $seqnum2 && $b[0] =~ /b/) {
+	    if($a[3] eq "+") {
+		$b[2] =~ /-(\d+)$/;
+		$end1 = $1;
+	    } else {
+		$b[2] =~ /^(\d+)-/;
+		$start1 = $1;
+		$a[2] =~ /-(\d+)$/;
+		$end1 = $1;
+	    }
+	    $out1 = $line1 . "\n" . $line2;
+	} else {
+	    $a[2] =~ /-(\d+)$/;
+	    $end1 = $1;
+	    # reset the file handle so the last line read will be read again
+	    $len = -1 * (1 + length($line2));
+	    seek(TEMPIN1, $len, 1);
+	    $out1 = $line1;
+	}
+    } else {
+	$a[2] =~ /-(\d+)$/;
+	$end1 = $1;
+	$out1 = $line1;
+    }
+}
+
+sub getNext2 () {
+    $line1 = <TEMPIN2>;
+    chomp($line1);
+    if($line1 eq '') {
+	$mergeFLAG++;
+	$start2 = 1000000000000;  # effectively infinity, no chromosome should be this large;
+	return "";
+    }
+    @a = split(/\t/,$line1);
+    $a[2] =~ /^(\d+)-/;
+    $start2 = $1;
+    if($a[0] =~ /a/ && $separate eq "false") {
+	$a[0] =~ /(\d+)/;
+	$seqnum1 = $1;
+	$line2 = <TEMPIN2>;
+	chomp($line2);
+	@b = split(/\t/,$line2);
+	$b[0] =~ /(\d+)/;
+	$seqnum2 = $1;
+	if($seqnum1 == $seqnum2 && $b[0] =~ /b/) {
+	    if($a[3] eq "+") {
+		$b[2] =~ /-(\d+)$/;
+		$end2 = $1;
+	    } else {
+		$b[2] =~ /^(\d+)-/;
+		$start2 = $1;
+		$a[2] =~ /-(\d+)$/;
+		$end2 = $1;
+	    }
+	    $out2 = $line1 . "\n" . $line2;
+	} else {
+	    $a[2] =~ /-(\d+)$/;
+	    $end2 = $1;
+	    # reset the file handle so the last line read will be read again
+	    $len = -1 * (1 + length($line2));
+	    seek(TEMPIN2, $len, 1);
+	    $out2 = $line1;
+	}
+    } else {
+	$a[2] =~ /-(\d+)$/;
+	$end2 = $1;
+	$out2 = $line1;
+    }
 }
