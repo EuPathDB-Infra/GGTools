@@ -22,20 +22,21 @@ if(@ARGV<1 || $ARGV[0] eq "/help/") {
     print "\n";
     print "     -printheader : print a header line.\n";
     print "\n";
-    print "     -sort1 n   : sort column n.  For n>0, n sorts decreasing, -n sorts increasing.\n                  Sorts both min and max files by the min file.  If using the -old\n                  option use this sort option.\n";
+    print "     -sort1 n   : If using -genes, -exons or -introns, this will sort on column n.\n                  For n>0, n sorts decreasing, -n sorts increasing.\n                  Sorts both min and max files by the min file.\n                  Also use this to sort when using the -sformat option.\n";
     print "\n";
-    print "     -sort2 n   : sort column n.  For n>0, n sorts decreasing, -n sorts increasing.\n                  Sorts both min and max files by the max file.\n";
+    print "     -sort2 n   : If using -genes, -exons or -introns, this will sort on column n.\n                  For n>0, n sorts decreasing, -n sorts increasing.\n                  Sorts both min and max files by the max file.\n";
     print "\n";
-    print "     -sort3 n   : sort column n.  For n>0, n sorts decreasing, -n sorts increasing.\n                  Sorts both min and max files separately.\n";
+    print "     -sort3 n   : If using -genes, -exons or -introns, this will sort on column n.\n                  For n>0, n sorts decreasing, -n sorts increasing.\n                  Sorts both min and max files separately.\n";
     print "\n";
     print "     -locations : output also the location of the feature.\n";
     print "\n";
     print "     -cnt       : report the avereage depth, unnormalized for number of bases mapped.\n";
+    print "                  This only works if using the -sformat option.\n";
     print "\n";
     print "     -annot x   : x is the name of a file of annotation, first column is the id in the feature\n";
-    print "                 quantification file and the second column is the annotation.\n";
+    print "                  quantification file and the second column is the annotation.\n";
     print "\n";
-    print "     -old      : input files are in the old format, which is no longer the default output from\n                 rum2quantifications.pl, but is the output format when -sepout option to that\nscript is used.\n";
+    print "     -sformat   : input files are in format output from rum2quantifications.pl when the\n                  -sepout option is used to that script.\n";
     print "\n";
     exit();
 }
@@ -70,7 +71,7 @@ $locations = "false";
 $reportcnt = "false";
 $annotfile_given = "false";
 $annotfile = "";
-$old = "false";
+$sformat = "false";
 for($i=$numfiles+1; $i<@ARGV; $i++) {
     $optionrecognized = 0;
     if($ARGV[$i] eq "-annot") {
@@ -86,8 +87,8 @@ for($i=$numfiles+1; $i<@ARGV; $i++) {
 	$reportcnt = "true";
 	$optionrecognized = 1;
     }
-    if($ARGV[$i] eq "-old") {
-	$old = "true";
+    if($ARGV[$i] eq "-sformat") {
+	$sformat = "true";
 	$optionrecognized = 1;
     }
     if($ARGV[$i] eq "-genes") {
@@ -211,11 +212,11 @@ if($num_sort > 1) {
     die "\nError: only specify one of -sort1, -sort2, -sort3\n\n";
 }
 
-if($old eq "true") {
+if($sformat eq "true") {
     $sort = $sort1;
 }
 
-if($old eq "true") {
+if($sformat eq "true") {
     open(OUTFILE1, ">$outfile");
 } else {
     $f = $outfile . ".min";
@@ -246,7 +247,7 @@ for($i=1; $i<$numfiles+1; $i++) {
 	    chomp($line);
 	    $line =~ s/\t(\+|-)//;
 	    $geneid = $line;
-	    if($old eq "true") {
+	    if($sformat eq "true") {
 		$ALL[$CNT][$i-1][0] = $geneid;
 	    } else {
    		$ALL_min[$CNT][$i-1][0] = $geneid;
@@ -258,7 +259,7 @@ for($i=1; $i<$numfiles+1; $i++) {
 	if($line =~ /transcript/) {
 	    @a = split(/\t/,$line);
 	    if($genesonly eq "true") {
-		if($old eq "true") {
+		if($sformat eq "true") {
 		    if($reportcnt eq "false") {
 			$profile{$geneid}[$i-1] = $a[4];
     		    } else {
@@ -273,7 +274,7 @@ for($i=1; $i<$numfiles+1; $i++) {
 	    if($all eq "true") {
 		$a[0] =~ s/^\s+//;
 		$a[0] =~ s/\s+$//;
-		if($old eq "true") {
+		if($sformat eq "true") {
 		    $ALL[$CNT][$i-1][1] = $a[1];
 		    if($reportcnt eq "false") {
 			$ALL[$CNT][$i-1][2] = $a[4];
@@ -292,7 +293,7 @@ for($i=1; $i<$numfiles+1; $i++) {
 	if($line =~ /exon/) {
 	    @a = split(/\t/,$line);
 	    if($exonsonly eq "true" || $featuresonly eq "true") {
-		if($old eq "true") {
+		if($sformat eq "true") {
 		    if($reportcnt eq "false") {
 			$exon{$a[1]}[$i-1] = $a[4];
 		    } else {
@@ -307,7 +308,7 @@ for($i=1; $i<$numfiles+1; $i++) {
 	    if($all eq "true") {
 		$a[0] =~ s/^\s+//;
 		$a[0] =~ s/\s+$//;
-		if($old eq "true") {
+		if($sformat eq "true") {
 		    $ALL[$CNT][$i-1][0] = $a[0];
 		    $ALL[$CNT][$i-1][1] = $a[1];
 		    if($reportcnt eq "false") {
@@ -329,7 +330,7 @@ for($i=1; $i<$numfiles+1; $i++) {
 	if($line =~ /intron/) {
 	    @a = split(/\t/,$line);
 	    if($intronsonly eq "true" || $featuresonly eq "true") {
-		if($old eq "true") {
+		if($sformat eq "true") {
 		    if($reportcnt eq "false") {
 			$intron{$a[1]}[$i-1] = $a[4];
 		    } else {
@@ -344,7 +345,7 @@ for($i=1; $i<$numfiles+1; $i++) {
 	    if($all eq "true") {
 		$a[0] =~ s/^\s+//;
 		$a[0] =~ s/\s+$//;
-		if($old eq "true") {
+		if($sformat eq "true") {
 		    $ALL[$CNT][$i-1][0] = $a[0];
 		    $ALL[$CNT][$i-1][1] = $a[1];
 		    if($reportcnt eq "false") {
@@ -369,43 +370,43 @@ for($i=1; $i<$numfiles+1; $i++) {
 if($printheader eq "true") {
     if($simple eq "false") {
 	print OUTFILE1 "\t";
-	if($old eq "false") {
+	if($sformat eq "false") {
 	    print OUTFILE2 "\t";
 	}
     }
 
     print OUTFILE1 "name";
-    if($old eq "false") {
+    if($sformat eq "false") {
 	    print OUTFILE2 "name";
     }
     if($locations eq "true") {
 	print OUTFILE1 "\tlocation";
-	if($old eq "false") {
+	if($sformat eq "false") {
 	    print OUTFILE2 "\tlocation";
 	}
     }
     for($i=0; $i<$numfiles; $i++) {
 	if($names[$i] =~ /\S/) {
 	    print OUTFILE1 "\t$names[$i]";
-	    if($old eq "false") {
+	    if($sformat eq "false") {
 		print OUTFILE2 "\t$names[$i]";
 	    }
 	} else {
 	    $j = $i+1;
 	    print OUTFILE1 "\tfile_$j";
-	    if($old eq "false") {
+	    if($sformat eq "false") {
 		print OUTFILE2 "\tfile_$j";
 	    }
 	}
     }
     print OUTFILE1 "\n";
-    if($old eq "false") {
+    if($sformat eq "false") {
 	print OUTFILE2 "\n";
     }
 }
 
 if($all eq "true") {
-    if($old eq "true") {
+    if($sformat eq "true") {
 	print STDERR "here\n";
 	for($cnt=0; $cnt<$CNT; $cnt++) {
 	    $IDout = $ALL[$cnt][0][0];
@@ -474,7 +475,7 @@ if($all eq "true") {
     }
 }
 
-if($old eq "true") {
+if($sformat eq "true") {
     if($genesonly eq "true") {
 	if($sort eq "true" && $sort_decreasing eq "true") {
 	    foreach $geneid (sort {$profile{$b}[$sortcol]<=>$profile{$a}[$sortcol]} keys %genelocation) {
