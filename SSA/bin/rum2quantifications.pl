@@ -25,10 +25,15 @@ Options:
     -sepout filename : Make separate files for the min and max experssion values.
                        In this case will write the min values to <outfile> and the   
                        max values to the file specified by 'filename'.
+                       There are two extra columns in each file if done this way,
+                       one giving the raw count and one giving the count normalized
+                       only by the feature length.
 
     -posonly  :  Output results only for transcripts that have non-zero intensity.
                  Note: if using -sepout, this will output results to both files for
                  a transcript if either one of the unique or non-unique counts is zero.
+
+    -countsonly :  Output only a simple file with feature names and counts.
 
 ";
 }
