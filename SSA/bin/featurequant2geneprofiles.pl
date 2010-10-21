@@ -33,6 +33,8 @@ if(@ARGV<1 || $ARGV[0] eq "/help/") {
     print "     -cnt       : report the avereage depth, unnormalized for number of bases mapped.\n";
     print "                  This only works if using the -sformat option.\n";
     print "\n";
+    print "     -d         : write the differences max-min to <outfile>.diff.\n";
+    print "\n";
     print "     -annot x   : x is the name of a file of annotation, first column is the id in the feature\n";
     print "                  quantification file and the second column is the annotation.\n";
     print "\n";
@@ -72,6 +74,7 @@ $reportcnt = "false";
 $annotfile_given = "false";
 $annotfile = "";
 $sformat = "false";
+$writediff = "false";
 for($i=$numfiles+1; $i<@ARGV; $i++) {
     $optionrecognized = 0;
     if($ARGV[$i] eq "-annot") {
@@ -94,6 +97,10 @@ for($i=$numfiles+1; $i<@ARGV; $i++) {
     if($ARGV[$i] eq "-genes") {
 	$genesonly = "true";
 	$all = "false";
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-d") {
+	$writediff = "true";
 	$optionrecognized = 1;
     }
     if($ARGV[$i] eq "-sort1") {
@@ -198,6 +205,10 @@ for($i=$numfiles+1; $i<@ARGV; $i++) {
     }
 }
 
+if($writediff eq "true" && $sformat eq "true") {
+    die "\nError: sorry, you can't specify both -d and -sformat.\n\n";
+}
+
 $num_sort=0;
 if($sort1 eq "true") {
     $num_sort++;
@@ -223,6 +234,10 @@ if($sformat eq "true") {
     open(OUTFILE1, ">$f");
     $f = $outfile . ".max";
     open(OUTFILE2, ">$f");
+    if($writediff eq "true") {
+	$f = $outfile . ".diff";
+	open(OUTFILE3, ">$f");
+    }
 }
 
 open(INFILE, $annotfile);
@@ -373,16 +388,25 @@ if($printheader eq "true") {
 	if($sformat eq "false") {
 	    print OUTFILE2 "\t";
 	}
+	if($writediff eq "true") {
+	    print OUTFILE3 "\t";
+	}
     }
 
     print OUTFILE1 "name";
     if($sformat eq "false") {
 	    print OUTFILE2 "name";
     }
+    if($writediff eq "true") {
+	print OUTFILE3 "name";
+    }
     if($locations eq "true") {
 	print OUTFILE1 "\tlocation";
 	if($sformat eq "false") {
 	    print OUTFILE2 "\tlocation";
+	}
+	if($writediff eq "true") {
+	    print OUTFILE3 "\tlocation";
 	}
     }
     for($i=0; $i<$numfiles; $i++) {
@@ -391,17 +415,26 @@ if($printheader eq "true") {
 	    if($sformat eq "false") {
 		print OUTFILE2 "\t$names[$i]";
 	    }
+	    if($writediff eq "true") {
+		print OUTFILE3 "\t$names[$i]";
+	    }
 	} else {
 	    $j = $i+1;
 	    print OUTFILE1 "\tfile_$j";
 	    if($sformat eq "false") {
 		print OUTFILE2 "\tfile_$j";
 	    }
+	    if($writediff eq "true") {
+		print OUTFILE3 "\tfile_$j";
+	    }
 	}
     }
     print OUTFILE1 "\n";
     if($sformat eq "false") {
 	print OUTFILE2 "\n";
+    }
+    if($writediff eq "true") {
+	print OUTFILE3 "\n";
     }
 }
 
@@ -471,6 +504,28 @@ if($all eq "true") {
 		print OUTFILE2 "\t$ANNOT{$ID}";
 	    }
 	    print OUTFILE2 "\n";
+	}
+	for($cnt=0; $cnt<$CNT; $cnt++) {
+	    $IDout = $ALL_max[$cnt][0][0];
+	    $IDout =~ s/::::/, /g;
+	    $IDout =~ s/_genes//g;
+	    print OUTFILE3 "$IDout";
+	    $ID = $ALL_max[$cnt][0][0];
+	    $ID =~ s/\(.*//;
+	    if(!($ANNOT{$ID} =~ /\S/)) {
+		$ID = $ALL_max[$cnt][0][0];
+		$ID =~ s/.*://;
+		$ID =~ s/\(.*//;
+	    }	
+	    print OUTFILE3 "\t$ALL_max[$cnt][0][1]";
+	    for($i=0; $i<$numfiles;$i++) {
+		$X = $ALL_max[$cnt][$i][2] - $ALL_min[$cnt][$i][2];
+		print OUTFILE3 "\t$X";
+	    }
+	    if($ANNOT{$ID} =~ /\S/) {
+		print OUTFILE3 "\t$ANNOT{$ID}";
+	    }
+	    print OUTFILE3 "\n";
 	}
     }
 }
@@ -687,6 +742,55 @@ if($genesonly eq "true") {
 		}
 		print OUTFILE1 "\n";
 	    }
+	    foreach $geneid (sort {$sort_hash2{$b}<=>$sort_hash2{$a}} keys %genelocation) {
+		$IDout = $geneid;
+		$IDout =~ s/::::/, /g;
+		$IDout =~ s/_genes//g;
+		print OUTFILE2 "$IDout";
+		$ID = $geneid;
+		$ID =~ s/\(.*//;
+		if(!($ANNOT{$ID} =~ /\S/)) {
+		    $ID = $geneid;
+		    $ID =~ s/.*://;
+		    $ID =~ s/\(.*//;
+		}
+		if($locations eq "true") {
+		    print OUTFILE2 "\t$genelocation{$geneid}";
+		}
+		for($i=0; $i<$numfiles; $i++) {
+		    print OUTFILE2 "\t$profile_max{$geneid}[$i]";
+		}
+		if($ANNOT{$ID} =~ /\S/) {
+		    print OUTFILE2 "\t$ANNOT{$ID}";
+		}
+		print OUTFILE2 "\n";
+	    }
+	    if($writediff eq "true") {
+		foreach $geneid (sort {$sort_hash2{$b}<=>$sort_hash2{$a}} keys %genelocation) {
+		    $IDout = $geneid;
+		    $IDout =~ s/::::/, /g;
+		    $IDout =~ s/_genes//g;
+		    print OUTFILE3 "$IDout";
+		    $ID = $geneid;
+		    $ID =~ s/\(.*//;
+		    if(!($ANNOT{$ID} =~ /\S/)) {
+			$ID = $geneid;
+			$ID =~ s/.*://;
+			$ID =~ s/\(.*//;
+		    }
+		    if($locations eq "true") {
+			print OUTFILE3 "\t$genelocation{$geneid}";
+		    }
+		    for($i=0; $i<$numfiles; $i++) {
+			$X = $profile_max{$geneid}[$i] - $profile_min{$geneid}[$i];
+			print OUTFILE3 "\t$X";
+		    }
+		    if($ANNOT{$ID} =~ /\S/) {
+			print OUTFILE3 "\t$ANNOT{$ID}";
+		    }
+		    print OUTFILE3 "\n";
+		}
+	    }
 	}
 	if($sort_decreasing eq "false") {
 	    foreach $geneid (sort {$sort_hash1{$a}<=>$sort_hash1{$b}} keys %genelocation) {
@@ -712,33 +816,6 @@ if($genesonly eq "true") {
 		}
 		print OUTFILE1 "\n";
 	    }
-	}
-	if($sort_decreasing eq "true") {
-	    foreach $geneid (sort {$sort_hash2{$b}<=>$sort_hash2{$a}} keys %genelocation) {
-		$IDout = $geneid;
-		$IDout =~ s/::::/, /g;
-		$IDout =~ s/_genes//g;
-		print OUTFILE2 "$IDout";
-		$ID = $geneid;
-		$ID =~ s/\(.*//;
-		if(!($ANNOT{$ID} =~ /\S/)) {
-		    $ID = $geneid;
-		    $ID =~ s/.*://;
-		    $ID =~ s/\(.*//;
-		}
-		if($locations eq "true") {
-		    print OUTFILE2 "\t$genelocation{$geneid}";
-		}
-		for($i=0; $i<$numfiles; $i++) {
-		    print OUTFILE2 "\t$profile_max{$geneid}[$i]";
-		}
-		if($ANNOT{$ID} =~ /\S/) {
-		    print OUTFILE2 "\t$ANNOT{$ID}";
-		}
-		print OUTFILE2 "\n";
-	    }
-	}
-	if($sort_decreasing eq "false") {
 	    foreach $geneid (sort {$sort_hash2{$a}<=>$sort_hash2{$b}} keys %genelocation) {
 		$IDout = $geneid;
 		$IDout =~ s/::::/, /g;
@@ -762,8 +839,33 @@ if($genesonly eq "true") {
 		}
 		print OUTFILE2 "\n";
 	    }
+	    if($writediff eq "true") {
+		foreach $geneid (sort {$sort_hash1{$a}<=>$sort_hash1{$b}} keys %genelocation) {
+		    $IDout = $geneid;
+		    $IDout =~ s/::::/, /g;
+		    $IDout =~ s/_genes//g;
+		    print OUTFILE3 "$IDout";
+		    $ID = $geneid;
+		    $ID =~ s/\(.*//;
+		    if(!($ANNOT{$ID} =~ /\S/)) {
+			$ID = $geneid;
+			$ID =~ s/.*://;
+			$ID =~ s/\(.*//;
+		    }
+		    if($locations eq "true") {
+			print OUTFILE3 "\t$genelocation{$geneid}";
+		    }
+		    for($i=0; $i<$numfiles; $i++) {
+			$X = $profile_max{$geneid}[$i] - $profile_min{$geneid}[$i];
+			print OUTFILE3 "\t$X";
+		    }
+		    if($ANNOT{$ID} =~ /\S/) {
+			print OUTFILE3 "\t$ANNOT{$ID}";
+		    }
+		    print OUTFILE3 "\n";
+		}
+	    }
 	}
-
     } else {
 	foreach $geneid (sort {$genelocation{$a} cmp $genelocation{$b}} keys %genelocation) {
 	    $IDout = $geneid;
@@ -771,6 +873,9 @@ if($genesonly eq "true") {
 	    $IDout =~ s/_genes//g;
 	    print OUTFILE1 "$IDout";
 	    print OUTFILE2 "$IDout";
+	    if($writediff eq "true") {
+		print OUTFILE3 "$IDout";
+	    }
 	    $ID = $geneid;
 	    $ID =~ s/\(.*//;
 	    if(!($ANNOT{$ID} =~ /\S/)) {
@@ -781,17 +886,30 @@ if($genesonly eq "true") {
 	    if($locations eq "true") {
 		print OUTFILE1 "\t$genelocation{$geneid}";
 		print OUTFILE2 "\t$genelocation{$geneid}";
+		if($writediff eq "true") {
+		    print OUTFILE3 "\t$genelocation{$geneid}";
+		}
 	    }
 	    for($i=0; $i<$numfiles; $i++) {
 		print OUTFILE1 "\t$profile_min{$geneid}[$i]";
 		print OUTFILE2 "\t$profile_max{$geneid}[$i]";
+		if($writediff eq "true") {
+		    $X = $profile_max{$geneid}[$i] - $profile_min{$geneid}[$i];
+		    print OUTFILE3 "\t$X";
+		}
 	    }
 	    if($ANNOT{$ID} =~ /\S/) {
 		print OUTFILE1 "\t$ANNOT{$ID}";
 		print OUTFILE2 "\t$ANNOT{$ID}";
+		if($writediff eq "true") {
+		    print OUTFILE3 "\t$ANNOT{$ID}";
+		}
 	    }
 	    print OUTFILE1 "\n";
 	    print OUTFILE2 "\n";
+	    if($writediff eq "true") {
+		print OUTFILE3 "\n";
+	    }
 	}
     }
 }
@@ -832,6 +950,31 @@ if($exonsonly eq "true" || $featuresonly eq "true") {
 		}
 		print OUTFILE1 "\n";
 	    }
+	    foreach $exonid (sort {$sort_hash2{$b}<=>$sort_hash2{$a}} keys %sort_hash2) {
+		if($simple eq "false") {
+		    print OUTFILE2 "$exonid\tEXON";
+		} else {
+		    print OUTFILE2 "$exonid";
+		}
+		for($i=0; $i<$numfiles; $i++) {
+		    print OUTFILE2 "\t$exon_max{$exonid}[$i]";
+		}
+		print OUTFILE2 "\n";
+	    }
+	    if($writediff eq "true") {
+		foreach $exonid (sort {$sort_hash2{$b}<=>$sort_hash2{$a}} keys %sort_hash2) {
+		    if($simple eq "false") {
+			print OUTFILE3 "$exonid\tEXON";
+		    } else {
+			print OUTFILE3 "$exonid";
+		    }
+		    for($i=0; $i<$numfiles; $i++) {
+			$X = $exon_max{$exonid}[$i] - $exon_min{$exonid}[$i];
+			print OUTFILE3 "\t$X";
+		    }
+		    print OUTFILE3 "\n";
+		}
+	    }
 	}
 	if($sort_decreasing eq "false") {
 	    foreach $exonid (sort {$exon_hash1{$a}<=>$exon_hash1{$b}} keys %sort_hash1) {
@@ -845,21 +988,6 @@ if($exonsonly eq "true" || $featuresonly eq "true") {
 		}
 		print OUTFILE1 "\n";
 	    }
-	}
-	if($sort_decreasing eq "true") {
-	    foreach $exonid (sort {$sort_hash2{$b}<=>$sort_hash2{$a}} keys %sort_hash2) {
-		if($simple eq "false") {
-		    print OUTFILE2 "$exonid\tEXON";
-		} else {
-		    print OUTFILE2 "$exonid";
-		}
-		for($i=0; $i<$numfiles; $i++) {
-		    print OUTFILE2 "\t$exon_max{$exonid}[$i]";
-		}
-		print OUTFILE2 "\n";
-	    }
-	}
-	if($sort_decreasing eq "false") {
 	    foreach $exonid (sort {$exon_hash2{$a}<=>$exon_hash2{$b}} keys %sort_hash2) {
 		if($simple eq "false") {
 		    print OUTFILE2 "$exonid\tEXON";
@@ -871,22 +999,48 @@ if($exonsonly eq "true" || $featuresonly eq "true") {
 		}
 		print OUTFILE2 "\n";
 	    }
+	    if($writediff eq "true") {
+		foreach $exonid (sort {$exon_hash2{$a}<=>$exon_hash2{$b}} keys %sort_hash2) {
+		    if($simple eq "false") {
+			print OUTFILE3 "$exonid\tEXON";
+		    } else {
+			print OUTFILE3 "$exonid";
+		    }
+		    for($i=0; $i<$numfiles; $i++) {
+			$X = $exon_max{$exonid}[$i] - $exon_min{$exonid}[$i];
+			print OUTFILE3 "\t$X";
+		    }
+		    print OUTFILE3 "\n";
+		}
+	    }
 	}
 	if($sort eq "false") {
 	    foreach $exonid (sort {$exonlocation{$a} cmp $exonlocation{$b}} keys %exon_min) {
 		if($simple eq "false") {
 		    print OUTFILE1 "$exonid\tEXON";
 		    print OUTFILE2 "$exonid\tEXON";
+		    if($writediff eq "true") {
+			print OUTFILE3 "$exonid\tEXON";
+		    }
 		} else {
 		    print OUTFILE1 "$exonid";
 		    print OUTFILE2 "$exonid";
+		    if($writediff eq "true") {
+			print OUTFILE3 "$exonid";
+		    }
 		}
 		for($i=0; $i<$numfiles; $i++) {
 		    print OUTFILE1 "\t$exon_min{$exonid}[$i]";
 		    print OUTFILE2 "\t$exon_max{$exonid}[$i]";
+		    if($writediff eq "true") {
+			print OUTFILE3 "\t$exon_max{$exonid}[$i]";
+		    }
 		}
 		print OUTFILE1 "\n";
 		print OUTFILE2 "\n";
+		if($writediff eq "true") {
+		    print OUTFILE3 "\n";
+		}
 	    }
 	}
     }
@@ -928,6 +1082,31 @@ if($intronsonly eq "true" || $featuresonly eq "true") {
 		}
 		print OUTFILE1 "\n";
 	    }
+	    foreach $intronid (sort {$sort_hash2{$b}<=>$sort_hash2{$a}} keys %sort_hash2) {
+		if($simple eq "false") {
+		    print OUTFILE2 "$intronid\tINTRON";
+		} else {
+		    print OUTFILE2 "$intronid";
+		}
+		for($i=0; $i<$numfiles; $i++) {
+		    print OUTFILE2 "\t$intron_max{$intronid}[$i]";
+		}
+		print OUTFILE2 "\n";
+	    }
+	    if($writediff eq "true") {
+		foreach $intronid (sort {$sort_hash2{$b}<=>$sort_hash2{$a}} keys %sort_hash2) {
+		    if($simple eq "false") {
+			print OUTFILE3 "$intronid\tINTRON";
+		    } else {
+			print OUTFILE3 "$intronid";
+		    }
+		    for($i=0; $i<$numfiles; $i++) {
+			$X = $intron_max{$intronid}[$i] - $intron_min{$intronid}[$i];
+			print OUTFILE3 "\t$X";
+		    }
+		    print OUTFILE3 "\n";
+		}
+	    }
 	}
 	if($sort_decreasing eq "false") {
 	    foreach $intronid (sort {$intron_hash1{$a}<=>$intron_hash1{$b}} keys %sort_hash1) {
@@ -941,21 +1120,6 @@ if($intronsonly eq "true" || $featuresonly eq "true") {
 		}
 		print OUTFILE1 "\n";
 	    }
-	}
-	if($sort_decreasing eq "true") {
-	    foreach $intronid (sort {$sort_hash2{$b}<=>$sort_hash2{$a}} keys %sort_hash2) {
-		if($simple eq "false") {
-		    print OUTFILE2 "$intronid\tINTRON";
-		} else {
-		    print OUTFILE2 "$intronid";
-		}
-		for($i=0; $i<$numfiles; $i++) {
-		    print OUTFILE2 "\t$intron_max{$intronid}[$i]";
-		}
-		print OUTFILE2 "\n";
-	    }
-	}
-	if($sort_decreasing eq "false") {
 	    foreach $intronid (sort {$intron_hash2{$a}<=>$intron_hash2{$b}} keys %sort_hash2) {
 		if($simple eq "false") {
 		    print OUTFILE2 "$intronid\tINTRON";
@@ -967,22 +1131,49 @@ if($intronsonly eq "true" || $featuresonly eq "true") {
 		}
 		print OUTFILE2 "\n";
 	    }
+	    if($writediff eq "true") {
+		foreach $intronid (sort {$intron_hash2{$a}<=>$intron_hash2{$b}} keys %sort_hash2) {
+		    if($simple eq "false") {
+			print OUTFILE3 "$intronid\tINTRON";
+		    } else {
+			print OUTFILE3 "$intronid";
+		    }
+		    for($i=0; $i<$numfiles; $i++) {
+			$X = $intron_max{$intronid}[$i] - $intron_min{$intronid}[$i];
+			print OUTFILE3 "\t$X";
+		    }
+		    print OUTFILE3 "\n";
+		}
+	    }
 	}
 	if($sort eq "false") {
 	    foreach $intronid (sort {$intronlocation{$a} cmp $intronlocation{$b}} keys %intron_min) {
 		if($simple eq "false") {
 		    print OUTFILE1 "$intronid\tINTRON";
 		    print OUTFILE2 "$intronid\tINTRON";
+		    if($writediff eq "true") {
+			print OUTFILE3 "$intronid\tINTRON";
+		    }
 		} else {
 		    print OUTFILE1 "$intronid";
 		    print OUTFILE2 "$intronid";
+		    if($writediff eq "true") {
+			print OUTFILE3 "$intronid";
+		    }
 		}
 		for($i=0; $i<$numfiles; $i++) {
 		    print OUTFILE1 "\t$intron_min{$intronid}[$i]";
 		    print OUTFILE2 "\t$intron_max{$intronid}[$i]";
+		    if($writediff eq "true") {
+			$X = $intron_max{$intronid}[$i] - $intron_min{$intronid}[$i];
+			print OUTFILE3 "\t$X";
+		    }
 		}
 		print OUTFILE1 "\n";
 		print OUTFILE2 "\n";
+		if($writediff eq "true") {
+		    print OUTFILE3 "\n";
+		}
 	    }
 	}
     }
