@@ -335,7 +335,7 @@ sub readfile () {
     my %indexstart_t;
     my %indexstart_e;
     my %indexstart_i;
-    foreach my $chr (sort cmpChrs keys %TRANSCRIPT) {
+    foreach my $chr (keys %TRANSCRIPT) {
 	$indexstart_t{$chr} = 0;
 	$indexstart_e{$chr} = 0;
 	$indexstart_i{$chr} = 0;
@@ -384,13 +384,13 @@ sub readfile () {
 	    seek(INFILE, $len, 1);
 	    @B = split(/[^\d]+/,$a[2]);
 	}
-	while($TRANSCRIPT{$CHR}[$indexstart_t{$CHR}]{end} <= $start && $indexstart_t{$CHR} <= $tcnt{$CHR}) {
+	while($TRANSCRIPT{$CHR}[$indexstart_t{$CHR}]{end} < $start && $indexstart_t{$CHR} <= $tcnt{$CHR}) {
 	    $indexstart_t{$CHR}++;	
 	}
-	while($EXON{$CHR}[$indexstart_e{$CHR}]{end} <= $start && $indexstart_e{$CHR} <= $ecnt{$CHR}) {
+	while($EXON{$CHR}[$indexstart_e{$CHR}]{end} < $start && $indexstart_e{$CHR} <= $ecnt{$CHR}) {
 	    $indexstart_e{$CHR}++;	
 	}
-	while($INTRON{$CHR}[$indexstart_i{$CHR}]{end} <= $start && $indexstart_i{$CHR} <= $icnt{$CHR}) {
+	while($INTRON{$CHR}[$indexstart_i{$CHR}]{end} < $start && $indexstart_i{$CHR} <= $icnt{$CHR}) {
 	    $indexstart_i{$CHR}++;	
 	}
 	my $i = $indexstart_t{$CHR};
