@@ -191,8 +191,15 @@ foreach my $chr (sort cmpChrs keys %TRANSCRIPT) {
 	my $st = $TRANSCRIPT{$chr}[$i]{strand};
 	my $z = $x1 + $x2;
 	my $nl = $TRANSCRIPT{$chr}[$i]{length} / 1000;
-	my $n1 = int($x1 / $nl / $nr * 10000) / 10000;
-	my $n2 = int($z / $nl / $nr * 10000) / 10000;
+	my $n1;
+	my $n2;
+	if($nl == 0 || $nr == 0) {
+	    $n1=0;
+	    $n2=0;
+	} else {
+	    $n1 = int($x1 / $nl / $nr * 10000) / 10000;
+	    $n2 = int($z / $nl / $nr * 10000) / 10000;
+	}
 	if($posonly eq "false" || ($posonly eq "true" && $z > 0)) {
 	    if($countsonly eq "false") {
 		print OUTFILE1 "--------------------------------------------------------------------\n";
@@ -207,9 +214,18 @@ foreach my $chr (sort cmpChrs keys %TRANSCRIPT) {
 		    print OUTFILE1 "      Type\tLocation           \tCount\tAve_Cnt\tRPKM\tLength\n";
 		    print OUTFILE2 "$y\t$st\n";
 		    print OUTFILE2 "      Type\tLocation           \tCount\tAve_Cnt\tRPKM\tLength\n";
-		    my $x3 = int($x1 / $nl * 10000) / 10000;
+		    my $x3;
+		    if($nl == 0) {
+			$x3=0;
+		    } else {
+			$x3 = int($x1 / $nl * 10000) / 10000;
+		    }
 		    print OUTFILE1 "transcript\t$chr:$s-$e\t$x1\t$x3\t$n1\t$tlen\t$y\n";
-		    $x3 = int($z / $nl * 10000) / 10000;
+		    if($nl == 0) {
+			$x3=0;
+		    } else {
+			$x3 = int($z / $nl * 10000) / 10000;
+		    }
 		    print OUTFILE2 "transcript\t$chr:$s-$e\t$z\t$x3\t$n2\t$tlen\t$y\n";
 		} else {
 		    print OUTFILE1 "$y\t$st\n";
@@ -230,14 +246,30 @@ foreach my $chr (sort cmpChrs keys %TRANSCRIPT) {
 		    my $x1 = $EXONhash{$exon}{u};
 		    my $x2 = $EXONhash{$exon}{nu};
 		    my $z = $x1 + $x2;
-		    my $n1 = int($x1 / $nl / $nr * 10000) / 10000;
-		    my $n2 = int($z / $nl / $nr * 10000) / 10000;
+		    my $n1;
+		    my $n2;
+		    if($nl==0 || $nr==0) {
+			$n1=0;
+			$n2=0;
+		    } else {
+			$n1 = int($x1 / $nl / $nr * 10000) / 10000;
+			$n2 = int($z / $nl / $nr * 10000) / 10000;
+		    }
 		    my $en = $j/2+1;
 		    if($countsonly eq "false") {
 			if($sepout eq "true") {
-			    my $x3 = int($x1 / $nl * 10000) / 10000;
+			    my $x3;
+			    if($nl == 0) {
+				$x3 = 0;
+			    } else {
+				$x3 = int($x1 / $nl * 10000) / 10000;
+			    }
 			    print OUTFILE1 "  exon $en\t$chr:$s-$e\t$x1\t$x3\t$n1\t$elen\n";
-			    $x3 = int($z / $nl * 10000) / 10000;
+			    if($nl == 0) {
+				$x3=0;
+			    } else {
+				$x3 = int($z / $nl * 10000) / 10000;
+			    }
 			    print OUTFILE2 "  exon $en\t$chr:$s-$e\t$z\t$x3\t$n2\t$elen\n";
 			} else {
 			    print OUTFILE1 "  exon $en\t$chr:$s-$e\t$n1\t$n2\t$elen\n";
@@ -254,14 +286,30 @@ foreach my $chr (sort cmpChrs keys %TRANSCRIPT) {
 			my $x1 = $INTRONhash{$intron}{u};
 			my $x2 = $INTRONhash{$intron}{nu};
 			my $z = $x1 + $x2;
-			my $n1 = int($x1 / $nl / $nr * 10000) / 10000;
-			my $n2 = int($z / $nl / $nr * 10000) / 10000;
+			my $n1;
+			my $n2;
+			if($nl==0 || $nr==0) {
+			    $n1=0;
+			    $n2=0;
+			} else {
+			    $n1 = int($x1 / $nl / $nr * 10000) / 10000;
+			    $n2 = int($z / $nl / $nr * 10000) / 10000;
+			}
 			my $en = $j/2+1;
 			if($countsonly eq "false") {
 			    if($sepout eq "true") {
-				my $x3 = int($x1 / $nl * 10000) / 10000;
+				my $x3;
+				if($nl==0) {
+				    $x3=0;
+				} else {
+				    $x3 = int($x1 / $nl * 10000) / 10000;
+				}
 				print OUTFILE1 "intron $en\t$chr:$s-$e\t$x1\t$x3\t$n1\t$ilen\n";
-				$x3 = int($z / $nl * 10000) / 10000;
+				if($nl==0) {
+				    $x3=0;
+				} else {
+				    $x3 = int($z / $nl * 10000) / 10000;
+				}
 				print OUTFILE2 "intron $en\t$chr:$s-$e\t$z\t$x3\t$n2\t$ilen\n";
 			    } else {
 				print OUTFILE1 "intron $en\t$chr:$s-$e\t$n1\t$n2\t$ilen\n";
@@ -282,13 +330,29 @@ foreach my $chr (sort cmpChrs keys %TRANSCRIPT) {
 		    my $en = $j/2+1;
 		    my $elen = $e - $s + 1;
 		    my $nl = $elen / 1000;
-		    my $n1 = int($x1 / $nl / $nr * 10000) / 10000;
-		    my $n2 = int($z / $nl / $nr * 10000) / 10000;		    
+		    my $n1;
+		    my $n2;
+		    if($nl==0 || $nr==0) {
+			$n1 = 0;
+			$n2 = 0;
+		    } else {
+			$n1 = int($x1 / $nl / $nr * 10000) / 10000;
+			$n2 = int($z / $nl / $nr * 10000) / 10000;
+		    }
 		    if($countsonly eq "false") {
 			if($sepout eq "true") {
-			    my $x3 = int($x1 / $nl * 10000) / 10000;
+			    my $x3;
+			    if($nl==0) {
+				$x3=0;
+			    } else {
+				$x3 = int($x1 / $nl * 10000) / 10000;
+			    }
 			    print OUTFILE1 "  exon $en\t$chr:$s-$e\t$x1\t$x3\t$n1\t$elen\n";
-			    $x3 = int($z / $nl * 10000) / 10000;
+			    if($nl == 0) {
+				$x3=0;
+			    } else {
+				$x3 = int($z / $nl * 10000) / 10000;
+			    }
 			    print OUTFILE2 "  exon $en\t$chr:$s-$e\t$z\t$x3\t$n2\t$elen\n";
 			} else {
 			    print OUTFILE1 "  exon $en\t$chr:$s-$e\t$n1\t$n2\t$elen\n";
@@ -305,14 +369,30 @@ foreach my $chr (sort cmpChrs keys %TRANSCRIPT) {
 			my $x1 = $INTRONhash{$intron}{u};
 			my $x2 = $INTRONhash{$intron}{nu};
 			my $z = $x1 + $x2;
-			my $n1 = int($x1 / $nl / $nr * 10000) / 10000;
-			my $n2 = int($z / $nl / $nr * 10000) / 10000;
+			my $n1;
+			my $n2;
+			if($nl == 0 || $nr == 0) {
+			    $n1 = 0;
+			    $n2 = 0;
+			} else {
+			    $n1 = int($x1 / $nl / $nr * 10000) / 10000;
+			    $n2 = int($z / $nl / $nr * 10000) / 10000;
+			}
 			my $en = $j/2+1;
 			if($countsonly eq "false") {
 			    if($sepout eq "true") {
-				my $x3 = int($x1 / $nl * 10000) / 10000;
+				my $x3;
+				if($nl == 0) {
+				    $x3 = 0;
+				} else {
+				    $x3 = int($x1 / $nl * 10000) / 10000;
+				}
 				print OUTFILE1 "intron $en\t$chr:$s-$e\t$x1\t$x3\t$n1\t$ilen\n";
-				$x3 = int($z / $nl * 10000) / 10000;
+				if($nl == 0) {
+				    $x3 = 0;
+				} else {
+				    $x3 = int($z / $nl * 10000) / 10000;
+				}
 				print OUTFILE2 "intron $en\t$chr:$s-$e\t$z\t$x3\t$n2\t$ilen\n";
 			    } else {
 				print OUTFILE1 "intron $en\t$chr:$s-$e\t$n1\t$n2\t$ilen\n";
