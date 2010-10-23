@@ -778,6 +778,15 @@ if($postprocess eq "false") {
             $qualflag = 1;
     	    $x = breakup_file($qualsfile, $numchunks);
         }
+    } else {
+        $readsfile =~ /([^\/]+)$/;
+        $readsfile_nopath = $1;
+        for($i=1; $i<=$numchunks; $i++) {
+            $r = $readsfile_nopath . "." . $i;
+            if(!(-e "$output_dir/$readsfile_nopath")) {
+                  die "\n-------------------------------------------------------------------\nError: You said the files were already broken up, but the file\n'$output_dir/$readsfile_nopath' does not seem to exist.\n\nNote: even if the files are already broken up, they still need to be\nin the <output dir> directory that you specified as '$output_dir'.\n-------------------------------------------------------------------\n\n";
+            }
+        }
     }
 
     print STDERR "Reads fasta file already fragmented: $fasta_already_fragmented\n";
@@ -942,60 +951,16 @@ $x = `cp $output_dir/sam_header.1 $output_dir/RUM.sam`;
 for($i=1; $i<=$numchunks; $i++) {
     $x = `cat $output_dir/RUM.sam.$i >> $output_dir/RUM.sam`;
 }
+
 print LOGFILE "finished creating RUM_Unique/RUM_NU/RUM.sam: $date\n";
-if($quantify eq "true") {
-   $num_reads = 0;
-   $first = 1;
-   for($i=1; $i<=$numchunks; $i++) {
-       open(INFILE, "$output_dir/quant.$i");
-       $line = <INFILE>;
-       $line =~ /num_reads = (\d+)/;
-       $num_reads = $num_reads + $1;
-       $cnt=0;
-       while($line = <INFILE>) {
-           chomp($line);
-           @a = split(/\t/,$line);
-           $counts[$cnt]{Ucnt} = $counts[$cnt]{Ucnt} + $a[2];
-           $counts[$cnt]{NUcnt} = $counts[$cnt]{NUcnt} + $a[3];
-           if($first == 1) {
-               $counts[$cnt]{type} = $a[0];
-               $counts[$cnt]{coords} = $a[1];
-               $counts[$cnt]{len} = $a[4];
-               $counts[$cnt]{strand} = $a[5];
-               $counts[$cnt]{id} = $a[6];
-           }
-           $cnt++;
-       }
-       $first = 0;
-   }
-   $num_reads = $num_reads / 1000000;
-   open(OUTFILE, ">$output_dir/feature_quantifications_$name");
-   for($i=0; $i<$cnt; $i++) {
-       $NL = $counts[$i]{len} / 1000;
-       $ucnt_normalized = int( $counts[$i]{Ucnt} / $NL / $num_reads * 10000 ) / 10000;
-       $totalcnt_normalized = int( ($counts[$i]{NUcnt}+$counts[$i]{Ucnt}) / $NL / $num_reads * 10000 ) / 10000;
-       if($counts[$i]{type} eq 'transcript') {
-           print OUTFILE "--------------------------------------------------------------------\n";
-           print OUTFILE "$counts[$i]{id}\t$counts[$i]{strand}\n";
-	   print OUTFILE "      Type\tLocation           \tmin\tmax\tLength\n";
-	   print OUTFILE "transcript\t$counts[$i]{coords}\t$ucnt_normalized\t$totalcnt_normalized\t$counts[$i]{len}\n";
-           $exoncnt = 1;
-           $introncnt = 1;
-       } elsif($counts[$i]{type} eq 'exon') {
-	   print OUTFILE "  exon $exoncnt\t$counts[$i]{coords}\t$ucnt_normalized\t$totalcnt_normalized\t$counts[$i]{len}\n";
-           $exoncnt++;
-       } elsif($counts[$i]{type} eq 'intron') {
-	   print OUTFILE " intron $introncnt\t$counts[$i]{coords}\t$ucnt_normalized\t$totalcnt_normalized\t$counts[$i]{len}\n";
-           $introncnt++;
-       }
-   }
-   close(OUTFILE);
-}
 
 print LOGFILE "starting the post processing: $date\n";
 $PPlog = "postprocessing_$name" . ".log";
 $shellscript = "#!/bin/sh\n";
 $shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl $output_dir/RUM_Unique $output_dir/RUM_NU > $output_dir/mapping_stats.txt\n";
+if($quantify eq "true") {
+    $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications_$name\n";
+}
 $shellscript = $shellscript . "echo sorting RUM_Unique > $output_dir/$PPlog\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
 $shellscript = $shellscript . "perl $scripts_dir/sort_RUM_by_location.pl $output_dir/RUM_Unique $output_dir/RUM_Unique.sorted -ram $ram >> $output_dir/mapping_stats.txt\n";
@@ -1056,7 +1021,7 @@ close(LOGFILE);
 sub breakup_file () {
     ($FILE, $numpieces) = @_;
 
-    open(INFILE, $FILE);
+    open(INFILE, $FILE) or die "\nError: Cannot open '$FILE' for reading.\n\n";
     $filesize = `wc -l $FILE`;
     chomp($filesize);
     $filesize =~ s/^\s+//;
