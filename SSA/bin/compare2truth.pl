@@ -276,7 +276,7 @@ for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
     while($cigar_string_temp =~ /^(\d+)([^\d])/) {
 	$num = $1;
 	$type = $2;
-	if($type eq 'S') {
+	if($type eq 'S' || $type eq 'H') {
 	    $total_number_of_bases_unaligned = $total_number_of_bases_unaligned + $num;
 	}
 	if($type eq 'M') {	
@@ -296,7 +296,7 @@ for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
 	while($cigar_string_temp =~ /^(\d+)([^\d])/) {
 	    $num = $1;
 	    $type = $2;
-	    if($type eq 'S') {
+	    if($type eq 'S' || $type eq 'H') {
 		for($i=0; $i<$num; $i++) {
 		    $location[$pos_on_read] = "x";
 		    $pos_on_read++;
