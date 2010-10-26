@@ -2,7 +2,7 @@
 
 $| = 1;
 
-if(@ARGV < 1) {
+if(@ARGV < 4) {
     die "
 Usage: compare_junctions_in_simulated_to_INFERRED_alignment.pl <transcripts> <junctions found> <INFERRED junctions>
 
