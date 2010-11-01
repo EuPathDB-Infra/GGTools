@@ -209,7 +209,7 @@ for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
 	    if($number_occurrences{$idx} > 1) {
 		$total_number_of_bases_aligned_ambiguously = $total_number_of_bases_aligned_ambiguously + $readlength * 2;
 		for($i=0; $i<$number_occurrences{$idx}*2-1; $i++) {
-		    $sam = <INFILE2>;	    
+		    $sam = <INFILE2>;
 		}
             }
 	    if($number_occurrences{$idx} != 1) {
@@ -234,7 +234,35 @@ for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
 	    }
 	}
 	if($unique_records eq "true") {
-	    $num_alignments = 1;
+            if($sam =~ /X0:i:(\d+)/) {
+                $num_alignments = $1;
+                if($num_alignments > 1) {
+		    $total_number_of_bases_aligned_ambiguously = $total_number_of_bases_aligned_ambiguously + $readlength * 2;
+                }
+	        if($num_alignments != 1) {
+		    $truth = <INFILE1>;
+		    @a = split(/\t/, $truth);
+		    $truth_cigar = $a[3];
+    		    $cigar_string_temp = $truth_cigar;
+		    while($cigar_string_temp =~ /^(\d+)([^\d])/) {
+		       $num = $1;
+		        $type = $2;
+		        if($type eq 'I') {
+			    for($i=0; $i<$num; $i++) {
+			        $total_number_of_bases_in_true_insertions++;
+			    }
+		        }
+		        $cigar_string_temp =~ s/^\d+[^\d]//;
+		    }
+		
+		    $total_number_of_bases_of_reads = $total_number_of_bases_of_reads + $readlength;
+		    $linenum++;
+		    $sam = <INFILE2>;
+		    next;
+                }
+            } else {
+    	        $num_alignments = 1;
+            }
 	}
     }
     $truth =~ /seq.(\d+.)/;
