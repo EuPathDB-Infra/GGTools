@@ -1,7 +1,7 @@
-#!/usr/local/perl
+#!/usr/bin/perl
 
 # Written by Gregory R Grant
-# University of Pennslyvania, 2010
+# University of Pennsylvania, 2010
 
 $|=1;
 
@@ -14,10 +14,31 @@ $max_seq_num = 0;
 $flag = 0;
 $num_areads = 0;
 $num_breads = 0;
+$current_seqnum = 0;
+$previous_seqnum = 0;
 while($line = <INFILE>) {
     chomp($line);
     $line =~ /seq.(\d+)([^\d])/;
     $seqnum = $1;
+    $type = $2;
+    $current_seqnum = $seqnum;
+    if($current_seqnum > $previous_seqnum) {
+	foreach $key (keys %typea) {
+	    if($typeb{$key} == 0) {
+		$num_a_only++;
+	    }
+	}
+	foreach $key (keys %typeb) {
+	    if($typea{$key} == 0) {
+		$num_b_only++;
+	    }
+	}
+	undef %typea;
+	undef %typeb;
+	undef %joined;
+	undef %unjoined;
+	$previous_seqnum = $current_seqnum;
+    }
     if($flag == 0) {
 	$flag = 1;
 	$min_seq_num = $seqnum;
@@ -28,7 +49,6 @@ while($line = <INFILE>) {
     if($seqnum < $min_seq_num) {
 	$min_seq_num = $seqnum;
     }
-    $type = $2;
     if($type eq "\t") {
 	$joined{$seqnum}++;
 	$numjoined++;
@@ -59,7 +79,6 @@ while($line = <INFILE>) {
 	    print "SOMETHING IS WRONG: $seqnum ($typeb{$seqnum}) $line\n";
 	}
     }
-    $prev_line = $line;
 }
 close(INFILE);
 foreach $key (keys %typea) {
@@ -72,6 +91,10 @@ foreach $key (keys %typeb) {
 	$num_b_only++;
     }
 }
+undef %typea;
+undef %typeb;
+undef %joined;
+undef %unjoined;
 
 $f = format_large_int($seqnum);
 $total=$max_seq_num - $min_seq_num + 1;
@@ -117,12 +140,36 @@ if($num_breads > 0) {
     print "\n";
 }
 
+$current_seqnum = 0;
+$previous_seqnum = 0;
+$num_ambig_consistent=0;
+$num_ambig_a_only=0;
+$num_ambig_b_only=0;
 open(INFILE, $ARGV[1]);
+print "------\n";
 while($line = <INFILE>) {
     chomp($line);
     $line =~ /seq.(\d+)(.)/;
     $seqnum = $1;
     $type = $2;
+    $current_seqnum = $seqnum;
+    if($current_seqnum > $previous_seqnum) {
+	foreach $seqnum (keys %allids) {
+	    if($ambiga{$seqnum}+0 > 0 && $ambigb{$seqnum}+0 > 0) {
+		$num_ambig_consistent++;	
+	    }
+	    if($ambiga{$seqnum}+0 > 0 && $ambigb{$seqnum}+0 == 0) {
+		$num_ambig_a++;
+	    }
+	    if($ambiga{$seqnum}+0 == 0 && $ambigb{$seqnum}+0 > 0) {
+		$num_ambig_b++;
+	    }
+	}
+	undef %allids;
+	undef %ambiga;
+	undef %ambigb;
+	$previous_seqnum = $current_seqnum;
+    }
     if($type eq "a") {
 	$ambiga{$seqnum}++;
     }
@@ -136,10 +183,6 @@ while($line = <INFILE>) {
     $allids{$seqnum}++;
 }
 close(INFILE);
-
-$num_ambig_consistent=0;
-$num_ambig_a_only=0;
-$num_ambig_b_only=0;
 foreach $seqnum (keys %allids) {
     if($ambiga{$seqnum}+0 > 0 && $ambigb{$seqnum}+0 > 0) {
 	$num_ambig_consistent++;	
@@ -151,6 +194,10 @@ foreach $seqnum (keys %allids) {
 	$num_ambig_b++;
     }
 }
+undef %allids;
+undef %ambiga;
+undef %ambigb;
+
 $f = format_large_int($num_ambig_a);
 $p = int($num_ambig_a/$total * 1000) / 10;
 if($num_breads > 0) {
