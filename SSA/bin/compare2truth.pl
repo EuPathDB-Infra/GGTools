@@ -1,5 +1,5 @@
 #!/bin/perl
-
+$|=1;
 if(@ARGV < 2) { 
     die "
 Usage: perl compare2truth.pl <truth file> <sam file> [options]
@@ -307,7 +307,7 @@ for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
 	if($type eq 'S' || $type eq 'H') {
 	    $total_number_of_bases_unaligned = $total_number_of_bases_unaligned + $num;
 	}
-	if($type eq 'M') {	
+	if($type eq 'M' || $type eq 'I') {
 	    $number_bases_of_this_read_aligned = $number_bases_of_this_read_aligned + $num;
 	}
 	$cigar_string_temp =~ s/^\d+[^\d]//;
@@ -321,6 +321,7 @@ for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
 	$cigar_string_temp = $sam_cigar;
 	undef @location;
 	undef @truelocation;
+        $total_called_insertion_this_read = 0;
 	while($cigar_string_temp =~ /^(\d+)([^\d])/) {
 	    $num = $1;
 	    $type = $2;
@@ -342,6 +343,7 @@ for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
 		    $location[$pos_on_read] = "i";
 		    $pos_on_read++;
 		    $total_number_of_bases_called_insertions++;
+                    $total_called_insertion_this_read++;
 		}
 	    }
 	    $cigar_string_temp =~ s/^\d+[^\d]//;
@@ -367,18 +369,72 @@ for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
 	    }
 	    $cigar_string_temp =~ s/^\d+[^\d]//;
 	}
+        $insertion_flag = 0;
+        $cnt_equal = 0;
 	for($pos_on_read=0; $pos_on_read<@truelocation; $pos_on_read++) {
 	    if($truelocation[$pos_on_read] eq $location[$pos_on_read]) {
+		if($truelocation[$pos_on_read] ne "i") {
+                    $cnt_equal++;
+                }
 		$total_number_of_bases_aligned_correctly++;
 		if($truelocation[$pos_on_read] eq "i") {
 		    $insertions_called_correctly++;
+#print "$sn:insertions_called_correctly = $insertions_called_correctly\n";
 		}
 	    } else {
+		if($truelocation[$pos_on_read] eq "i") {
+                   $insertion_flag = 1;
+                }
 		if($location[$pos_on_read] ne "x") {
 		    $total_number_of_bases_aligned_incorrectly++;
 		}
 	    }
 	}
+        if($insertion_flag == 1) {
+             # fix insertion issue here
+             undef @truelocation_temp;
+             $j=0;
+             for($i=0; $i<@truelocation; $i++) {
+                 if($truelocation[$i] ne 'i') {
+                     $truelocation_temp[$j] = $truelocation[$i];
+                     $j++;
+                 }
+             }
+             undef @location_temp;
+             $j=0;
+             for($i=0; $i<@location; $i++) {
+                 if($location[$i] ne 'i') {
+                     $location_temp[$j] = $location[$i];
+                     $j++;
+                 }
+             }
+             $cnt_equal2 = 0;
+             for($i=0; $i<@truelocation_temp; $i++) {
+                  if($truelocation_temp[$i] eq $location_temp[$i]) {
+                      $cnt_equal2++;
+                  }
+             }
+             $diff = $cnt_equal2 - $cnt_equal;
+#print "-----\nsn=$sn\ndiff = $diff\n";
+#print "cnt_equal = $cnt_equal\n";
+#print "cnt_equal2 = $cnt_equal2\n";
+#print "truth_cigar = $truth_cigar\n";
+#print "sam_cigar = $sam_cigar\n";
+#print "insertions_called_correctly = $insertions_called_correctly\n";
+#print "total_number_of_bases_in_true_insertions = $total_number_of_bases_in_true_insertions\n";
+#print "total_number_of_bases_called_insertions = $total_number_of_bases_called_insertions\n";
+             if($diff > $total_called_insertion_this_read) {
+                  $diff = $total_called_insertion_this_read;
+#print "$sn:here\n";
+#print "diff = $diff\n";
+             }
+             if($diff > 0) {
+                 $insertions_called_correctly = $insertions_called_correctly + $diff;
+#print "$sn :::insertions_called_correctly = $insertions_called_correctly\n";
+ 		 $total_number_of_bases_aligned_correctly = $total_number_of_bases_aligned_correctly + $diff*2;
+		 $total_number_of_bases_aligned_incorrectly = $total_number_of_bases_aligned_incorrectly - $diff*2;
+             }
+        }
     }
     if($flag == 0) {
 	$seqnum--;
@@ -420,7 +476,7 @@ if($total_number_of_bases_in_true_insertions==0) {
     print "insertions FP/FN rate: No insertions exist in true data.\n";
 } else {
     if($total_number_of_bases_called_insertions>0) {
-	$insertions_false_positive_rate = (1 - int($insertions_called_correctly / $total_number_of_bases_called_insertions * 10000) / 10000) * 100;
+	$insertions_false_positive_rate = int((1 - int($insertions_called_correctly / $total_number_of_bases_called_insertions * 10000) / 10000) * 100 * 10000)/10000;
 	print "insertions FP rate: $insertions_false_positive_rate%\n";
     } else {
 	print "insertions FP rate: 0% (no insertions called)\n";
