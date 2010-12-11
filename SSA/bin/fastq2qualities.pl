@@ -72,8 +72,8 @@ if($userparamsgiven == 0) {  # the following figures out how many rows per block
 	}
 	chomp($line);
 	$line =~ s/\^M$//;
-	$line =~ s/[^;-h.]$//;
-	if($line =~ /^[;-h]+$/ && !($line =~ /^[ACGTN.]+$/)) {
+	$line =~ s/[^;-s.]$//;
+	if($line =~ /^[;-s]+$/ && !($line =~ /^[ACGTN.]+$/)) {
 	    $linearray[$cnt] = 1;
 	} else {
 	    $linearray[$cnt] = 0;
@@ -104,8 +104,8 @@ if($userparamsgiven == 0) {  # the following figures out how many rows per block
 	$line = <INFILE>;
 	chomp($line);
 	$line =~ s/\^M$//;
-	$line =~ s/[^;-h.]$//;
-	if($line =~ /^[;-h]+$/ && !($line =~ /^[ACGTN.]+$/)) {
+	$line =~ s/[^;-s.]$//;
+	if($line =~ /^[;-s]+$/ && !($line =~ /^[ACGTN.]+$/)) {
 	    print "$line\n";
 	} else {
 	    die "Error: There's only one line in the file '$ARGV[0]' and it doesn't\nlook like sequence.";
@@ -117,8 +117,8 @@ if($userparamsgiven == 0) {  # the following figures out how many rows per block
 	    $line = <INFILE>;
 	    chomp($line);
 	    $line =~ s/\^M$//;
-	    $line =~ s/[^;-h.]$//;
-	    if($line =~ /^[;-h]+$/ && !($line =~ /^[ACGTN.]+$/)) {
+	    $line =~ s/[^;-s.]$//;
+	    if($line =~ /^[;-s]+$/ && !($line =~ /^[ACGTN.]+$/)) {
 		print "$line\n";
 	    } else {
 		die "Error: There's only one line in the file '$ARGV[1]' and it doesn't\nlook like sequence.";
@@ -198,8 +198,8 @@ while($line = <INFILE1>) {    # this loop writes out the fasta file
 	chomp($line);
 	my $line_hold = $line;
 	$line =~ s/\^M$//;
-	$line =~ s/[^;-h.]$//;
-	if(($line =~ /[^;-h.]/ || !($line =~ /\S/)) && !($line =~ /^[ACGTN.]+$/)) {
+	$line =~ s/[^;-s.]$//;
+	if(($line =~ /[^;-s.]/ || !($line =~ /\S/)) && !($line =~ /^[ACGTN.]+$/)) {
 	    print STDERR "\nERROR: There's something wrong with line $linecnt in file $ARGV[0]\nIt should be a line of sequence but it is:\n$line_hold\n\n";
 	    exit();
 	}
@@ -210,8 +210,8 @@ while($line = <INFILE1>) {    # this loop writes out the fasta file
 	    print "b\n";
 	    $line_hold = $line2;
 	    $line2 =~ s/\^M$//;
-	    $line2 =~ s/[^;-h.]$//;
-	    if(($line2 =~ /[^;-h.]/ || !($line2 =~ /\S/)) && !($line2 =~ /^[ACGTN.]+$/)) {
+	    $line2 =~ s/[^;-s.]$//;
+	    if(($line2 =~ /[^;-s.]/ || !($line2 =~ /\S/)) && !($line2 =~ /^[ACGTN.]+$/)) {
 		print STDERR "\nERROR: There's something wrong with line $linecnt in file $ARGV[1]\nIt should be a line of sequence but it is:\n$line_hold\n\n";
 		exit();
 	    }
@@ -233,7 +233,7 @@ sub try_to_see_if_part_of_each_line_is_seq () {
 	open(INFILE, $ARGV[0]);
 	my $line = <INFILE>;
 	chomp($line);
-	my @a = split(/[^;-h.]+/,$line);
+	my @a = split(/[^;-s.]+/,$line);
 	my $maxlen = 0;
 	for(my $i=0; $i<@a; $i++) {
 	    my $len = length($a[$i]);
@@ -246,7 +246,7 @@ sub try_to_see_if_part_of_each_line_is_seq () {
 	while($line = <INFILE>) {
 	    chomp($line);
 	    $cnt++;
-	    my @a = split(/[^;-h.]+/,$line);
+	    my @a = split(/[^;-s.]+/,$line);
 	    my $flag = 0;
 	    for(my $i=0; $i<@a; $i++) {
 		my $len = length($a[$i]);
@@ -265,7 +265,7 @@ sub try_to_see_if_part_of_each_line_is_seq () {
 	open(INFILE2, $ARGV[1]);
 	my $line1 = <INFILE1>;
 	chomp($line1);
-	my @a = split(/[^;-h.]+/,$line1);
+	my @a = split(/[^;-s.]+/,$line1);
 	my $maxlen = 0;
 	for(my $i=0; $i<@a; $i++) {
 	    my $len = length($a[$i]);
@@ -280,8 +280,8 @@ sub try_to_see_if_part_of_each_line_is_seq () {
 	    my $line2 = <INFILE2>;
 	    chomp($line2);
 	    $cnt++;
-	    my @a = split(/[^;-h.]+/,$line1);
-	    my @b = split(/[^;-h.]+/,$line2);
+	    my @a = split(/[^;-s.]+/,$line1);
+	    my @b = split(/[^;-s.]+/,$line2);
 	    my $flag1 = 0;
 	    for(my $i=0; $i<@a; $i++) {
 		my $len = length($a[$i]);

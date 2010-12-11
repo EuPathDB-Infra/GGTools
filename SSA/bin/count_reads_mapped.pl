@@ -6,11 +6,52 @@
 $|=1;
 
 open(INFILE, $ARGV[0]);
-if(!($ARGV[0]=~/\S/)) {
-    print "\nUsage: count_reads_mapped.pl <filename of unique mappers> <filename of non-unique mappers>\n\nFile lines should look like this:\nseq.6b  chr19   44086924-44086960, 44088066-44088143    CGTCCAATCACACGATCAAGTTCTTCATGAACTTTGG:CTTGCACCTCTGGATGCTTGACAAGGAGCAGAAGCCCGAATCTCAGGGTGGTGCTGGTTGTCTCTGTGACTGCCGTAA\n\n";
-    exit();
+if(@ARGV<2) {
+    die "
+Usage: count_reads_mapped.pl <RUM Unique file> <RUM NU file> [options]
+
+Options: -maxseq n : specify the max sequence id, otherwise
+          will just use the max seq id found in the two files.
+
+         -minseq n : specify the min sequences id, otherwise
+          will just use the min seq id found in the two files.
+
+File lines should look like this:
+seq.6b  chr19   44086924-44086960, 44088066-44088143    CGTCCAATCACACGATCAAGTTCTTCATGAACTTTGG:CTTGCACCTCTGGATGCTTGACAAGGAGCAGAAGCCCGAATCTCAGGGTGGTGCTGGTTGTCTCTGTGACTGCCGTAA
+
+";
 }
+
 $max_seq_num = 0;
+$max_num_seqs_specified = "false";
+$min_num_seqs_specified = "false";
+for($i=2; $i<@ARGV; $i++) {
+    $optionrecognized = 0;
+    if($ARGV[$i] eq "-maxseq") {
+	$max_seq_num = $ARGV[$i+1];
+	$max_num_seqs_specified = "true";
+	if(!($max_seq_num =~ /^\d+$/)) {
+	    $x = $ARGV[$i+1];
+	    die "\nError: option $ARGV[$i] $x is not recognized, you need a number here, not '$x'...\n\n";
+	}
+	$optionrecognized = 1;
+	$i++;
+    }
+    if($ARGV[$i] eq "-minseq") {
+	$min_seq_num = $ARGV[$i+1];
+	$min_num_seqs_specified = "true";
+	if(!($min_seq_num =~ /^\d+$/)) {
+	    $x = $ARGV[$i+1];
+	    die "\nError: option $ARGV[$i] $x is not recognized, you need a number here, not '$x'...\n\n";
+	}
+	$optionrecognized = 1;
+	$i++;
+    }
+    if($optionrecognized == 0) {
+	die "\nError: option $ARGV[$i] is not recognized\n\n";
+    }
+}
+
 $flag = 0;
 $num_areads = 0;
 $num_breads = 0;
@@ -39,14 +80,14 @@ while($line = <INFILE>) {
 	undef %unjoined;
 	$previous_seqnum = $current_seqnum;
     }
-    if($flag == 0) {
+    if($flag == 0 && $min_num_seqs_specified eq "false") {
 	$flag = 1;
 	$min_seq_num = $seqnum;
     }
-    if($seqnum > $max_seq_num) {
+    if($seqnum > $max_seq_num && $max_num_seqs_specified eq "false") {
 	$max_seq_num = $seqnum;
     }
-    if($seqnum < $min_seq_num) {
+    if($seqnum < $min_seq_num && $min_num_seqs_specified eq "false") {
 	$min_seq_num = $seqnum;
     }
     if($type eq "\t") {

@@ -91,6 +91,7 @@ sub merge () {
     if($line2 eq '') {
 	$flag = 1;
 	unlink("$temp2sortedfile");
+	unlink("$temp3sortedfile");
     } else {
 	while($flag == 0) {
 	    while($seqnum1 <= $seqnum2 && $line1 ne '') {

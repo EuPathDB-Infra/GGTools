@@ -120,7 +120,7 @@ while(my $line = <INFILE>) {
 }
 close(INFILE);
 my %EXON;
-foreach my $chr (sort cmpChrs keys %EXON_temp) {
+foreach my $chr (sort {cmpChrs($a,$b)} keys %EXON_temp) {
     $ecnt{$chr} = 0;
     foreach my $exon (sort {$EXON_temp{$chr}{$a}{start} <=> $EXON_temp{$chr}{$b}{start}} keys %{$EXON_temp{$chr}}) {
 	$EXON{$chr}[$ecnt{$chr}]{start} = $EXON_temp{$chr}{$exon}{start};
@@ -130,7 +130,7 @@ foreach my $chr (sort cmpChrs keys %EXON_temp) {
     }
 }
 my %INTRON;
-foreach my $chr (sort cmpChrs keys %INTRON_temp) {
+foreach my $chr (sort {cmpChrs($a,$b)} keys %INTRON_temp) {
     $icnt{$chr} = 0;
     foreach my $intron (sort {$INTRON_temp{$chr}{$a}{start} <=> $INTRON_temp{$chr}{$b}{start}} keys %{$INTRON_temp{$chr}}) {
 	$INTRON{$chr}[$icnt{$chr}]{start} = $INTRON_temp{$chr}{$intron}{start};
@@ -144,7 +144,7 @@ foreach my $chr (sort cmpChrs keys %INTRON_temp) {
 &readfile($NU_readsfile, "NUcount");
 
 my %EXONhash;
-foreach my $chr (sort cmpChrs keys %EXON) {
+foreach my $chr (sort {cmpChrs($a,$b)} keys %EXON) {
     for(my $i=0; $i<$ecnt{$chr}; $i++) {
 	my $x1 = $EXON{$chr}[$i]{Ucount}+0;
 	my $x2 = $EXON{$chr}[$i]{NUcount}+0;
@@ -157,7 +157,7 @@ foreach my $chr (sort cmpChrs keys %EXON) {
     }
 }
 my %INTRONhash;
-foreach my $chr (sort cmpChrs keys %INTRON) {
+foreach my $chr (sort {cmpChrs($a,$b)} keys %INTRON) {
     for(my $i=0; $i<$icnt{$chr}; $i++) {
 	my $x1 = $INTRON{$chr}[$i]{Ucount}+0;
 	my $x2 = $INTRON{$chr}[$i]{NUcount}+0;
@@ -181,7 +181,7 @@ my $nr = $num_reads / 1000000;
 if($countsonly eq "true") {
     print OUTFILE1 "num_reads = $num_reads\n";
 }
-foreach my $chr (sort cmpChrs keys %TRANSCRIPT) {
+foreach my $chr (sort {cmpChrs($a,$b)} keys %TRANSCRIPT) {
     for(my $i=0; $i<$tcnt{$chr}; $i++) {
 	my $x1 = $TRANSCRIPT{$chr}[$i]{Ucount}+0;
 	my $x2 = $TRANSCRIPT{$chr}[$i]{NUcount}+0;
@@ -645,7 +645,7 @@ sub cmpChrs () {
 	    my %temphash;
 	    $temphash{$tempa}=1;
 	    $temphash{$tempb}=1;
-	    foreach my $tempkey (sort cmpChrs keys %temphash) {
+	    foreach my $tempkey (sort {cmpChrs($a,$b)} keys %temphash) {
 		if($tempkey eq $tempa) {
 		    return 1;
 		} else {
@@ -694,7 +694,7 @@ sub cmpChrs () {
 		my %temphash;
 		$temphash{$tempa}=1;
 		$temphash{$tempb}=1;
-		foreach my $tempkey (sort cmpChrs keys %temphash) {
+		foreach my $tempkey (sort {cmpChrs($a,$b)} keys %temphash) {
 		    if($tempkey eq $tempa) {
 			return 1;
 		    } else {

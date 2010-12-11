@@ -89,8 +89,7 @@ while($FLAG == 0) {
 	    $chr =~ s/:[^:]*$//;
 	    $ref_seq = <GENOMESEQ>;
 	    chomp($ref_seq);
-	    $chrsize = length($ref_seq);
-	    $samheader{$chr} = "\@SQ\tSN:$chr\tLN:$chrsize\n";
+	    $chrsize{$chr} = length($ref_seq);
 	    $CHR2SEQ{$chr} = $ref_seq;
 	    $totalsize = $totalsize + length($ref_seq);
 	    if($totalsize > 1000000000) {  # don't store more than 1 gb of sequence in memory at once...
@@ -104,7 +103,7 @@ while($FLAG == 0) {
 close(GENOMESEQ);
 
 open(SAMHEADER, ">$ARGV[5]");
-foreach $chr (sort cmpChrs keys %samheader) {
+foreach $chr (sort {cmpChrs($a,$b)} keys %samheader) {
     $outstr = $samheader{$chr};
     print SAMHEADER $outstr;
 }
@@ -142,7 +141,7 @@ sub cmpChrs () {
 	    undef %temphash;
 	    $temphash{$tempa}=1;
 	    $temphash{$tempb}=1;
-	    foreach $tempkey (sort cmpChrs keys %temphash) {
+	    foreach $tempkey (sort {cmpChrs($a,$b)} keys %temphash) {
 		if($tempkey eq $tempa) {
 		    return 1;
 		} else {
@@ -190,7 +189,7 @@ sub cmpChrs () {
 		undef %temphash;
 		$temphash{$tempa}=1;
 		$temphash{$tempb}=1;
-		foreach $tempkey (sort cmpChrs keys %temphash) {
+		foreach $tempkey (sort {cmpChrs($a,$b)} keys %temphash) {
 		    if($tempkey eq $tempa) {
 			return 1;
 		    } else {
@@ -300,7 +299,11 @@ sub clean () {
 		$flag = 1;
 	    }
 	}
-	if(defined $CHR2SEQ{$a[1]} && $flag == 0) {
+	if(!(defined $samheader{$chr})) {
+	    $CS = $chrsize{$chr};
+	    $samheader{$chr} = "\@SQ\tSN:$chr\tLN:$CS\n";
+	}
+	if(defined $CHR2SEQ{$chr} && $flag == 0) {
 	    if($line =~ /[^\t]\+[^\t]/) {   # insertions will break things, have to fix this, for now not just cleaning these lines
 		@LINE = split(/\t/,$line);
 		print OUTFILE "$LINE[0]\t$LINE[1]\t$LINE[2]\t$LINE[4]\t$LINE[3]\n";
@@ -311,7 +314,7 @@ sub clean () {
  		    @c = split(/-/,$b[$i]);
 		    $len = $c[1] - $c[0] + 1;
 		    $start = $c[0] - 1;
-		    $SEQ = $SEQ . substr($CHR2SEQ{$a[1]}, $start, $len);
+		    $SEQ = $SEQ . substr($CHR2SEQ{$chr}, $start, $len);
 		}
 		$a[3] =~ s/://g;
 		&trimleft($SEQ, $a[3], $a[2]) =~ /(.*)\t(.*)/;
@@ -329,7 +332,7 @@ sub clean () {
 		$seq = addJunctionsToSeq($seq, $spans);
 
 		# should fix the following so it doesn't repeat the operation unnecessarily
-		# while processin the RUM_NU file
+		# while processing the RUM_NU file
 		if($countmismatches eq "true") {
 		    $num_mismatches = &countmismatches($SEQ, $seq);
 		    print OUTFILE "$a[0]\t$chr\t$spans\t$strand\t$seq\t$num_mismatches\n";

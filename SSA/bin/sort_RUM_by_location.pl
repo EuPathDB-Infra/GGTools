@@ -115,7 +115,7 @@ close(INFILE);
 
 $cnt=0;
 print "\n$infile reads per chromosome:\n\nchr_name\tnum_reads\n";
-foreach $chr (sort cmpChrs keys %chr_counts) {
+foreach $chr (sort {cmpChrs($a,$b)} keys %chr_counts) {
     $CHR[$cnt] = $chr;
     $cnt++;
     print "$chr\t$chr_counts{$chr}\n";
@@ -141,7 +141,7 @@ while($cnt < @CHR) {
 }
 
 # DEBUG
-#foreach $chr (sort cmpChrs keys %CHUNK) {
+#foreach $chr (sort {cmpChrs($a,$b)} keys %CHUNK) {
 #    print STDERR "$chr\t$CHUNK{$chr}\n";
 #}
 # DEBUG
@@ -331,7 +331,7 @@ while($cnt < @CHR) {
 	}
     }
     close(INFILE);
-    foreach $chr (sort cmpChrs keys %hash) {
+    foreach $chr (sort {cmpChrs($a,$b)} keys %hash) {
 	foreach $line (sort {$hash{$chr}{$a}[0]<=>$hash{$chr}{$b}[0] || ($hash{$chr}{$a}[0]==$hash{$chr}{$b}[0] && $hash{$chr}{$a}[1]<=>$hash{$chr}{$b}[1])} keys %{$hash{$chr}}) {
 	    chomp($line);
 	    if($line =~ /\S/) {
@@ -409,7 +409,7 @@ sub cmpChrs () {
 	    undef %temphash;
 	    $temphash{$tempa}=1;
 	    $temphash{$tempb}=1;
-	    foreach $tempkey (sort cmpChrs keys %temphash) {
+	    foreach $tempkey (sort {cmpChrs($a,$b)} keys %temphash) {
 		if($tempkey eq $tempa) {
 		    return 1;
 		} else {
@@ -457,7 +457,7 @@ sub cmpChrs () {
 		undef %temphash;
 		$temphash{$tempa}=1;
 		$temphash{$tempb}=1;
-		foreach $tempkey (sort cmpChrs keys %temphash) {
+		foreach $tempkey (sort {cmpChrs($a,$b)} keys %temphash) {
 		    if($tempkey eq $tempa) {
 			return 1;
 		    } else {

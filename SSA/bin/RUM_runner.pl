@@ -108,13 +108,13 @@ Options: There are many options, but RUM is typically run with the defaults.
        -dna       : Run in dna mode, meaning don't map across splice junctions.
 
        -fast      : Run with blat params that run about 3 times faster but
-                    a tad less sensitive
+                    a tad less sensitive.
 
        -variable_read_lengths : Set this if your reads are not all of the same
-                                length
+                                length.
 
-       -limitNU x : Limits the number of ambiguous mappers in the final output
-                    to a max of x
+       -limitNU N : Limits the number of ambiguous mappers in the final output
+                    by removing all reads that map to N locations or more.
 
        -limitBowtieNU : Limits the number of ambiguous mappers in the Bowtie
                         run to a max of 100.  If you have short reads and a
@@ -170,6 +170,8 @@ Options: There are many options, but RUM is typically run with the defaults.
        -postprocess : Rerun just the post-processing steps, after the alignment,
                       if for some reason you need to do this.
 
+       -noclean   : do not remove the intermediate and temp files after finishing.
+
        -kill      : To kill a job, run with all the same parameters but add
                     -kill.  Note: it is not sufficient to just terminate
                     RUM_runner.pl, that will leave other phantom processes.
@@ -221,6 +223,7 @@ $minidentity=93;
 $postprocess = "false";
 $blatonly = "false";
 $kill = "false";
+$cleanup = "true";
 $variable_read_lengths = "false";
 $countmismatches = "false";
 $num_insertions_allowed = 1;
@@ -228,6 +231,7 @@ $junctions = "false";
 $quatify = "false";
 $ram = 8;
 $user_ram = "false";
+$nocat = "false";
 if(@ARGV > 5) {
     for($i=5; $i<@ARGV; $i++) {
 	$optionrecognized = 0;
@@ -248,6 +252,14 @@ if(@ARGV > 5) {
         }
 	if($ARGV[$i] eq "-single") {
 	    $paired_end = "false";
+	    $optionrecognized = 1;
+	}
+	if($ARGV[$i] eq "-nocat") {
+	    $nocat = "true";
+	    $optionrecognized = 1;
+	}
+	if($ARGV[$i] eq "-noclean") {
+	    $cleanup = "false";
 	    $optionrecognized = 1;
 	}
 	if($ARGV[$i] eq "-junctions") {
@@ -399,7 +411,7 @@ if($postprocess eq "false") {
      sleep(2);
 
      if($qsub eq "true") {
-         print STDERR "You have chosen to submit the jobs using 'qsub'.  I'm going to assume each node has\nsufficient RAM for this.  If you are running a mammalian genome then you should have at least 6 to 8 Gigs per node.\n\n";
+         print STDERR "You have chosen to submit the jobs using 'qsub'.  I'm going to assume each node has\nsufficient RAM for this.  If you are running a mammalian genome then you should have\nat least 6 to 8 Gigs per node.\n\n";
      } else {
           print STDERR "I'm going to try to figure out how much RAM you have.\nIf you see some error messages here, don't worry, these are harmless.\n\n";
           sleep(2);
@@ -482,12 +494,13 @@ $check = `ps x | grep RUM_runner.pl`;
 $CNT=0;
 for($i=0; $i<@a; $i++) {
     chomp($a[$i]);
+    next if $a[$i]=~ /screen.*RUM_runner/i;
     $a[$i] =~ s/.*RUM_runner.pl *//;
     @b = split(/ +/,$a[$i]);
     if($b[2] eq $output_dir || $b[2] eq $ARGV[2]) {
 	$CNT++;
 	if($CNT > 1) {
-	    die "\nERROR: You seem to already have an instance of RUM_runner.pl running on the\nsame working directory.  This will cause collisions of the temporary files.\n\nExiting...\n\n";
+	    die "\nERROR: You seem to already have an instance of RUM_runner.pl running on the\nsame working directory.  This will cause collisions of the temporary files.\n\nExiting.\n\nTry killing by running the same command with -kill.\nIf that doesn't work use kill -9 on the process ID.\n\n";
 	}
     }
 }
@@ -632,7 +645,8 @@ print LOGFILE "numchunks: $numchunks\n";
 print LOGFILE "name: $name\n";
 print LOGFILE "paired_end: $paired_end\n";
 print LOGFILE "fast: $fast\n";
-print LOGFILE "limitNU: $limitNU\n";
+print LOGFILE "limitBowtieNU: $limitNU\n";
+print LOGFILE "limitNU: $limitNUhard\n";
 print LOGFILE "dna: $dna\n";
 print LOGFILE "qsub: $qsub\n";
 print LOGFILE "blat minidentity: $minidentity\n";
@@ -760,6 +774,10 @@ if($blatonly eq "true" && $dna eq "true") {
 
 if($postprocess eq "false") {
     $pipeline_template = `cat pipeline_template.sh`;
+    if($cleanup eq 'false') {
+        $pipeline_template =~ s/^.*unlink.*$//mg;
+        $pipeline_template =~ s!if . -f OUTDIR.RUM_NU_temp3.CHUNK .\nthen\n\nfi\n!!gs;
+    }
     if($dna eq "true") {
         $pipeline_template =~ s/# cp /cp /gs;
         $pipeline_template =~ s/xxx1.*xxx2//s;
@@ -796,27 +814,38 @@ if($postprocess eq "false") {
 
     $readsfile =~ s!.*/!!;
     $readsfile = $output_dir . "/" . $readsfile;
+    $t = `tail -2 $readsfile`;
+    $t =~ /seq.(\d+)/;
+    $NumSeqs = $1;
+    $f = &format_large_int($NumSeqs);
+    if($paired_end eq 'true') {
+       print STDERR "Number of Read Pairs: $f\n";
+       print LOGFILE "Number of Read Pairs: $f\n";
+    } else {
+       print STDERR "Number of Reads: $f\n";
+       print LOGFILE "Number of Reads: $f\n";
+    }
     
     print STDERR "\nEverything seems okay, I am going to fire off the job.\n\n";
     
     for($i=1; $i<=$numchunks; $i++) {
         $pipeline_file = $pipeline_template;
         if($limitNUhard eq "true") {
-    	$pipeline_file =~ s!LIMITNUCUTOFF!$NU_limit!gs;
-    	$pipeline_file =~ s!sort_RUM_by_id.pl OUTDIR.RUM_NU_temp2.CHUNK!sort_RUM_by_id.pl OUTDIR/RUM_NU_temp3.CHUNK!gs;
+    	   $pipeline_file =~ s!LIMITNUCUTOFF!$NU_limit!gs;
+#    	   $pipeline_file =~ s!sort_RUM_by_id.pl OUTDIR.RUM_NU_temp2.CHUNK!sort_RUM_by_id.pl OUTDIR/RUM_NU_temp3.CHUNK!gs;
         } else {
-    	$pipeline_file =~ s!perl SCRIPTSDIR/limit_NU.pl OUTDIR/RUM_NU_temp2.CHUNK LIMITNUCUTOFF > OUTDIR/RUM_NU_temp3.CHUNK\n!!gs;
+    	   $pipeline_file =~ s!perl SCRIPTSDIR/limit_NU.pl OUTDIR/RUM_NU_temp3.CHUNK LIMITNUCUTOFF > OUTDIR/RUM_NU.CHUNK\n!mv OUTDIR/RUM_NU_temp3.CHUNK OUTDIR/RUM_NU.CHUNK\n!gs;
         }
         if($num_insertions_allowed != 1) {
-    	$pipeline_file =~ s!MAXINSERTIONSALLOWED!-num_insertions_allowed $num_insertions_alllowed!gs;
+    	   $pipeline_file =~ s!MAXINSERTIONSALLOWED!-num_insertions_allowed $num_insertions_alllowed!gs;
         } else {
-    	$pipeline_file =~ s!MAXINSERTIONSALLOWED!!gs;
+    	   $pipeline_file =~ s!MAXINSERTIONSALLOWED!!gs;
         }
-        $pipeline_file =~ s!OUTDIR!$output_dir!gs;
+           $pipeline_file =~ s!OUTDIR!$output_dir!gs;
         if($quals eq "false") {
-    	$pipeline_file =~ s!QUALSFILE.CHUNK!none!gs;
+    	   $pipeline_file =~ s!QUALSFILE.CHUNK!none!gs;
         } else {
-    	$pipeline_file =~ s!QUALSFILE!$qualsfile!gs;
+    	   $pipeline_file =~ s!QUALSFILE!$qualsfile!gs;
         }
         $pipeline_file =~ s!CHUNK!$i!gs;
         $pipeline_file =~ s!MINIDENTITY!$minidentity!gs;
@@ -833,23 +862,23 @@ if($postprocess eq "false") {
         $pipeline_file =~ s!GENOMEFA!$genomefa!gs;
         $pipeline_file =~ s!READLENGTH!$readlength!gs;
         if($countmismatches eq "true") {
-    	$pipeline_file =~ s!COUNTMISMATCHES!-countmismatches!gs;
+    	   $pipeline_file =~ s!COUNTMISMATCHES!-countmismatches!gs;
         } else {
-    	$pipeline_file =~ s!COUNTMISMATCHES!!gs;
+    	   $pipeline_file =~ s!COUNTMISMATCHES!!gs;
         }
         if($limitNU eq "true") {
-    	$pipeline_file =~ s! -a ! -k 100 !gs;	
+    	   $pipeline_file =~ s! -a ! -k 100 !gs;	
         }
         if($fast eq "false") {
-    	$pipeline_file =~ s!SPEED!-stepSize=5!gs;
+    	   $pipeline_file =~ s!SPEED!-stepSize=5!gs;
         }
         else {
-    	$pipeline_file =~ s!SPEED!!gs;
+    	   $pipeline_file =~ s!SPEED!!gs;
         }
         if($paired_end eq "true") {
-    	$pipeline_file =~ s!PAIREDEND!paired!gs;
+    	   $pipeline_file =~ s!PAIREDEND!paired!gs;
         } else {
-    	$pipeline_file =~ s!PAIREDEND!single!gs;
+    	   $pipeline_file =~ s!PAIREDEND!single!gs;
         }
         $outfile = "pipeline." . $i . ".sh";
         open(OUTFILE, ">$output_dir/$outfile") or die "\nError: cannot open '$output_dir/$outfile' for writing\n\n";
@@ -857,10 +886,10 @@ if($postprocess eq "false") {
         close(OUTFILE);
     
         if($qsub eq "true") {
-    	`qsub -l mem_free=7G $output_dir/$outfile`;
+    	   `qsub -l mem_free=7G $output_dir/$outfile`;
         }
         else {
-    	system("/bin/bash $output_dir/$outfile &");
+    	   system("/bin/bash $output_dir/$outfile &");
         }
         print STDERR "Chunk $i initiated\n";
         $status{$i} = 1;
@@ -937,27 +966,45 @@ if($postprocess eq "false") {
      print STDERR "\nOK, will now merge everything, create the coverage plots and\ncalculate the quantified values, etc.  This could take some time...\n\n";
 }
 
-$date = `date`;
-print LOGFILE "finished creating RUM_Unique.*/RUM_NU.*: $date\n";
-$x = `cp $output_dir/RUM_Unique.1 $output_dir/RUM_Unique`;
-for($i=2; $i<=$numchunks; $i++) {
-    $x = `cat $output_dir/RUM_Unique.$i >> $output_dir/RUM_Unique`;
-}
-$x = `cp $output_dir/RUM_NU.1 $output_dir/RUM_NU`;
-for($i=2; $i<=$numchunks; $i++) {
-    $x = `cat $output_dir/RUM_NU.$i >> $output_dir/RUM_NU`;
-}
-$x = `cp $output_dir/sam_header.1 $output_dir/RUM.sam`;
-for($i=1; $i<=$numchunks; $i++) {
-    $x = `cat $output_dir/RUM.sam.$i >> $output_dir/RUM.sam`;
+$t = `tail -2 $readsfile`;
+$t =~ /seq.(\d+)/;
+$NumSeqs = $1;
+
+if($nocat eq "false") {
+    $date = `date`;
+    print LOGFILE "finished creating RUM_Unique.*/RUM_NU.*: $date\n";
+    $x = `cp $output_dir/RUM_Unique.1 $output_dir/RUM_Unique`;
+    for($i=2; $i<=$numchunks; $i++) {
+        $x = `cat $output_dir/RUM_Unique.$i >> $output_dir/RUM_Unique`;
+    }
+    $x = `cp $output_dir/RUM_NU.1 $output_dir/RUM_NU`;
+    for($i=2; $i<=$numchunks; $i++) {
+        $x = `cat $output_dir/RUM_NU.$i >> $output_dir/RUM_NU`;
+    }
+    $x = `cp $output_dir/sam_header.1 $output_dir/RUM.sam`;
+    for($i=1; $i<=$numchunks; $i++) {
+        $x = `cat $output_dir/RUM.sam.$i >> $output_dir/RUM.sam`;
+    }
 }
 
 print LOGFILE "finished creating RUM_Unique/RUM_NU/RUM.sam: $date\n";
 
+if($cleanup eq 'true') {
+   print STDERR "\nCleaning up some temp files...\n\n";
+   `yes|rm $output_dir/RUM.sam.* $output_dir/RUM_Unique.* $output_dir/RUM_NU.* $output_dir/sam_header.* $output_dir/reads.fa.*`;
+   if(-e "$output_dir/quals.fa.1") {
+       `yes|rm $output_dir/quals.fa.*`;
+   }
+}
+
 print LOGFILE "starting the post processing: $date\n";
 $PPlog = "postprocessing_$name" . ".log";
 $shellscript = "#!/bin/sh\n";
-$shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl $output_dir/RUM_Unique $output_dir/RUM_NU > $output_dir/mapping_stats.txt\n";
+if($NumSeqs =~ /(\d+)/) {
+    $shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl $output_dir/RUM_Unique $output_dir/RUM_NU -minseq 1 -maxseq $NumSeqs > $output_dir/mapping_stats.txt\n";
+} else {
+    $shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl $output_dir/RUM_Unique $output_dir/RUM_NU -minseq 1 > $output_dir/mapping_stats.txt\n";
+}
 if($quantify eq "true") {
     $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications_$name\n";
 }
@@ -993,7 +1040,6 @@ if($qsub eq "true") {
 else {
     system("/bin/bash $output_dir/$str");
 }
-
 print STDERR "\nWorking, now another wait...\n\n";
 $doneflag = 0;
 while($doneflag == 0) {
@@ -1010,6 +1056,11 @@ while($doneflag == 0) {
     if($doneflag == 0) {
 	sleep(30);
     }
+}
+
+if($cleanup eq 'true') {
+   `yes|rm $output_dir/quant.*`;
+   `yes|rm $output_dir/pipeline.*`;
 }
 
 print STDERR "\nOkay, all finished.\n\n";
@@ -1029,10 +1080,18 @@ sub breakup_file () {
     $numseqs = $filesize / 2;
     $piecesize = int($numseqs / $numpieces);
     $piecesize2 = int($numseqs / $numpieces / 2);
-    if($numchunks > 1) {
-	print LOGFILE "processing in $numchunks pieces of approx $piecesize2 reads each\n";
-    } else {
-	print LOGFILE "processing in one piece of approx $piecesize2 reads\n";
+
+    $t = `tail -2 $FILE`;
+    $t =~ /seq.(\d+)/;
+    $NS = $1;
+    if(!($FILE =~ /qual/)) {
+        $piecesize3 = &format_large_int($piecesize2);
+        if($numchunks > 1) {
+    	    print LOGFILE "processing in $numchunks pieces of approx $piecesize3 reads each\n";
+        } else {
+	    $NS2 = &format_large_int($NS);
+    	    print LOGFILE "processing in one piece of $NS2 reads\n";
+        }
     }
     if($piecesize % 2 == 1) {
 	$piecesize++;
@@ -1233,4 +1292,21 @@ sub getNext2 () {
 	$end2 = $1;
 	$out2 = $line1;
     }
+}
+
+sub format_large_int () {
+    ($int) = @_;
+    @a = split(//,"$int");
+    $j=0;
+    $newint = "";
+    $n = @a;
+    for($i=$n-1;$i>=0;$i--) {
+	$j++;
+	$newint = $a[$i] . $newint;
+	if($j % 3 == 0) {
+	    $newint = "," . $newint;
+	}
+    }
+    $newint =~ s/^,//;
+    return $newint;
 }

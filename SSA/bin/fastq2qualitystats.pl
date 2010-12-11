@@ -1,7 +1,7 @@
-#!/usr/bin/perl
-
-# Written by Gregory R. Grant
+# Written by Elisabetta Manduchi, based on a script by Greg Grant
 # University of Pennslyvania, 2010
+
+use strict;
 
 if (@ARGV < 1) {
   die "
@@ -12,35 +12,42 @@ This program prints to output the average quality score over all reads for each
 read position.";
 }
 
-$string = "\@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefgh";
+my $string = "\@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 
-@a = split(//,$string);
+my @a = split(//,$string);
 
-for($i=0; $i<@a; $i++) {
-    $qualitychar2score{$a[$i]} = $i + 64;
+my %qualitychar2score;
+for(my $i=0; $i<@a; $i++) {
+    $qualitychar2score{$a[$i]} = $i;
 }
-#foreach $char (sort {$qualitychar2score{$a} <=> $qualitychar2score{$b}} keys %qualitychar2score) {
+#foreach my $char (sort {$qualitychar2score{$a} <=> $qualitychar2score{$b}} keys %qualitychar2score) {
 #    print "$char: $qualitychar2score{$char}\n";
 #}
 
 open(INFILE, $ARGV[0]);
-$num_seqs = 0;
-while($line = <INFILE>) {
+my $num_seqs = 0;
+my @sum_of_quals;
+while(my $line = <INFILE>) {
     $line = <INFILE>;
     $line = <INFILE>;
     $line = <INFILE>;
+#    print $line;
     chomp($line);
-    @a = split(//,$line);
-    $N = @a;
-    for($i=0; $i<@a; $i++) {
-	$sum_of_quals{$i} = $sum_of_quals{$i} + $qualitychar2score{$a[$i]};
+    my @a = split(//,$line);
+    for(my $i=0; $i<@a; $i++) {
+      $sum_of_quals[$i] = $sum_of_quals[$i] + $qualitychar2score{$a[$i]};
+#      print "i, $sum_of_quals[$i]\n";
     }
     $num_seqs++;
 }
-foreach $i (sort {$a <=> $b} keys %sum_of_quals) {
-    $ave_of_quals{$i} = $sum_of_quals{$i} / $num_seqs;
+#print "$num_seqs\n";
+my @ave_of_quals;
+for (my $i=0; $i<@sum_of_quals; $i++) {
+  $ave_of_quals[$i] = $sum_of_quals[$i] / $num_seqs;
 }
 
-foreach $i (sort {$a <=> $b} keys %ave_of_quals) {
-    print "ave qual position $i: $ave_of_quals{$i}\n";
+print "POSITION\tAVG_Q\tP\n";
+for (my $i=1;$i<=@ave_of_quals;$i++) {
+  my $p = 10**(-$ave_of_quals[$i-1]/10);
+  print "ave qual position $i\t$ave_of_quals[$i-1]\t$p\n";
 }
