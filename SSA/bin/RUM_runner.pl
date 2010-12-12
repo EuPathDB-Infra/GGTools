@@ -618,12 +618,36 @@ if(($readsfile =~ /,,,/) && ($paired_end eq "true") && ($postprocess eq "false")
 	die "\nError: You specified the same file for the forward and reverse reads, must be an error...\n\n";
     }
 
+    `perl $scripts_dir/parse2fasta.pl $a[0] $a[1] | head -10000 > $output_dir/reads_temp.fa`;
+    `perl $scripts_dir/fastq2qualities.pl $a[0] $a[1] | head -10000 > $output_dir/quals_temp.fa`;
+    $X = `head -2 $output_dir/quals_temp.fa | tail -1`;
+    if($X =~ /\S/ && !($X =~ /Sorry, can't figure these files out/)) {
+        open(RFILE, "$output_dir/reads_temp.fa");
+        open(QFILE, "$output_dir/quals_temp.fa");
+        while($linea = <RFILE>) {
+            $lineb = <QFILE>;
+            $line1 = <RFILE>;
+            $line2 = <QFILE>;
+            chomp($line1);
+            chomp($line2);
+            if(length($line1) != length($line2)) {
+               $readlength = length($line1);
+               $quallength = length($line2);
+               print "readlength = $readlength\n";
+               print "quallength = $quallength\n";
+               die "ERROR: It seems your read lengths differ from your quality string lengths.\nCheck line:\n$linea$line1\n$lineb$line2\n\n";
+           }
+        }
+    }
+    unlink("$output_dir/reads_temp.fa");
+    unlink("$output_dir/quals_temp.fa");
+
     print STDERR "Reformatting reads file... please be patient.\n";
     `perl $scripts_dir/parse2fasta.pl $a[0] $a[1] > $output_dir/reads.fa`;
     `perl $scripts_dir/fastq2qualities.pl $a[0] $a[1] > $output_dir/quals.fa`;
     $X = `head -2 $output_dir/quals.fa | tail -1`;
     if($X =~ /\S/ && !($X =~ /Sorry, can't figure these files out/)) {
-	$quals = "true"
+	$quals = "true";
     }
     $readsfile = "$output_dir/reads.fa";
     $qualsfile = "$output_dir/quals.fa";
