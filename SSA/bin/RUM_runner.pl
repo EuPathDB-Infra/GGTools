@@ -25,6 +25,9 @@ Note: All entries can be absolute path, or relative path to where the RUM_runner
    e.g. indexes/mm9_genome_sequence_single-line-seqs.fa
 8) perl scripts directory, can be relative path to where the RUM_runner.pl script is, or absolute path
    e.g.: scripts
+9) lib directory, this directory holds the config files and the pipeline_template.sh file.  It can
+   be relative path to where the RUM_runner.pl script is, or absolute path
+   e.g.: lib
 
 ";
 }
@@ -65,12 +68,12 @@ Usage: RUM_runner.pl <config file> <reads file(s)> <output dir> <num chunks>
                      <name> [options]
 
 <config file>   :  This file tells RUM where to find the various executables
-                   and indexes.  This file is included in the download for
-                   a given organism, for example rum.config_mm9 for mouse
-                   build mm9, which will work if you leave everything in its
-                   default location.  To modify or make your own config file,
-                   run this program with the single argument 'config' for more
-                   information on the config file.
+                   and indexes.  This file is included in the 'lib' directory
+                   when you download an organism, for example rum.config_mm9
+                   for mouse build mm9, which will work if you leave everything
+                   in its default location.  To modify or make your own config
+                   file, run this program with the single argument 'config' for
+                   more information on the config file.
 
 <reads file(s)> :  What to put here depends on whether your data is paired or
                    unpaired:
@@ -583,6 +586,9 @@ chomp($genome_blat);
 $scripts_dir = <INFILE>;
 $scripts_dir =~ s!/$!!;
 chomp($scripts_dir);
+$lib = <INFILE>;
+$lib =~ s!/$!!;
+chomp($lib);
 $genomefa = $genome_blat;
 close(INFILE);
 
@@ -773,7 +779,7 @@ if($blatonly eq "true" && $dna eq "true") {
 }
 
 if($postprocess eq "false") {
-    $pipeline_template = `cat pipeline_template.sh`;
+    $pipeline_template = `cat $lib/pipeline_template.sh`;
     if($cleanup eq 'false') {
         $pipeline_template =~ s/^.*unlink.*$//mg;
         $pipeline_template =~ s!if . -f OUTDIR.RUM_NU_temp3.CHUNK .\nthen\n\nfi\n!!gs;
@@ -1328,6 +1334,28 @@ sub format_large_int () {
 sub cmpChrs () {
     $a2_c = lc($b);
     $b2_c = lc($a);
+    if($a2_c =~ /^\d+$/ && !($b2_c =~ /^\d+$/)) {
+        return 1;
+    }
+    if($b2_c =~ /^\d+$/ && !($a2_c =~ /^\d+$/)) {
+        return -1;
+    }
+    if($a2_c =~ /^[ivxym]+$/ && !($b2_c =~ /^[ivxym]+$/)) {
+        return 1;
+    }
+    if($b2_c =~ /^[ivxym]+$/ && !($a2_c =~ /^[ivxym]+$/)) {
+        return -1;
+    }
+    if($a2_c eq 'm' && ($b2_c eq 'y' || $b2_c eq 'x')) {
+        return -1;
+    }
+    if($b2_c eq 'm' && ($a2_c eq 'y' || $a2_c eq 'x')) {
+        return 1;
+    }
+    if($a2_c =~ /^[ivx]+$/ && $b2_c =~ /^[ivx]+$/) {
+        $a2_c = "chr" . $a2_c;
+        $b2_c = "chr" . $b2_c;
+    }
     if($a2_c =~ /$b2_c/) {
 	return -1;
     }
