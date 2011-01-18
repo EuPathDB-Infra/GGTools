@@ -424,8 +424,8 @@ $fafilename = $outdir . "simulated_reads_$name" . ".fa";
 $substitutionsfilename = $outdir . "simulated_reads_substitutions_$name" . ".txt";
 $indelsfilename = $outdir . "simulated_reads_indels_$name" . ".txt";
 $junctionssfilename = $outdir . "simulated_reads_junctions-crossed_$name" . ".txt";
+$reads2genesfilename = $outdir . "simulated_reads2genes_$name" . ".txt";
 $individual_forward_and_reverse_alignments_file = $outdir . "simulated_reads_$name" . ".cig";
-
 
 open(SIMLOGOUT, ">$logfilename") or die "\nError: cannot open file '$logfilename' for writing\n\n";
 open(SIMBEDOUT, ">$bedfilename") or die "\nError: cannot open file '$bedfilename' for writing\n\n";
@@ -433,6 +433,7 @@ open(SIMFAOUT, ">$fafilename") or die "\nError: cannot open file '$fafilename' f
 open(SIMSUBSOUT, ">$substitutionsfilename") or die "\nError: cannot open file '$substitutionsfilename' for writing\n\n";
 open(SIMINDELSOUT, ">$indelsfilename") or die "\nError: cannot open file '$indelsfilename' for writing\n\n";
 open(SIMJUNCTIONSOUT, ">$junctionssfilename") or die "\nError: cannot open file '$substitutionsfilename' for writing\n\n";
+open(SIMREAD2GENE, ">$reads2genesfilename") or die "\nError: cannot open file '$reads2genesfilename' for writing\n\n";
 open(SIMCIGOUT, ">$individual_forward_and_reverse_alignments_file") or die "\nError: cannot open file '$individual_forward_and_reverse_alignments_file' for writing\n\n";
 
 $date = `date`;
@@ -1078,7 +1079,7 @@ while( 1 == 1) {
 	undef %geneWithIntron2indel;
 	$SEQ = getpaddedintron($GENE, $intron_num);
 	$seqlength = length($SEQ);
-
+	print SIMREAD2GENE "seq.$CNT\t$GENE\n";
 	@INDELS = @{$geneWithIntron2indel{$GENE}{$INTRON2}};
 # the following fixes the starts/ends so they reflect the retained intron:
 	$STARTS2 = $starts{$GENE};
@@ -1137,6 +1138,7 @@ while( 1 == 1) {
 	    $c++;
 	}
 	$GENE = $genes[$c];
+	print SIMREAD2GENE "seq.$CNT\t$GENE\n";
 	@INDELS = @{$gene2indel{$GENE}};
 	$SEQ = $seq{$GENE};
 	$STARTS = $starts{$GENE};
@@ -1180,6 +1182,7 @@ while( 1 == 1) {
 	if($CNT2 > $num_reads) {
 	    close(SIMBEDOUT);
 	    close(SIMFAOUT);
+	    close(SIMREAD2GENE);
 	    $date = `date`;
 	    print SIMLOGOUT "finished at $date\n";
 	    close(SIMLOGOUT);
