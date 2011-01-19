@@ -52,7 +52,7 @@ BLATEXE GENOMEBLAT OUTDIR/R.CHUNK OUTDIR/R.CHUNK.blat -minScore=20 -minIdentity=
 echo "finished running BLAT" `date` `date +%s` >> OUTDIR/rum.log_chunk.CHUNK
 MDUSTEXE OUTDIR/R.CHUNK >> OUTDIR/R.mdust.CHUNK
 echo "finished running mdust on R" `date` `date +%s` >> OUTDIR/rum.log_chunk.CHUNK
-perl SCRIPTSDIR/parse_blat_out.pl OUTDIR/R.CHUNK OUTDIR/R.CHUNK.blat OUTDIR/R.mdust.CHUNK OUTDIR/BlatUnique.CHUNK OUTDIR/BlatNU.CHUNK MAXINSERTIONSALLOWED
+perl SCRIPTSDIR/parse_blat_out.pl OUTDIR/R.CHUNK OUTDIR/R.CHUNK.blat OUTDIR/R.mdust.CHUNK OUTDIR/BlatUnique.CHUNK OUTDIR/BlatNU.CHUNK MAXINSERTIONSALLOWED MATCHLENGTHCUTOFF
 echo "finished parsing BLAT output" `date` `date +%s` >> OUTDIR/rum.log_chunk.CHUNK
 ls -l OUTDIR/R.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
 ls -l OUTDIR/R.CHUNK.blat >> OUTDIR/rum.log_chunk.CHUNK
@@ -72,7 +72,7 @@ yes|unlink OUTDIR/BlatUnique.CHUNK
 yes|unlink OUTDIR/BowtieNU.CHUNK
 yes|unlink OUTDIR/BlatNU.CHUNK
 
-perl SCRIPTSDIR/RUM_finalcleanup.pl OUTDIR/RUM_Unique_temp.CHUNK OUTDIR/RUM_NU_temp.CHUNK OUTDIR/RUM_Unique_temp2.CHUNK OUTDIR/RUM_NU_temp2.CHUNK GENOMEFA OUTDIR/sam_header.CHUNK -faok COUNTMISMATCHES
+perl SCRIPTSDIR/RUM_finalcleanup.pl OUTDIR/RUM_Unique_temp.CHUNK OUTDIR/RUM_NU_temp.CHUNK OUTDIR/RUM_Unique_temp2.CHUNK OUTDIR/RUM_NU_temp2.CHUNK GENOMEFA OUTDIR/sam_header.CHUNK -faok COUNTMISMATCHES MATCHLENGTHCUTOFF
 echo "finished cleaning up final results" `date` `date +%s` >> OUTDIR/rum.log_chunk.CHUNK
 perl SCRIPTSDIR/sort_RUM_by_id.pl OUTDIR/RUM_NU_temp2.CHUNK OUTDIR/RUM_NU_idsorted.CHUNK
 echo "finished sorting NU" `date` `date +%s` >> OUTDIR/rum.log_chunk.CHUNK
@@ -105,14 +105,20 @@ ls -l OUTDIR/RUM_Unique.sorted.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
 perl SCRIPTSDIR/sort_RUM_by_location.pl OUTDIR/RUM_NU.CHUNK OUTDIR/RUM_NU.sorted.CHUNK
 echo "finished sorting RUM_NU" `date` `date +%s` >> OUTDIR/rum.log_chunk.CHUNK
 ls -l OUTDIR/RUM_NU.sorted.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
-perl SCRIPTSDIR/rum2quantifications.pl GENEANNOTFILE OUTDIR/RUM_Unique.sorted.CHUNK OUTDIR/RUM_NU.sorted.CHUNK OUTDIR/quant.CHUNK -countsonly
+perl SCRIPTSDIR/rum2quantifications.pl GENEANNOTFILE OUTDIR/RUM_Unique.sorted.CHUNK OUTDIR/RUM_NU.sorted.CHUNK OUTDIR/quant.S1s.CHUNK -countsonly STRAND1s
+perl SCRIPTSDIR/rum2quantifications.pl GENEANNOTFILE OUTDIR/RUM_Unique.sorted.CHUNK OUTDIR/RUM_NU.sorted.CHUNK OUTDIR/quant.S2s.CHUNK -countsonly STRAND2s
+perl SCRIPTSDIR/rum2quantifications.pl GENEANNOTFILE OUTDIR/RUM_Unique.sorted.CHUNK OUTDIR/RUM_NU.sorted.CHUNK OUTDIR/quant.S1a.CHUNK -countsonly STRAND1a
+perl SCRIPTSDIR/rum2quantifications.pl GENEANNOTFILE OUTDIR/RUM_Unique.sorted.CHUNK OUTDIR/RUM_NU.sorted.CHUNK OUTDIR/quant.S2a.CHUNK -countsonly STRAND2a
 
 ls -l OUTDIR/RUM.sam.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
 ls -l OUTDIR/RUM_Unique.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
 ls -l OUTDIR/RUM_NU.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
 ls -l OUTDIR/RUM.sam.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
 ls -l OUTDIR/sam_header.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
-ls -l OUTDIR/quant.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
+ls -l OUTDIR/quant.S1s.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
+ls -l OUTDIR/quant.S2s.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
+ls -l OUTDIR/quant.S1a.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
+ls -l OUTDIR/quant.S2a.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
 ls -l OUTDIR/reads.fa.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
 echo '' >> OUTDIR/quals.fa.CHUNK
 ls -l OUTDIR/quals.fa.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
