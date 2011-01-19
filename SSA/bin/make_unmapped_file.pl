@@ -74,20 +74,26 @@ while($line = <INFILE>) {
 	$seq = $1;
 	if($paired_end eq "true") {
 	    if($bu{$seq}+0 < 2 && !($bnu{$seq} =~ /\S/)) {
+		$line_hold = $line;
+		$line = <INFILE>;
+		chomp($line);
+		print OUTFILE "$line_hold\n";
 		print OUTFILE "$line\n";
+		$line_hold = <INFILE>;
+		chomp($line_hold);
 		$line = <INFILE>;
-		print OUTFILE $line;
-		$line = <INFILE>;
-		print OUTFILE $line;
-		$line = <INFILE>;
-		print OUTFILE $line;
+		chomp($line);
+		print OUTFILE "$line_hold\n";
+		print OUTFILE "$line\n";
 	    }
 	}
 	else {
 	    if($bu{$seq}+0 < 1 && !($bnu{$seq} =~ /\S/)) {
-		print OUTFILE "$line\n";
+		$line_hold = $line;
 		$line = <INFILE>;
-		print OUTFILE $line;
+		chomp($line);
+		print OUTFILE "$line_hold\n";
+		print OUTFILE "$line\n";
 	    }
 	}
     }

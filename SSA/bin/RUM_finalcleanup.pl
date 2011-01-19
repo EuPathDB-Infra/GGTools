@@ -14,7 +14,10 @@ Where:
 
 Options:
    -faok  : the fasta file already has sequence all on one line
+
    -countmismatches : report in the final column the number of mismatches, ignoring insertions
+
+   -match_length_cutoff  : set this min length alignment to be reported
 
 This script modifies the RUM_Unique and RUM_NU files to clean
 up things like mismatches at the ends of alignments.
@@ -24,8 +27,16 @@ up things like mismatches at the ends of alignments.
 }
 $faok = "false";
 $countmismatches = "false";
+$match_length_cutoff = 0;
 for($i=6; $i<@ARGV; $i++) {
     $optionrecognized = 0;
+    if($ARGV[$i] eq "-match_length_cutoff") {
+	$i++;
+	$match_length_cutoff = $ARGV[$i];
+	if($ARGV[$i] =~ /^\d+$/) {
+	    $optionrecognized = 1;
+	}
+    }
     if($ARGV[$i] eq "-faok") {
 	$faok = "true";
 	$optionrecognized = 1;
@@ -315,13 +326,19 @@ sub clean () {
 	$strand = $a[4];
 	$chr = $a[1];
 	@b2 = split(/, /,$a[2]);
+	$a[3] =~ s/://g;
+	$seq_temp = $a[3];
+	$seq_temp =~ s/\+//g;
+	if(length($seq_temp) < $match_length_cutoff) {
+	    next;
+	}
 	for($i=0; $i<@b2; $i++) {
 	    @c2 = split(/-/,$b2[$i]);
 	    if($c2[1] < $c2[0]) {
 		$flag = 1;
 	    }
 	}
-	if(!(defined $samheader{$chr})) {
+        if(defined $CHR2SEQ{$chr} && !(defined $samheader{$chr})) {
 	    $CS = $chrsize{$chr};
 	    $samheader{$chr} = "\@SQ\tSN:$chr\tLN:$CS\n";
 	}
@@ -338,7 +355,6 @@ sub clean () {
 		    $start = $c[0] - 1;
 		    $SEQ = $SEQ . substr($CHR2SEQ{$chr}, $start, $len);
 		}
-		$a[3] =~ s/://g;
 		&trimleft($SEQ, $a[3], $a[2]) =~ /(.*)\t(.*)/;
 		$spans = $1;
 		$seq = $2;
@@ -355,11 +371,16 @@ sub clean () {
 
 		# should fix the following so it doesn't repeat the operation unnecessarily
 		# while processing the RUM_NU file
-		if($countmismatches eq "true") {
-		    $num_mismatches = &countmismatches($SEQ, $seq);
-		    print OUTFILE "$a[0]\t$chr\t$spans\t$strand\t$seq\t$num_mismatches\n";
-		} else {
-		    print OUTFILE "$a[0]\t$chr\t$spans\t$strand\t$seq\n";
+		$seq_temp = $seq;
+		$seq_temp =~ s/://g;
+		$seq_temp =~ s/\+//g;
+		if(length($seq_temp) >= $match_length_cutoff) {
+		    if($countmismatches eq "true") {
+			$num_mismatches = &countmismatches($SEQ, $seq);
+			print OUTFILE "$a[0]\t$chr\t$spans\t$strand\t$seq\t$num_mismatches\n";
+		    } else {
+			print OUTFILE "$a[0]\t$chr\t$spans\t$strand\t$seq\n";
+		    }
 		}
 	    }
 	}

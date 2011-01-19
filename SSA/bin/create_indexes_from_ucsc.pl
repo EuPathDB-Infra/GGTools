@@ -5,7 +5,7 @@
 
 if(@ARGV < 1) {
     die "
-Usage: create_gene_indexes.pl <name> <genome fasta>
+Usage: create_indexes_from_ucsc.pl <NAME_genome.txt> <NAME_refseq_ucsc>
 
 This script is part of the pipeline of scripts used to create RUM indexes.
 For more information see the library file: 'how2setup_genome-indexes_forPipeline.txt'.
@@ -16,10 +16,25 @@ Genome fasta file must be formatted as described in:
 ";
 }
 
-$NAME = $ARGV[0];
+$infile = $ARGV[0];
+$F1 = $infile;
+$F1 =~ s/.txt$/.fa/;
+$F2 = $infile;
+$F2 =~ s/.txt$/_one-line-seqs_temp.fa/;
+$F3 = $infile;
+$F3 =~ s/.txt$/_one-line-seqs.fa/;
+
+`perl modify_fasta_header_for_genome_seq_database.pl $infile > $F1`;
+`perl modify_fa_to_have_seq_on_one_line.pl $F1 > $F2`;
+`perl sort_genome_fa_by_chr.pl $F2 >  $F3`;
+
+unlink($F1);
+unlink($F2);
+
+$NAME = $ARGV[1];
 
 $N1 = $NAME . "_gene_info_orig.txt";
-$N2 = $ARGV[1];
+$N2 = $F3;
 $N3 = $NAME . "_genes_unsorted.fa";
 $N4 = $NAME . "_gene_info_unsorted.txt";
 $N5 = $NAME . "_genes.fa";
@@ -38,19 +53,32 @@ unlink($N3);
 unlink($N4);
 unlink("temp.fa");
 
-$config = "indexes/$N6\n";
 $N6 =~ /^([^_]+)_/;
 $organism = $1;
+
+# write rum.config file:
+$config = "indexes/$N6\n";
 $config = $config . "bin/bowtie\n";
 $config = $config . "bin/blat\n";
 $config = $config . "bin/mdust\n";
 $config = $config . "indexes/$organism" . "_genome\n";
 $config = $config . "indexes/$organism" . "_genes\n";
-$config = $config . "indexes/$organism" . "_genome_one-line-seqs.fa\n";
+$config = $config . "indexes/$N2\n";
 $config = $config . "scripts\n";
 $config = $config . "lib\n";
-
 $configfile = "rum.config_" . $organism;
 open(OUTFILE, ">$configfile");
 print OUTFILE $config;
 close(OUTFILE);
+
+# run bowtie on genes index
+print STDERR "running bowtie on the gene index, please wait...\n\n";
+$O = $organism . "_genes";
+`bowtie-build $N5 $O`;
+
+# run bowtie on genome index
+print STDERR "running bowtie on the genome index, please wait this can take some time...\n\n";
+$O = $organism . "_genome";
+`bowtie-build $F3 $O`;
+
+print STDERR "ok, all done...\n\n";

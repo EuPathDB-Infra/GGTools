@@ -71,7 +71,6 @@ if($userparamsgiven == 0) {  # the following figures out how many rows per block
 	    last;
 	}
 	chomp($line);
-	$line =~ s/\^M$//;
 	$line =~ s/[^;-s.]$//;
 	if($line =~ /^[;-s]+$/ && !($line =~ /^[ACGTN.]+$/)) {
 	    $linearray[$cnt] = 1;
@@ -103,7 +102,6 @@ if($userparamsgiven == 0) {  # the following figures out how many rows per block
 	open(INFILE, $ARGV[0]);
 	$line = <INFILE>;
 	chomp($line);
-	$line =~ s/\^M$//;
 	$line =~ s/[^;-s.]$//;
 	if($line =~ /^[;-s]+$/ && !($line =~ /^[ACGTN.]+$/)) {
 	    print "$line\n";
@@ -116,7 +114,6 @@ if($userparamsgiven == 0) {  # the following figures out how many rows per block
 	    open(INFILE, $ARGV[1]);
 	    $line = <INFILE>;
 	    chomp($line);
-	    $line =~ s/\^M$//;
 	    $line =~ s/[^;-s.]$//;
 	    if($line =~ /^[;-s]+$/ && !($line =~ /^[ACGTN.]+$/)) {
 		print "$line\n";
@@ -197,7 +194,6 @@ while($line = <INFILE1>) {    # this loop writes out the fasta file
 	print "a\n";
 	chomp($line);
 	my $line_hold = $line;
-	$line =~ s/\^M$//;
 	$line =~ s/[^;-s.]$//;
 	if(($line =~ /[^;-s.]/ || !($line =~ /\S/)) && !($line =~ /^[ACGTN.]+$/)) {
 	    print STDERR "\nERROR: There's something wrong with line $linecnt in file $ARGV[0]\nIt should be a line of sequence but it is:\n$line_hold\n\n";
@@ -209,7 +205,6 @@ while($line = <INFILE1>) {    # this loop writes out the fasta file
 	    print ".$cnt2";
 	    print "b\n";
 	    $line_hold = $line2;
-	    $line2 =~ s/\^M$//;
 	    $line2 =~ s/[^;-s.]$//;
 	    if(($line2 =~ /[^;-s.]/ || !($line2 =~ /\S/)) && !($line2 =~ /^[ACGTN.]+$/)) {
 		print STDERR "\nERROR: There's something wrong with line $linecnt in file $ARGV[1]\nIt should be a line of sequence but it is:\n$line_hold\n\n";

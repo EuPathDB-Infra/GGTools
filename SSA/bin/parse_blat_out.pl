@@ -41,6 +41,8 @@ Option:
 
        -dna           : set this flag is aligning dna sequence data
 
+       -match_length_cutoff  : set this min length alignment to be reported
+
        -num_insertions_allowed n : allow n insertions in one read.  The default
                                    is n=1.  Setting n>1 only allowed for single
                                    end reads.  Don't raise it unless you know
@@ -165,6 +167,7 @@ $max_distance_between_paired_reads = 500000;
 $dna = 'false';
 $num_blocks_allowed = 1000;
 $num_insertions_allowed = 1;
+$match_length_cutoff = 0;
 for($i=5; $i<@ARGV; $i++) {
     $optionrecognized = 0;
     if($ARGV[$i] eq "-maxpairdist") {
@@ -180,6 +183,13 @@ for($i=5; $i<@ARGV; $i++) {
     if($ARGV[$i] eq "-num_insertions_allowed") {
 	$i++;
 	$num_insertions_allowed = $ARGV[$i];
+	if($ARGV[$i] =~ /^\d+$/) {
+	    $optionrecognized = 1;
+	}
+    }
+    if($ARGV[$i] eq "-match_length_cutoff") {
+	$i++;
+	$match_length_cutoff = $ARGV[$i];
 	if($ARGV[$i] =~ /^\d+$/) {
 	    $optionrecognized = 1;
 	}
@@ -206,14 +216,20 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	$readlength = $a[10];
 	if($readlength < 80) {
 	    $min_size_intersection_allowed = 35;
-	    $match_length_cutoff = 35;
+            if($match_length_cutoff == 0) {
+		$match_length_cutoff = 35;
+	    }
 	} else {
 	    $min_size_intersection_allowed = 45;
-	    $match_length_cutoff = 50;
+            if($match_length_cutoff == 0) {
+		$match_length_cutoff = 50;
+	    }
 	}
 	if($min_size_intersection_allowed >= .8 * $readlength) {
 	    $min_size_intersection_allowed = int(.6 * $readlength);
-	    $match_length_cutoff = int(.6 * $readlength);
+            if($match_length_cutoff == 0) {
+		$match_length_cutoff = int(.6 * $readlength);
+	    }
 	}
 	@a_x = split(/\t/,$line);
 	$seqname = $a[9];
@@ -221,18 +237,15 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	$seqnum =~ s/[^\d]//g;
 	$seqa_temp = <SEQFILE>;
 	chomp($seqa_temp);
-	$seqa_temp =~ s/\^M$//;
 	$seqa_temp =~ s/[^ACGTNab]$//;
 	$mdust_temp = <MDUST>;
 	chomp($mdust_temp);
-	$mdust_temp =~ s/\^M$//;
 	$mdust_temp =~ s/[^ACGTNab]$//;
     }
     $seqa_temp =~ /seq.(\d+)/;
     $seq_count = $1;       # this way we skip over things that aren't in <seq file>
     $seqa_temp = <SEQFILE>;
     chomp($seqa_temp);
-    $seqa_temp =~ s/\^M$//;
     $seqa_temp =~ s/[^ACGTNab]$//;
     $seqa = "";
     while(!($seqa_temp =~ /^>/)) {
@@ -240,7 +253,6 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	$seqa = $seqa . $seqa_temp;
 	$seqa_temp = <SEQFILE>;
 	chomp($seqa_temp);
-	$seqa_temp =~ s/\^M$//;
 	$seqa_temp =~ s/[^ACGTNab]$//;
 	if($seqa_temp eq '') {
 	    last;
@@ -249,7 +261,6 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
     if($paired_end eq "true") {
 	$seqb_temp = <SEQFILE>;
 	chomp($seqb_temp);
-	$seqb_temp =~ s/\^M$//;
 	$seqb_temp =~ s/[^ACGTNab]$//;
 	$seqb = "";
 	$seqb_temp =~ s/[^A-Z]//gs;
@@ -257,7 +268,6 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	    $seqb = $seqb . $seqb_temp;
 	    $seqb_temp = <SEQFILE>;
 	    chomp($seqb_temp);
-	    $seqb_temp =~ s/\^M$//;
 	    $seqb_temp =~ s/[^ACGTNab]$//;
 	    if($seqb_temp eq '') {
 		last;
@@ -268,14 +278,12 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 
     $mdust_temp = <MDUST>;
     chomp($mdust_temp);
-    $mdust_temp =~ s/\^M$//;
     $mdust_temp =~ s/[^ACGTNab]$//;
     $dust_output = "";
     while(!($mdust_temp =~ /^>/)) {
 	$dust_output = $dust_output . $mdust_temp;
 	$mdust_temp = <MDUST>;
 	chomp($mdust_temp);
-	$mdust_temp =~ s/\^M$//;
 	$mdust_temp =~ s/[^ACGTNab]$//;
 	if($mdust_temp eq '') {
 	    last;
@@ -290,14 +298,12 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
     if($paired_end eq "true") {
 	$mdust_temp = <MDUST>;
 	chomp($mdust_temp);
-	$mdust_temp =~ s/\^M$//;
 	$mdust_temp =~ s/[^ACGTNab]$//;
 	$dust_output = "";
 	while(!($mdust_temp =~ /^>/)) {
 	    $dust_output = $dust_output . $mdust_temp;
 	    $mdust_temp = <MDUST>;
 	    chomp($mdust_temp);
-	    $mdust_temp =~ s/\^M$//;
 	    $mdust_temp =~ s/[^ACGTNab]$//;
 	    if($mdust_temp eq '') {
 		last;
@@ -470,14 +476,20 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	    $readlength = $a[10];
 	    if($readlength < 80) {
 		$min_size_intersection_allowed = 35;
-		$match_length_cutoff = 35;
+		if($match_length_cutoff == 0) {
+		    $match_length_cutoff = 35;
+		}
 	    } else {
 		$min_size_intersection_allowed = 45;
-		$match_length_cutoff = 50;
+		if($match_length_cutoff == 0) {
+		    $match_length_cutoff = 50;
+		}
 	    }
 	    if($min_size_intersection_allowed >= .8 * $readlength) {
 		$min_size_intersection_allowed = int(.6 * $readlength);
-		$match_length_cutoff = int(.6 * $readlength);
+		if($match_length_cutoff == 0) {
+		    $match_length_cutoff = int(.6 * $readlength);
+		}
 	    }
 	}
     }

@@ -379,7 +379,6 @@ for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
 		$total_number_of_bases_aligned_correctly++;
 		if($truelocation[$pos_on_read] eq "i") {
 		    $insertions_called_correctly++;
-#print "$sn:insertions_called_correctly = $insertions_called_correctly\n";
 		}
 	    } else {
 		if($truelocation[$pos_on_read] eq "i") {
@@ -415,22 +414,11 @@ for($seqnum=$first_seq_num; $seqnum<=$last_seq_num; $seqnum++) {
                   }
              }
              $diff = $cnt_equal2 - $cnt_equal;
-#print "-----\nsn=$sn\ndiff = $diff\n";
-#print "cnt_equal = $cnt_equal\n";
-#print "cnt_equal2 = $cnt_equal2\n";
-#print "truth_cigar = $truth_cigar\n";
-#print "sam_cigar = $sam_cigar\n";
-#print "insertions_called_correctly = $insertions_called_correctly\n";
-#print "total_number_of_bases_in_true_insertions = $total_number_of_bases_in_true_insertions\n";
-#print "total_number_of_bases_called_insertions = $total_number_of_bases_called_insertions\n";
              if($diff > $total_called_insertion_this_read) {
                   $diff = $total_called_insertion_this_read;
-#print "$sn:here\n";
-#print "diff = $diff\n";
              }
              if($diff > 0) {
                  $insertions_called_correctly = $insertions_called_correctly + $diff;
-#print "$sn :::insertions_called_correctly = $insertions_called_correctly\n";
  		 $total_number_of_bases_aligned_correctly = $total_number_of_bases_aligned_correctly + $diff*2;
 		 $total_number_of_bases_aligned_incorrectly = $total_number_of_bases_aligned_incorrectly - $diff*2;
              }

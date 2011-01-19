@@ -28,7 +28,7 @@ while($line = <INFILE>) {
 }
 close(INFILE);
 
-foreach $chr (sort cmpChrs keys %hash) {
+foreach $chr (sort {cmpChrs($a,$b)} keys %hash) {
     foreach $line (sort {$hash{$chr}{$a}[0]<=>$hash{$chr}{$b}[0] || ($hash{$chr}{$a}[0]==$hash{$chr}{$b}[0] && $hash{$chr}{$a}[1]<=>$hash{$chr}{$b}[1]) || ($hash{$chr}{$a}[0]==$hash{$chr}{$b}[0] && $hash{$chr}{$a}[1]==$hash{$chr}{$b}[1] && $hash{$chr}{$a}[2] cmp $hash{$chr}{$b}[2])} keys %{$hash{$chr}}) {
 	chomp($line);
 	if($line =~ /\S/) {
@@ -41,6 +41,28 @@ foreach $chr (sort cmpChrs keys %hash) {
 sub cmpChrs () {
     $a2_c = lc($b);
     $b2_c = lc($a);
+    if($a2_c =~ /^\d+$/ && !($b2_c =~ /^\d+$/)) {
+        return 1;
+    }
+    if($b2_c =~ /^\d+$/ && !($a2_c =~ /^\d+$/)) {
+        return -1;
+    }
+    if($a2_c =~ /^[ivxym]+$/ && !($b2_c =~ /^[ivxym]+$/)) {
+        return 1;
+    }
+    if($b2_c =~ /^[ivxym]+$/ && !($a2_c =~ /^[ivxym]+$/)) {
+        return -1;
+    }
+    if($a2_c eq 'm' && ($b2_c eq 'y' || $b2_c eq 'x')) {
+        return -1;
+    }
+    if($b2_c eq 'm' && ($a2_c eq 'y' || $a2_c eq 'x')) {
+        return 1;
+    }
+    if($a2_c =~ /^[ivx]+$/ && $b2_c =~ /^[ivx]+$/) {
+        $a2_c = "chr" . $a2_c;
+        $b2_c = "chr" . $b2_c;
+    }
     if($a2_c =~ /$b2_c/) {
 	return -1;
     }
@@ -69,7 +91,7 @@ sub cmpChrs () {
 	    undef %temphash;
 	    $temphash{$tempa}=1;
 	    $temphash{$tempb}=1;
-	    foreach $tempkey (sort cmpChrs keys %temphash) {
+	    foreach $tempkey (sort {cmpChrs($a,$b)} keys %temphash) {
 		if($tempkey eq $tempa) {
 		    return 1;
 		} else {
@@ -117,7 +139,7 @@ sub cmpChrs () {
 		undef %temphash;
 		$temphash{$tempa}=1;
 		$temphash{$tempb}=1;
-		foreach $tempkey (sort cmpChrs keys %temphash) {
+		foreach $tempkey (sort {cmpChrs($a,$b)} keys %temphash) {
 		    if($tempkey eq $tempa) {
 			return 1;
 		    } else {

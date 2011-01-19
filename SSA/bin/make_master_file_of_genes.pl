@@ -38,16 +38,16 @@ while($file = <FILESFILE>) {
         if($header[$i] =~ /name/) {
             $namecol = $i;
         }
-        if($header[$i] eq "chrom") {
+        if($header[$i] =~ /chrom/) {
             $chromcol = $i;
         }
-        if($header[$i] eq "strand") {
+        if($header[$i] =~ /strand/) {
             $strandcol = $i;
         }
-        if($header[$i] eq "exonStarts") {
+        if($header[$i] =~ /exonStarts/) {
             $exonStartscol = $i;
         }
-        if($header[$i] eq "exonEnds") {
+        if($header[$i] =~ /exonEnds/) {
             $exonEndscol = $i;
         }
     }

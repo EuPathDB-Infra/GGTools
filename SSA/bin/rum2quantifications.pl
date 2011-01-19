@@ -35,9 +35,13 @@ Options:
 
     -countsonly :  Output only a simple file with feature names and counts.
 
+    -strand s : s=p to use just + strand reads, s=m to use just - strand.
+
+    -anti     : Use in conjunction with -strand to record anti-sense transcripts instead
+                of sense. 
+
 ";
 }
-
 
 my $annotfile = $ARGV[0];
 my $U_readsfile = $ARGV[1];
@@ -61,6 +65,9 @@ my %READS;
 my $sepout = "false";
 my $posonly = "false";
 my $countsonly = "false";
+my $strandspecific="false";
+my $strand = "";
+my $anti = "false";
 for(my $i=4; $i<@ARGV; $i++) {
     my $optionrecognized = 0;
     if($ARGV[$i] eq "-sepout") {
@@ -69,8 +76,21 @@ for(my $i=4; $i<@ARGV; $i++) {
 	$i++;
 	$optionrecognized = 1;
     }
+    if($ARGV[$i] eq "-strand") {
+	$strand = $ARGV[$i+1];
+	$strandspecific="true";
+	$i++;
+	if(!($strand eq 'p' || $strand eq 'm')) {
+	    die "\nError; -strand must equal either 'p' or 'm', not '$strand'\n\n";
+	}
+	$optionrecognized = 1;
+    }
     if($ARGV[$i] eq "-posonly") {
 	$posonly = "true";
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-anti") {
+	$anti = "true";
 	$optionrecognized = 1;
     }
     if($ARGV[$i] eq "-countsonly") {
@@ -82,10 +102,22 @@ for(my $i=4; $i<@ARGV; $i++) {
     }
 }
 
+# read in the transcript models
 
 while(my $line = <INFILE>) {
     chomp($line);
     my @a = split(/\t/,$line);
+
+    my $STRAND = $a[3];
+    if($strandspecific eq 'true') {
+	if($strand =~ /^p/ && $a[1] eq '-') {
+	    next;
+	}
+	if($strand =~ /^m/ && $a[1] eq '+') {
+	    next;
+	}
+    }
+
     $a[5] =~ s/\s*,\s*$//;
     $a[6] =~ s/\s*,\s*$//;
     my $chr = $a[0];
@@ -119,6 +151,7 @@ while(my $line = <INFILE>) {
     $tcnt{$chr}++;
 }
 close(INFILE);
+
 my %EXON;
 foreach my $chr (sort {cmpChrs($a,$b)} keys %EXON_temp) {
     $ecnt{$chr} = 0;
@@ -430,9 +463,24 @@ sub readfile () {
 	    last;
 	}
 	my @a = split(/\t/,$line);
+	my $STRAND = $a[3];
 	$a[0] =~ /(\d+)/;
 	my $seqnum1 = $1;
 	$READS{$seqnum1}=0;
+	if($strandspecific eq 'true') {
+	    if($strand eq 'p' && $STRAND eq '-' && $anti eq 'false') {
+		next;
+	    }
+	    if($strand eq 'm' && $STRAND eq '+' && $anti eq 'false') {
+		next;
+	    }
+	    if($strand eq 'p' && $STRAND eq '+' && $anti eq 'true') {
+		next;
+	    }
+	    if($strand eq 'm' && $STRAND eq '-' && $anti eq 'true') {
+		next;
+	    }
+	}
 	my $CHR = $a[1];
 	$a[2] =~ /^(\d+)-/;
 	my $start = $1;
@@ -844,18 +892,7 @@ sub union () {
     return $spans_union;
 }
 
-
-# seq.128001      chr1    3133832-3134065 -       GCTCAATGGCAGCAAGTGCTTGCGCTATCACAACCTTGTCATTTGTTTGTTGGGTTATGAGCTTGCAAACCAACCAGAGTATAAACAGAAGTCTACAGCAGGTGGCAACACCAAATAAACCTACCCCCACCCATTCCTTAAAATAAGAAAATGCAGATGAAATCCAGGAGGAGAGGCCCTCTGTCAATGACAGGTCCACTCGCGTTGAGTTGATCTTTAAAACTGCCACCCTCA
-# seq.124539a     chr1    3192090-3192209 -       AACCCACCCAAAACTAGACCAAATAGTCAACTTCAGTTTTTCTGTATAAAACTGAATCAAAACCGATGTTTATTTTTATGATAAAAAGGATATACTTTTGTATTTTGGGGTAGAAAAAAT
-# seq.124539b     chr1    3191916-3192035 -       TCTATGCATATGGCATGTTGTTGGTACCTGTACCATTCTCTTCCATTGAGAATTCTAAGCCATTATGTGGAGGAGCTGTTCAGCTCTCTCTAACCTATTTAGATTTTATCTTTCACTTTG
-# seq.186710      chr1    3194551-3194762 -       AAATAACCAACATTACAATTTTCATGGTAACCAGCAAGCAGTTATTAACTGGAATGATGTCTGTAAACCAAATCCCAAAAGTTAGATAATGTGTTTGATTTGGGCAAAGTTGTCTTTTTCCTCAATCTGCAGCCATAAAATTCACCACAAAGTATTTAGATCAAACAATTTAAACAACTTTAGCTTTACAATATTACAGGGGAGACTTCAAA
 # seq.35669       chr1    3206742-3206966 -       GCCCACCACCATGTCAAACACAATCTCTTCCCATTTGGTGATACAGAATTCTGTCTCACAGTGGACAATCCAGAAAGTCATGATGCACCAATGGAGGACAATAAATATCCCAAAATACAGCTGGAAAACCGAGGCAAAGAGGGCGAATGTGATGACCCTGGCAGCGATGGTGAAGAAATGCCAGCAGAACTGAATGATGACAGCCATTTAGCTGATGGGCTTTTT
 # 
 # 
 # chr1    -       3195981 3206425 2       3195981,3203689,        3197398,3206425,        OTTMUST00000086625(vega)
-# chr1    -       3195984 3205713 2       3195984,3203519,        3197398,3205713,        uc007aet.1(ucsc)
-# chr1    -       3196603 3205713 2       3196603,3203519,        3197398,3205713,        OTTMUST00000086624(vega)
-# chr1    -       3204562 3661579 3       3204562,3411782,3660632,        3207049,3411982,3661579,        NM_001011874(refseq)::::uc007aeu.1(ucsc)::::OTTMUST00000065166(vega)
-# chr1    +       3456667 3503634 2       3456667,3503485,        3456768,3503634,        OTTMUST00000065165(vega)
-# chr1    -       3638391 3648985 2       3638391,3648927,        3640590,3648985,        uc007aev.1(ucsc)
-# chr1    -       4280926 4399322 4       4280926,4341990,4342282,4399250,        4283093,4342162,4342918,4399322,      uc007aew.1(ucsc)

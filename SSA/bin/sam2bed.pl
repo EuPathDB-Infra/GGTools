@@ -39,12 +39,6 @@ while($line1 = <INFILE>) {
 	if(!($line1 =~ /IH:i/ || $line2 =~ /IH:i/)) {
 	    next;
 	}
-    } else {
-	$line1 =~ /X0:i:(\d+)/;
-	$num_alignments_this_read = $1;
-	if($num_alignments_this_read > 1) {
-	    next;
-	}
     }
     @a = split(/\t/,$line1);
     $a[2] =~ s/:.*//;
@@ -61,8 +55,6 @@ while($line1 = <INFILE>) {
     $cig2 = $a[5];
     $start2 = $a[3];
 
-    $id = $a[0];
-
     $spans1 = &cig2spans($cig1, $start1);
     $spans2 = &cig2spans($cig2, $start2);
 
@@ -76,7 +68,6 @@ while($line1 = <INFILE>) {
 #		print "line1 = $line1\n";
 #		print "line2 = $line2\n";
 #	    }
-#	    print "$id\t";
 	    print $str;
 	}
     } else {
@@ -84,14 +75,12 @@ while($line1 = <INFILE>) {
 	for($i=0; $i<@b; $i++) {
 	    @c = split(/-/,$b[$i]);
 	    $str = "$chr1\t$c[0]\t$c[1]\t+\n";
-#	    print "$id\t";
 	    print $str;
 	}
 	@b = split(/, /,$spans2);
 	for($i=0; $i<@b; $i++) {
 	    @c = split(/-/,$b[$i]);
 	    $str = "$chr2\t$c[0]\t$c[1]\t+\n";
-#	    print "$id\t";
 	    print $str;
 	}
     }

@@ -16,16 +16,30 @@ and *do not* use the -separate option.
 ";
 }
 
+# option not implemented:
+#       -strand s : s=p to use just + strand reads, s=m to use just - strand.
+
 print STDERR "\nMaking coverage plot $ARGV[1]...\n\n";
 
 $infile = $ARGV[0];
 $outfile = $ARGV[1];
 $name = $infile . " Coverage";
+$strandspecific="false";
+$strand = "";
 for($i=2; $i<@ARGV; $i++) {
     $optionrecognized = 0;
     if($ARGV[$i] eq "-name") {
 	$name = $ARGV[$i+1];
 	$i++;
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-strand") {
+	$strand = $ARGV[$i+1];
+	$strandspecific="true";
+	$i++;
+	if(!($strand eq 'p' || $strand eq 'm')) {
+	    die "\nError; -strand must equal either 'p' or 'm', not '$strand'\n\n";
+	}
 	$optionrecognized = 1;
     }
     if($optionrecognized == 0) {

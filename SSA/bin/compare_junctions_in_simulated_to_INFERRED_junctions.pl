@@ -1,12 +1,19 @@
-#!/usr/bin/perl
-
 $| = 1;
 
-if(@ARGV < 4) {
+if(@ARGV < 1) {
     die "
-Usage: compare_junctions_in_simulated_to_INFERRED_alignment.pl <transcripts> <junctions found> <INFERRED junctions>
+Usage: compare_junctions_in_simulated_to_INFERRED_alignment.pl <transcripts> <junctions found> <INFERRED> <junctions/introns>
+
+If <INFERRED> are introns set the last argument to be \"introns\", else set it to be \"junctions\".
+
+Junctions have the terminal coords of the exons, while introns have the terminal coords of the intron.
 
 ";
+}
+
+$junctions = "true";
+if($ARGV[3] eq "introns") {
+    $junctions = "false";
 }
 
 open(INFILE, $ARGV[0]);
@@ -31,6 +38,7 @@ while($line = <INFILE>) {
 	    $intron_end = $S[$i+1];
 	    $intron = $chr . ":" . $intron_start . "-" . $intron_end;
 	    $TRUEINTRON{$intron}=1;
+#	    print "$intron\n";
 	}
     }
 }
@@ -62,8 +70,12 @@ while($line = <INFILE>) {
     chomp($line);
     $line =~ /^(.*):(\d+)-(\d+)/;
     $chr = $1;
-    $start = $2 + 1;
-    $end = $3 - 1;
+    $start = $2;
+    $end = $3;
+    if($junctions eq "true") {
+	$start++;
+	$end--;
+    }
     $intron = "$chr:$start-$end";
     @a = split(/\t/,$line);
     if($a[1] =~ /\S/) {
@@ -95,7 +107,7 @@ for($depth=99; $depth >= 1; $depth--) {
     $num_false_positive[$depth] = $num_false_positive[$depth] + $num_false_positive[$depth+1];    
 }
 
-for($depth=1; $depth <= 1; $depth++) {
+for($depth=1; $depth <= 10; $depth++) {
     print "-------\ndepth = $depth\n";
     if($total[$depth] > 0) {
 	$percent_true_positive = int($num_true_positive[$depth] / $total[$depth] * 10000) / 100;
@@ -124,7 +136,7 @@ for($depth=99; $depth >= 1; $depth--) {
     $false_negative[$depth] = $false_negative[$depth] + $false_negative[$depth+1];    
 }
 
-for($depth=1; $depth <= 1; $depth++) {
+for($depth=1; $depth <= 10; $depth++) {
     print "-------\ndepth = $depth\n";
     if($total[$depth] > 0) {
 	$percent_false_negative = int($false_negative[$depth] / $total[$depth] * 10000) / 100;

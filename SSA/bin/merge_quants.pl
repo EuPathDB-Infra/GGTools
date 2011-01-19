@@ -5,10 +5,15 @@
 
 if(@ARGV<3) {
     die "
-Usage: merge_quants.pl <dir> <numchunks> <outfile>
+Usage: merge_quants.pl <dir> <numchunks> <outfile> [options]
+
+option:
+
+    -strand s : ps, ms, pa, or ma (p: plus, m: minus, s: sense, a: antisense)
 
 This script will look in <dir> for files named quant.1, quant.2, etc..
-up to quant.numchunks. 
+up to quant.numchunks.  Unless -strand S is set in which case it looks
+for quant.S.1, quant.S.2, etc...
 
 ";
 }
@@ -16,11 +21,30 @@ up to quant.numchunks.
 $output_dir = $ARGV[0]; 
 $numchunks = $ARGV[1];
 $outfile = $ARGV[2];
+$strandspecific = "false";
+$strand = "";
+for($i=3; $i<@ARGV; $i++) {
+    $optionrecognized = 0;
+    if($ARGV[$i] eq "-strand") {
+	$strand = $ARGV[$i+1];
+	$strandspecific="true";
+	$i++;
+	if(!($strand eq 'pa' || $strand eq 'ma' || $strand eq 'ps' || $strand eq 'ms')) {
+	    die "\nError; -strand must equal either ps, ms, pa or ma, not '$strand'\n\n";
+	}
+	$optionrecognized = 1;
+    }
+}
 
 $num_reads = 0;
 $first = 1;
 for($i=1; $i<=$numchunks; $i++) {
-    open(INFILE, "$output_dir/quant.$i");
+    if($strandspecific eq "true") {
+	$filename = "quant.$strand.$i";
+    } else {
+	$filename = "quant.$i";
+    }
+    open(INFILE, "$output_dir/$filename");
     $line = <INFILE>;
     $line =~ /num_reads = (\d+)/;
     $num_reads = $num_reads + $1;

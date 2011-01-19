@@ -108,6 +108,10 @@ Options: There are many options, but RUM is typically run with the defaults.
 
        -single    : Data is single-end (default is paired-end).
 
+       -strandspecific : If the data are strand specific, then yo can use this
+                         option to generate strand specific coverage plots and
+                         quantified values.
+
        -dna       : Run in dna mode, meaning don't map across splice junctions.
 
        -fast      : Run with blat params that run about 3 times faster but
@@ -150,6 +154,11 @@ Options: There are many options, but RUM is typically run with the defaults.
        -minidentity x : run blat with minIdentity=x (default x=93).  You
                         shouldn't need to change this.
 
+       -minlength x : don't report alignments less than this long.  The default
+                      = 50 if the readlength >= 80, else = 35 if readlength >= 45
+                      else = 0.8 * readlength.  Don't set this too low you will
+                      start to pick up a lot of garbage.
+
        -countmismatches : Report in the last column the number of mismatches,
                           ignoring insertions
 
@@ -180,8 +189,9 @@ Options: There are many options, but RUM is typically run with the defaults.
                     RUM_runner.pl, that will leave other phantom processes.
                     Use -kill instead.
 
-Running RUM_runner.pl with the one argument 'config' will explain how to make
-the config file.
+Default config files are supplied with each organism.  If you need to make or
+modify one then running RUM_runner.pl with the one argument 'config' gives an
+explaination of the the file.
 
 This program writes very large intermediate files.  If you have a large genome
 such as mouse or human then it is recommended to run in chunks on a cluster, or
@@ -203,6 +213,9 @@ $configfile = $ARGV[0];
 $readsfile = $ARGV[1];
 $output_dir = $ARGV[2];
 $output_dir =~ s!/$!!;
+if(!(-d $output_dir)) {
+    die "\nError: The directory '$output_dir' does not seem to exists...\n\n";
+}
 $numchunks = $ARGV[3];
 $name = $ARGV[4];
 if($name =~ /^-/) {
@@ -223,6 +236,7 @@ $limitNU = "false";
 $limitNUhard = "false";
 $qsub = "false";
 $minidentity=93;
+$minlength=0;
 $postprocess = "false";
 $blatonly = "false";
 $kill = "false";
@@ -235,9 +249,12 @@ $quatify = "false";
 $ram = 8;
 $user_ram = "false";
 $nocat = "false";
+$quals_specified = "false";
+$strandspecific = "false";
 if(@ARGV > 5) {
     for($i=5; $i<@ARGV; $i++) {
 	$optionrecognized = 0;
+
         if($ARGV[$i] eq "-max_insertions_per_read") {
 	    $i++;
 	    $num_insertions_allowed = $ARGV[$i];
@@ -255,6 +272,10 @@ if(@ARGV > 5) {
         }
 	if($ARGV[$i] eq "-single") {
 	    $paired_end = "false";
+	    $optionrecognized = 1;
+	}
+	if($ARGV[$i] eq "-strandspecific") {
+	    $strandspecific = "true";
 	    $optionrecognized = 1;
 	}
 	if($ARGV[$i] eq "-nocat") {
@@ -317,12 +338,30 @@ if(@ARGV > 5) {
             close(TESTIN);
 	    $optionrecognized = 1;
 	}
-	if($ARGV[$i] eq "-minidentity") {
 
+	if($ARGV[$i] eq "-qualsfile" || $ARGV[$i] eq "-qualfile") {
+	    $quals_specified = "true";
+            $i++;
+            $quals_file = $ARGV[$i];
+            if($quals_file =~ /\//) {
+               die "Error: do not specify -quals file with a full path, put it in the '$output_dir' directory.\n\n";
+            }
+	    $optionrecognized = 1;
+	}
+
+	if($ARGV[$i] eq "-minidentity") {
 	    $minidentity = $ARGV[$i+1];
 	    $i++;
 	    if(!($minidentity =~ /^\d+$/ && $minidentity <= 100)) {
 		die "\nERROR: minidentity must be an integer between zero and 100.\nYou have given '$minidentity'.\n\n";
+	    }
+	    $optionrecognized = 1;
+	}
+	if($ARGV[$i] eq "-minlength") {
+	    $minlength = $ARGV[$i+1];
+	    $i++;
+	    if(!($minlength =~ /^\d+$/ && $minlength >= 10)) {
+		die "\nERROR: minlength must be an integer >= 10.\nYou have given '$minlength'.\n\n";
 	    }
 	    $optionrecognized = 1;
 	}
@@ -368,6 +407,7 @@ if($kill eq "true") {
     }
     exit();
 }
+
 
 print STDERR "
 
@@ -633,8 +673,6 @@ if(($readsfile =~ /,,,/) && ($paired_end eq "true") && ($postprocess eq "false")
             if(length($line1) != length($line2)) {
                $readlength = length($line1);
                $quallength = length($line2);
-               print "readlength = $readlength\n";
-               print "quallength = $quallength\n";
                die "ERROR: It seems your read lengths differ from your quality string lengths.\nCheck line:\n$linea$line1\n$lineb$line2\n\n";
            }
         }
@@ -647,15 +685,16 @@ if(($readsfile =~ /,,,/) && ($paired_end eq "true") && ($postprocess eq "false")
     `perl $scripts_dir/fastq2qualities.pl $a[0] $a[1] > $output_dir/quals.fa`;
     $X = `head -2 $output_dir/quals.fa | tail -1`;
     if($X =~ /\S/ && !($X =~ /Sorry, can't figure these files out/)) {
-	$quals = "true";
+	 $quals = "true";
     }
-    $readsfile = "$output_dir/reads.fa";
     $qualsfile = "$output_dir/quals.fa";
+    $readsfile = "$output_dir/reads.fa";
 }
+
 if($postprocess eq "true") {
     $readsfile = "$output_dir/reads.fa";
     if(!(-e $readsfile)) {
-        $readsfile = $readsfile = $ARGV[1];
+        $readsfile = $ARGV[1];
     }
     $qualsfile = "$output_dir/quals.fa";
     $quals = "false";
@@ -667,10 +706,44 @@ if($postprocess eq "true") {
     }
 }
 
+$head = `head -2 $readsfile | tail -1`;
+chomp($head);
+$rl = length($head);
+$tail = `tail -2 $readsfile | head -1`;
+$tail =~ /seq.(\d+)/s;
+$nr = $1;
+
+if($minlength == 0) {
+	if($rl < 80) {
+	    if($match_length_cutoff == 0) {
+		$match_length_cutoff = 35;
+	    }
+	} else {
+	    if($match_length_cutoff == 0) {
+		$match_length_cutoff = 50;
+	    }
+	}
+	if($min_size_intersection_allowed >= .8 * $rl) {
+	    if($match_length_cutoff == 0) {
+		$match_length_cutoff = int(.6 * $rl);
+	    }
+	}
+} else {
+	$match_length_cutoff = $minlength;
+}
+
 open(LOGFILE, ">$output_dir/rum.log_master");
 print LOGFILE "config file: $configfile\n";
-print LOGFILE "readsfile: $readsfile\n";
+print LOGFILE "readsfile: $ARGV[1]\n";
 print LOGFILE "output_dir: $output_dir\n";
+print LOGFILE "readlength = $rl\n";
+$NR = &format_large_int($nr);
+if($paired_end eq 'false') {
+    print LOGFILE "number of reads: $NR\n";
+} else {
+    print LOGFILE "number of read pairs: $NR\n";
+}
+print LOGFILE "minimum length alignment to report = $match_length_cutoff\n";
 print LOGFILE "numchunks: $numchunks\n";
 print LOGFILE "name: $name\n";
 print LOGFILE "paired_end: $paired_end\n";
@@ -682,6 +755,7 @@ print LOGFILE "qsub: $qsub\n";
 print LOGFILE "blat minidentity: $minidentity\n";
 print LOGFILE "output junctions: $junctions\n";
 print LOGFILE "output quantified values: $quantify\n";
+print LOGFILE "strand specific: $strandspecific\n";
 
 if($numchunks =~ /(\d+)s/) {
     $numchunks = $1;
@@ -695,10 +769,13 @@ chomp($head);
 @a = split(//,$head);
 if($variable_read_lengths eq "false") {
    $readlength = @a;
+   if($minlength > $readlength) {
+       die "Error: you specified a minimum length alignment to report as '$minlength', however\nyour read length is only $readlength\n";
+   }
 } else {
    $readlength = "v";
 }
-print LOGFILE "readlength: $readlength\n";
+
 print LOGFILE "\nstart: $date\n";
 
 $head = `head -4 $readsfile`;
@@ -711,8 +788,8 @@ if($postprocess eq "false") {
     if($paired_end eq 'false') {
         if($type1 ne "a") {
 	   print STDERR "Reformatting reads file... please be patient.\n";
-	   `perl scripts/parse2fasta.pl $readsfile > $output_dir/reads.fa`;
-	   `perl scripts/fastq2qualities.pl $readsfile > $output_dir/quals.fa`;
+	   `perl $scripts_dir/parse2fasta.pl $readsfile > $output_dir/reads.fa`;
+	   `perl $scripts_dir/fastq2qualities.pl $readsfile > $output_dir/quals.fa`;
 	   $X = `head -2 $output_dir/quals.fa | tail -1`;
            if($X =~ /\S/ && !($X =~ /Sorry, can't figure these files out/)) {
 	       $quals = "true"
@@ -728,6 +805,14 @@ if($postprocess eq "false") {
         }
     }
 }
+
+if($quals_specified eq 'true') {
+    open(TESTIN, "$output_dir/$quals_file") or die "\nError: cannot open '$quals_file' for reading, it should be in the '$output_dir' directory.\n\n";
+    close(TESTIN);
+    $qualsfile = "$output_dir/$quals_file";
+    $quals = "true";
+}
+
 if($postprocess eq "true") {
     $head = `head -4 $readsfile`;
     $head =~ /seq.(\d+)(.).*seq.(\d+)(.)/s;
@@ -832,7 +917,18 @@ if($postprocess eq "false") {
         for($i=1; $i<=$numchunks; $i++) {
             $r = $readsfile_nopath . "." . $i;
             if(!(-e "$output_dir/$readsfile_nopath")) {
-                  die "\n-------------------------------------------------------------------\nError: You said the files were already broken up, but the file\n'$output_dir/$readsfile_nopath' does not seem to exist.\n\nNote: even if the files are already broken up, they still need to be\nin the <output dir> directory that you specified as '$output_dir'.\n-------------------------------------------------------------------\n\n";
+                die "\n-------------------------------------------------------------------\nError: You said the files were already broken up, but the file\n'$output_dir/$readsfile_nopath' does not seem to exist.\n\nNote: even if the files are already broken up, they still need to be\nin the <output dir> directory that you specified as '$output_dir'.\n-------------------------------------------------------------------\n\n";
+            }
+        }
+	$quals = "true";
+        for($i=1; $i<=$numchunks; $i++) {
+            $qfile = "$output_dir/quals.$i";
+            if(!(-e $qfile)) {
+                $quals = "false";
+                $i = $numchunks+1;
+            }
+            if($quals eq 'false') {
+                print STDERR "Note: I did not find any quality files, I will assume you are\naware of that and just did not have them.\n\n";
             }
         }
     }
@@ -850,10 +946,8 @@ if($postprocess eq "false") {
     $f = &format_large_int($NumSeqs);
     if($paired_end eq 'true') {
        print STDERR "Number of Read Pairs: $f\n";
-       print LOGFILE "Number of Read Pairs: $f\n";
     } else {
        print STDERR "Number of Reads: $f\n";
-       print LOGFILE "Number of Reads: $f\n";
     }
     
     print STDERR "\nEverything seems okay, I am going to fire off the job.\n\n";
@@ -862,7 +956,6 @@ if($postprocess eq "false") {
         $pipeline_file = $pipeline_template;
         if($limitNUhard eq "true") {
     	   $pipeline_file =~ s!LIMITNUCUTOFF!$NU_limit!gs;
-#    	   $pipeline_file =~ s!sort_RUM_by_id.pl OUTDIR.RUM_NU_temp2.CHUNK!sort_RUM_by_id.pl OUTDIR/RUM_NU_temp3.CHUNK!gs;
         } else {
     	   $pipeline_file =~ s!perl SCRIPTSDIR/limit_NU.pl OUTDIR/RUM_NU_temp3.CHUNK LIMITNUCUTOFF > OUTDIR/RUM_NU.CHUNK\n!mv OUTDIR/RUM_NU_temp3.CHUNK OUTDIR/RUM_NU.CHUNK\n!gs;
         }
@@ -876,6 +969,22 @@ if($postprocess eq "false") {
     	   $pipeline_file =~ s!QUALSFILE.CHUNK!none!gs;
         } else {
     	   $pipeline_file =~ s!QUALSFILE!$qualsfile!gs;
+        }
+        if($strandspecific eq 'true') {
+           $pipeline_file =~ s/STRAND1s/-strand p/gs;
+           $pipeline_file =~ s/quant.S1s/quant.ps/gs;
+           $pipeline_file =~ s/STRAND2s/-strand m/gs;
+           $pipeline_file =~ s/quant.S2s/quant.ms/gs;
+           $pipeline_file =~ s/STRAND1a/-strand p -anti/gs;
+           $pipeline_file =~ s/quant.S1a/quant.pa/gs;
+           $pipeline_file =~ s/STRAND2a/-strand m -anti/gs;
+           $pipeline_file =~ s/quant.S2a/quant.ma/gs;
+        } else {
+           $pipeline_file =~ s/STRAND1s//sg;
+           $pipeline_file =~ s/quant.S1s/quant/sg;
+           $pipeline_file =~ s/[^\n]+quant.S2s[^\n]+\n//sg;
+           $pipeline_file =~ s/[^\n]+quant.S1a[^\n]+\n//sg;
+           $pipeline_file =~ s/[^\n]+quant.S2a[^\n]+\n//sg;
         }
         $pipeline_file =~ s!CHUNK!$i!gs;
         $pipeline_file =~ s!MINIDENTITY!$minidentity!gs;
@@ -899,6 +1008,11 @@ if($postprocess eq "false") {
         if($limitNU eq "true") {
     	   $pipeline_file =~ s! -a ! -k 100 !gs;	
         }
+        if($minlength > 0) {
+    	   $pipeline_file =~ s!MATCHLENGTHCUTOFF!-match_length_cutoff $minlength!gs;
+        } else {
+    	   $pipeline_file =~ s!MATCHLENGTHCUTOFF!!gs;
+        }
         if($fast eq "false") {
     	   $pipeline_file =~ s!SPEED!-stepSize=5!gs;
         }
@@ -916,7 +1030,9 @@ if($postprocess eq "false") {
         close(OUTFILE);
     
         if($qsub eq "true") {
-    	   `qsub -l mem_free=7G $output_dir/$outfile`;
+           $ofile = $output_dir . "/chunk.$i" . ".o";
+           $efile = $output_dir . "/chunk.$i" . ".e";
+    	   `qsub -l mem_free=7G -o $ofile -e $efile $output_dir/$outfile`;
         }
         else {
     	   system("/bin/bash $output_dir/$outfile &");
@@ -997,7 +1113,7 @@ if($postprocess eq "false") {
 }
 
 $t = `tail -2 $readsfile`;
-$t =~ /seq.(\d+)/;
+$t =~ /seq.(\d+)/s;
 $NumSeqs = $1;
 
 if($nocat eq "false") {
@@ -1050,7 +1166,16 @@ if($NumSeqs =~ /(\d+)/) {
     $shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl $output_dir/RUM_Unique $output_dir/RUM_NU -minseq 1 > $output_dir/mapping_stats.txt\n";
 }
 if($quantify eq "true") {
-    $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications_$name\n";
+    if($strandspecific eq 'true') {
+        $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications.ps -strand ps\n";
+        $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications.ms -strand ms\n";
+        $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications.pa -strand pa\n";
+        $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications.ma -strand ma\n";
+        $shellscript = $shellscript . "perl $scripts_dir/merge_quants_strandspecific.pl $output_dir/feature_quantifications.ps $output_dir/feature_quantifications.ms $output_dir/feature_quantifications.pa $output_dir/feature_quantifications.ma $gene_annot_file $output_dir/feature_quantifications_$name\n";
+
+    } else {
+        $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications_$name\n";
+    }
 }
 $shellscript = $shellscript . "echo sorting RUM_Unique > $output_dir/$PPlog\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
@@ -1062,6 +1187,16 @@ $shellscript = $shellscript . "echo making coverage plots >> $output_dir/$PPlog\
 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
 $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_Unique.sorted $output_dir/RUM_Unique.cov -name \"$name Unique Mappers\"\n";
 $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_NU.sorted $output_dir/RUM_NU.cov -name \"$name Non-Unique Mappers\"\n";
+if($strandspecific eq 'true') {
+      # breakup RUM_Unique and RUM_NU files into plus and minus
+      $shellscript = $shellscript . "perl $scripts_dir/breakup_RUM_files_by_strand.pl $output_dir/RUM_Unique.sorted $output_dir/RUM_Unique.sorted.plus $output_dir/RUM_Unique.sorted.minus\n";
+      $shellscript = $shellscript . "perl $scripts_dir/breakup_RUM_files_by_strand.pl $output_dir/RUM_NU.sorted $output_dir/RUM_NU.sorted.plus $output_dir/RUM_NU.sorted.minus\n";
+      # run rum2cov on all four files
+      $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_Unique.sorted.plus $output_dir/RUM_Unique.plus.cov -name \"$name Unique Mappers Plus Strand\"\n";
+      $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_Unique.sorted.minus $output_dir/RUM_Unique.minus.cov -name \"$name Unique Mappers Minus Strand\"\n";
+      $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_NU.sorted.plus $output_dir/RUM_NU.plus.cov -name \"$name Non-Unique Mappers Plus Strand\"\n";
+      $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_NU.sorted.minus $output_dir/RUM_NU.minus.cov -name \"$name Non-Unique Mappers Minus Strand\"\n";
+}
 if($junctions eq "true") {
    $shellscript = $shellscript . "echo starting to compute junctions >> $output_dir/$PPlog\n";
    $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
@@ -1079,9 +1214,10 @@ print OUTFILE2 $shellscript;
 close(OUTFILE2);
 
 if($qsub eq "true") {
-    `qsub -l mem_free=7G $output_dir/$str`;
-}
-else {
+    $ofile = $output_dir . "/postprocessing" . ".o";
+    $efile = $output_dir . "/postprocessing" . ".e";
+    `qsub -l mem_free=7G -o $ofile -e $efile $output_dir/$str`;
+} else {
     system("/bin/bash $output_dir/$str");
 }
 print STDERR "\nWorking, now another wait...\n\n";
@@ -1105,6 +1241,12 @@ while($doneflag == 0) {
 if($cleanup eq 'true') {
    `yes|rm $output_dir/quant.*`;
    `yes|rm $output_dir/pipeline.*`;
+   if($strandspecific eq 'true') {
+      `yes|rm $output_dir/feature_quantifications.ps`;
+      `yes|rm $output_dir/feature_quantifications.ms`;
+      `yes|rm $output_dir/feature_quantifications.pa`;
+      `yes|rm $output_dir/feature_quantifications.ma`;
+   }
 }
 
 print STDERR "\nOkay, all finished.\n\n";
@@ -1117,25 +1259,22 @@ sub breakup_file () {
     ($FILE, $numpieces) = @_;
 
     open(INFILE, $FILE) or die "\nError: Cannot open '$FILE' for reading.\n\n";
-    $filesize = `wc -l $FILE`;
-    chomp($filesize);
-    $filesize =~ s/^\s+//;
-    $filesize =~ s/\s.*//;
-    $numseqs = $filesize / 2;
+    $tail = `tail -2 $FILE | head -1`;
+    $tail =~ /seq.(\d+)/s;
+    $numseqs = $1;
     $piecesize = int($numseqs / $numpieces);
-    $piecesize2 = int($numseqs / $numpieces / 2);
 
     $t = `tail -2 $FILE`;
-    $t =~ /seq.(\d+)/;
+    $t =~ /seq.(\d+)/s;
     $NS = $1;
+    $piecesize2 = &format_large_int($piecesize);
     if(!($FILE =~ /qual/)) {
-        $piecesize3 = &format_large_int($piecesize2);
-        if($numchunks > 1) {
-    	    print LOGFILE "processing in $numchunks pieces of approx $piecesize3 reads each\n";
-        } else {
+	if($numchunks > 1) {
+	    print LOGFILE "processing in $numchunks pieces of approx $piecesize2 reads each\n";
+	} else {
 	    $NS2 = &format_large_int($NS);
-    	    print LOGFILE "processing in one piece of $NS2 reads\n";
-        }
+	    print LOGFILE "processing in one piece of $NS2 reads\n";
+	}
     }
     if($piecesize % 2 == 1) {
 	$piecesize++;
@@ -1144,21 +1283,26 @@ sub breakup_file () {
 
     $F2 = $FILE;
     $F2 =~ s!.*/!!;
+
+    if($paired_end eq 'true') {
+	$PS = $piecesize * 2;
+    } else {
+	$PS = $piecesize;
+    }
+
     for($i=1; $i<$numpieces; $i++) {
 	$outfilename = $output_dir . "/" . $F2 . "." . $i;
 
 	open(OUTFILE, ">$outfilename");
-	for($j=0; $j<$piecesize; $j++) {
+	for($j=0; $j<$PS; $j++) {
 	    $line = <INFILE>;
 	    chomp($line);
-	    $line =~ s/\^M$//s;
 	    if($qualflag == 0) {
 		$line =~ s/[^ACGTNab]$//s;
 	    }
 	    print OUTFILE "$line\n";
 	    $line = <INFILE>;
 	    chomp($line);
-	    $line =~ s/\^M$//s;
 	    if($qualflag == 0) {
 		$line =~ s/[^ACGTNab]$//s;
 	    }
