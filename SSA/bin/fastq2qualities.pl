@@ -92,7 +92,7 @@ if($userparamsgiven == 0) {  # the following figures out how many rows per block
     }
 
     if($num_lines_seq == 0) {
-	&try_to_see_if_part_of_each_line_is_seq();
+#	&try_to_see_if_part_of_each_line_is_seq();
 	die "\nWarning: No lines of sequence found in the file '$ARGV[0]'\n\n";
     }
 
