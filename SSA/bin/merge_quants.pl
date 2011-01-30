@@ -82,7 +82,7 @@ for($i=0; $i<$cnt; $i++) {
 	print OUTFILE "  exon $exoncnt\t$counts[$i]{coords}\t$ucnt_normalized\t$totalcnt_normalized\t$counts[$i]{len}\n";
 	$exoncnt++;
     } elsif($counts[$i]{type} eq 'intron') {
-	print OUTFILE " intron $introncnt\t$counts[$i]{coords}\t$ucnt_normalized\t$totalcnt_normalized\t$counts[$i]{len}\n";
+	print OUTFILE "intron $introncnt\t$counts[$i]{coords}\t$ucnt_normalized\t$totalcnt_normalized\t$counts[$i]{len}\n";
 	$introncnt++;
     }
 }

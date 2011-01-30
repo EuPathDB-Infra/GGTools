@@ -123,7 +123,7 @@ while($line = <ANNOTFILE>) {
     @a = split(/\t/,$line);
     @ids = split(/::::/,$a[7]);
     for($i=0;$i<@ids;$i++) {
-	$ids[$i] =~ s/\(.*//;
+	$ids[$i] =~ s/\([^\(]+$//;
 	$geneID2coords{$ids[$i]} = $line;
     }
 }
@@ -619,7 +619,7 @@ while(1 == 1) {
     $displacement = $a[3];
 # $a[2] looks like this: uc002bea.2:chr15:78885397-78913322_-
 #       or like this: PF08_tmp1:rRNA:Pf3D7_08:1285649-1288826_+
-    $a[2] =~ /^(.*):([^:]*):.*(.)$/;
+    $a[2] =~ /^(.*):([^:]+):[^:]+(.)$/;
     $geneid = $1;
     $chr = $2;
     $tstrand = $3;
@@ -680,7 +680,6 @@ while(1 == 1) {
     }
     $i=0;
     $s[0] = 0;
-
     while($s[$i] <= $displacement) {
 	$i++;
 	$s[$i] = $s[$i-1] + $ends[$i-1] - $starts[$i-1];

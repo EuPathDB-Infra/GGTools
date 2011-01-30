@@ -45,7 +45,12 @@ while($flag == 0) {
 	}
     }
     if($sn == $seqnum && $type eq "b") {
-	$entry = $entry . "\n" . $line;
+	if($entry =~ /a/) {
+	    $entry = $entry . "\n" . $line;
+	} else {
+	    $entry = $line;  # a line with 'b' never follows a merged of the same id, 
+                             # otherwise this would wax the merged...
+	}
 	$hash{$entry} = 1;
 	$entry = '';
     }

@@ -492,7 +492,7 @@ sub readfile () {
 	my $seqnum2 = $1;
 	my $spans_union;
 	
-	if($seqnum1 == $seqnum2 && $b[0] =~ /b/) {
+	if($seqnum1 == $seqnum2 && $b[0] =~ /b/ && $a[0] =~ /a/) {
 	    if($a[3] eq "+") {
 		$b[2] =~ /-(\d+)$/;
 		$end = $1;

@@ -251,6 +251,7 @@ $user_ram = "false";
 $nocat = "false";
 $quals_specified = "false";
 $strandspecific = "false";
+$quantify = "false";
 if(@ARGV > 5) {
     for($i=5; $i<@ARGV; $i++) {
 	$optionrecognized = 0;
@@ -714,20 +715,20 @@ $tail =~ /seq.(\d+)/s;
 $nr = $1;
 
 if($minlength == 0) {
-	if($rl < 80) {
-	    if($match_length_cutoff == 0) {
-		$match_length_cutoff = 35;
-	    }
-	} else {
-	    if($match_length_cutoff == 0) {
-		$match_length_cutoff = 50;
-	    }
-	}
-	if($min_size_intersection_allowed >= .8 * $rl) {
-	    if($match_length_cutoff == 0) {
-		$match_length_cutoff = int(.6 * $rl);
-	    }
-	}
+   if($rl < 80) {
+      if($match_length_cutoff == 0) {
+         $match_length_cutoff = 35;
+      }
+   } else {
+      if($match_length_cutoff == 0) {
+         $match_length_cutoff = 50;
+      }
+   }
+   if($match_length_cutoff >= .8 * $rl) {
+      if($match_length_cutoff == 0) {
+         $match_length_cutoff = int(.6 * $rl);
+       }
+   }
 } else {
 	$match_length_cutoff = $minlength;
 }

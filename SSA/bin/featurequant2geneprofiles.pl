@@ -3,6 +3,8 @@
 # Written by Gregory R. Grant
 # University of Pennsylvania, 2010
 
+$|=1;
+
 if(@ARGV<1 || $ARGV[0] eq "/help/") {
     print "\nUsage: featurequant2geneprofiles.pl <outfile> <feature_quantification_files> [options]\n\n";
     print "Profiles are output for all genes/exons/introns, by default.  To change this use the options below.\n\n";
@@ -583,7 +585,7 @@ if($sformat eq "true") {
 	    }
 	}
 	if($sort eq "false") {
-	    foreach $geneid (sort {$genelocation{$a} cmp $genelocation{$b}} keys %genelocation) {
+	    foreach $geneid (sort {cmpChrs($genelocation{$a},$genelocation{$b})} keys %genelocation) {
 		$IDout = $geneid;
 		$IDout =~ s/::::/, /g;
 		$IDout =~ s/_genes//g;
@@ -637,7 +639,7 @@ if($sformat eq "true") {
 	    }
 	}
 	if($sort eq "false") {
-	    foreach $exonid (sort {$exonlocation{$a} cmp $exonlocation{$b}} keys %exon) {
+	    foreach $exonid (sort {cmpChrs($exonlocation{$a},$exonlocation{$b})} keys %exon) {
 		if($simple eq "false") {
 		    print OUTFILE1 "$exonid\tEXON";
 		} else {
@@ -679,7 +681,7 @@ if($sformat eq "true") {
 	    }
 	}
 	if($sort eq "false") {
-	    foreach $intronid (sort {$intronlocation{$a} cmp $intronlocation{$b}} keys %intron) {
+	    foreach $intronid (sort {cmpChrs($intronlocation{$a},$intronlocation{$b})} keys %intron) {
 		if($simple eq "false") {
 		    print OUTFILE1 "$intronid\tINTRON";
 		} else {
@@ -867,7 +869,7 @@ if($genesonly eq "true") {
 	    }
 	}
     } else {
-	foreach $geneid (sort {$genelocation{$a} cmp $genelocation{$b}} keys %genelocation) {
+	foreach $geneid (sort {cmpChrs($genelocation{$a},$genelocation{$b})} keys %genelocation) {
 	    $IDout = $geneid;
 	    $IDout =~ s/::::/, /g;
 	    $IDout =~ s/_genes//g;
@@ -1014,33 +1016,33 @@ if($exonsonly eq "true" || $featuresonly eq "true") {
 		}
 	    }
 	}
-	if($sort eq "false") {
-	    foreach $exonid (sort {$exonlocation{$a} cmp $exonlocation{$b}} keys %exon_min) {
-		if($simple eq "false") {
-		    print OUTFILE1 "$exonid\tEXON";
-		    print OUTFILE2 "$exonid\tEXON";
-		    if($writediff eq "true") {
-			print OUTFILE3 "$exonid\tEXON";
-		    }
-		} else {
-		    print OUTFILE1 "$exonid";
-		    print OUTFILE2 "$exonid";
-		    if($writediff eq "true") {
-			print OUTFILE3 "$exonid";
-		    }
-		}
-		for($i=0; $i<$numfiles; $i++) {
-		    print OUTFILE1 "\t$exon_min{$exonid}[$i]";
-		    print OUTFILE2 "\t$exon_max{$exonid}[$i]";
-		    if($writediff eq "true") {
-			print OUTFILE3 "\t$exon_max{$exonid}[$i]";
-		    }
-		}
-		print OUTFILE1 "\n";
-		print OUTFILE2 "\n";
+    }
+    if($sort eq "false") {
+	foreach $exonid (sort {cmpChrs($exonlocation{$a},$exonlocation{$b})} keys %exon_min) {
+	    if($simple eq "false") {
+		print OUTFILE1 "$exonid\tEXON";
+		print OUTFILE2 "$exonid\tEXON";
 		if($writediff eq "true") {
-		    print OUTFILE3 "\n";
+		    print OUTFILE3 "$exonid\tEXON";
 		}
+	    } else {
+		print OUTFILE1 "$exonid";
+		print OUTFILE2 "$exonid";
+		if($writediff eq "true") {
+		    print OUTFILE3 "$exonid";
+		}
+	    }
+	    for($i=0; $i<$numfiles; $i++) {
+		print OUTFILE1 "\t$exon_min{$exonid}[$i]";
+		print OUTFILE2 "\t$exon_max{$exonid}[$i]";
+		if($writediff eq "true") {
+		    print OUTFILE3 "\t$exon_max{$exonid}[$i]";
+		}
+	    }
+	    print OUTFILE1 "\n";
+	    print OUTFILE2 "\n";
+	    if($writediff eq "true") {
+		print OUTFILE3 "\n";
 	    }
 	}
     }
@@ -1146,35 +1148,318 @@ if($intronsonly eq "true" || $featuresonly eq "true") {
 		}
 	    }
 	}
-	if($sort eq "false") {
-	    foreach $intronid (sort {$intronlocation{$a} cmp $intronlocation{$b}} keys %intron_min) {
-		if($simple eq "false") {
-		    print OUTFILE1 "$intronid\tINTRON";
-		    print OUTFILE2 "$intronid\tINTRON";
-		    if($writediff eq "true") {
-			print OUTFILE3 "$intronid\tINTRON";
-		    }
-		} else {
-		    print OUTFILE1 "$intronid";
-		    print OUTFILE2 "$intronid";
-		    if($writediff eq "true") {
-			print OUTFILE3 "$intronid";
-		    }
-		}
-		for($i=0; $i<$numfiles; $i++) {
-		    print OUTFILE1 "\t$intron_min{$intronid}[$i]";
-		    print OUTFILE2 "\t$intron_max{$intronid}[$i]";
-		    if($writediff eq "true") {
-			$X = $intron_max{$intronid}[$i] - $intron_min{$intronid}[$i];
-			print OUTFILE3 "\t$X";
-		    }
-		}
-		print OUTFILE1 "\n";
-		print OUTFILE2 "\n";
+    }
+    if($sort eq "false") {
+	foreach $intronid (sort {cmpChrs($intronlocation{$a},$intronlocation{$b})} keys %intron_min) {
+	    if($simple eq "false") {
+		print OUTFILE1 "$intronid\tINTRON";
+		print OUTFILE2 "$intronid\tINTRON";
 		if($writediff eq "true") {
-		    print OUTFILE3 "\n";
+		    print OUTFILE3 "$intronid\tINTRON";
+		}
+	    } else {
+		print OUTFILE1 "$intronid";
+		print OUTFILE2 "$intronid";
+		if($writediff eq "true") {
+		    print OUTFILE3 "$intronid";
+		}
+	    }
+	    for($i=0; $i<$numfiles; $i++) {
+		print OUTFILE1 "\t$intron_min{$intronid}[$i]";
+		print OUTFILE2 "\t$intron_max{$intronid}[$i]";
+		if($writediff eq "true") {
+		    $X = $intron_max{$intronid}[$i] - $intron_min{$intronid}[$i];
+		    print OUTFILE3 "\t$X";
+		}
+	    }
+	    print OUTFILE1 "\n";
+	    print OUTFILE2 "\n";
+	    if($writediff eq "true") {
+		print OUTFILE3 "\n";
+	    }
+	}
+    }
+}
+
+sub cmpChrs () {
+    $A2_c = lc($b);
+    $B2_c = lc($a);
+
+    $A2_c =~ /^(.*):(\d+)-(\d+)$/;
+    $a2_c = $1;
+    $startcoord_a = $2;
+    $endcoord_a = $3;
+
+    $B2_c =~ /^(.*):(\d+)-(\d+)$/;
+    $b2_c = $1;
+    $startcoord_b = $2;
+    $endcoord_b = $3;
+
+    if($a2_c eq $b2_c) {
+	if($startcoord_a < $startcoord_b) {
+	    return 1;
+	}
+	if($startcoord_b < $startcoord_a) {
+	    return -1;
+	}
+	if($startcoord_a == $startcoord_b) {
+	    if($endcoord_a < $endcoord_b) {
+		return 1;
+	    }
+	    if($endcoord_b < $endcoord_a) {
+		return -1;
+	    }
+	    if($endcoord_a == $endcoord_b) {
+		return 1;
+	    }
+	}
+    }
+
+    if($a2_c =~ /^\d+$/ && !($b2_c =~ /^\d+$/)) {
+        return 1;
+    }
+    if($b2_c =~ /^\d+$/ && !($a2_c =~ /^\d+$/)) {
+        return -1;
+    }
+    if($a2_c =~ /^[ivxym]+$/ && !($b2_c =~ /^[ivxym]+$/)) {
+        return 1;
+    }
+    if($b2_c =~ /^[ivxym]+$/ && !($a2_c =~ /^[ivxym]+$/)) {
+        return -1;
+    }
+    if($a2_c eq 'm' && ($b2_c eq 'y' || $b2_c eq 'x')) {
+        return -1;
+    }
+    if($b2_c eq 'm' && ($a2_c eq 'y' || $a2_c eq 'x')) {
+        return 1;
+    }
+    if($a2_c =~ /^[ivx]+$/ && $b2_c =~ /^[ivx]+$/) {
+        $a2_c = "chr" . $a2_c;
+        $b2_c = "chr" . $b2_c;
+    }
+    if($a2_c =~ /$b2_c/) {
+	return -1;
+    }
+    if($b2_c =~ /$a2_c/) {
+	return 1;
+    }
+    # dealing with roman numerals starts here
+    if($a2_c =~ /chr([ivx]+)/ && $b2_c =~ /chr([ivx]+)/) {
+	$a2_c =~ /chr([ivx]+)/;
+	$a2_roman = $1;
+	$b2_c =~ /chr([ivx]+)/;
+	$b2_roman = $1;
+	$a2_arabic = arabic($a2_roman);
+    	$b2_arabic = arabic($b2_roman);
+	if($a2_arabic > $b2_arabic) {
+	    return -1;
+	} 
+	if($a2_arabic < $b2_arabic) {
+	    return 1;
+	}
+	if($a2_arabic == $b2_arabic) {
+	    $tempa = $a2_c;
+	    $tempb = $b2_c;
+	    $tempa =~ s/chr([ivx]+)//;
+	    $tempb =~ s/chr([ivx]+)//;
+	    undef %temphash;
+	    $temphash{$tempa}=1;
+	    $temphash{$tempb}=1;
+	    foreach $tempkey (sort {cmpChrs($a,$b)} keys %temphash) {
+		if($tempkey eq $tempa) {
+		    return 1;
+		} else {
+		    return -1;
 		}
 	    }
 	}
     }
+    if($b2_c =~ /chr([ivx]+)/ && !($a2_c =~ /chr([a-z]+)/) && !($a2_c =~ /chr(\d+)/)) {
+	return -1;
+    }
+    if($a2_c =~ /chr([ivx]+)/ && !($b2_c =~ /chr([a-z]+)/) && !($b2_c =~ /chr(\d+)/)) {
+	return 1;
+    }
+    if($b2_c =~ /chr([ivx]+)/ && ($a2_c =~ /chrm/)) {
+	return -1;
+    }
+    if($a2_c =~ /chr([ivx]+)/ && ($b2_c =~ /chrm/)) {
+	return 1;
+    }
+    # roman numerals ends here
+    if($a2_c =~ /chr(\d+)$/ && $b2_c =~ /chr.*_/) {
+        return 1;
+    }
+    if($b2_c =~ /chr(\d+)$/ && $a2_c =~ /chr.*_/) {
+        return -1;
+    }
+    if($a2_c =~ /chr([a-z])$/ && $b2_c =~ /chr.*_/) {
+        return 1;
+    }
+    if($b2_c =~ /chr([a-z])$/ && $a2_c =~ /chr.*_/) {
+        return -1;
+    }
+    if($a2_c =~ /chr(\d+)/) {
+        $numa = $1;
+        if($b2_c =~ /chr(\d+)/) {
+            $numb = $1;
+            if($numa < $numb) {return 1;}
+	    if($numa > $numb) {return -1;}
+	    if($numa == $numb) {
+		$tempa = $a2_c;
+		$tempb = $b2_c;
+		$tempa =~ s/chr\d+//;
+		$tempb =~ s/chr\d+//;
+		undef %temphash;
+		$temphash{$tempa}=1;
+		$temphash{$tempb}=1;
+		foreach $tempkey (sort {cmpChrs($a,$b)} keys %temphash) {
+		    if($tempkey eq $tempa) {
+			return 1;
+		    } else {
+			return -1;
+		    }
+		}
+	    }
+        } else {
+            return 1;
+        }
+    }
+    if($a2_c =~ /chrx(.*)/ && ($b2_c =~ /chr(y|m)$1/)) {
+	return 1;
+    }
+    if($b2_c =~ /chrx(.*)/ && ($a2_c =~ /chr(y|m)$1/)) {
+	return -1;
+    }
+    if($a2_c =~ /chry(.*)/ && ($b2_c =~ /chrm$1/)) {
+	return 1;
+    }
+    if($b2_c =~ /chry(.*)/ && ($a2_c =~ /chrm$1/)) {
+	return -1;
+    }
+    if($a2_c =~ /chr\d/ && !($b2_c =~ /chr[^\d]/)) {
+	return 1;
+    }
+    if($b2_c =~ /chr\d/ && !($a2_c =~ /chr[^\d]/)) {
+	return -1;
+    }
+    if($a2_c =~ /chr[^xy\d]/ && (($b2_c =~ /chrx/) || ($b2_c =~ /chry/))) {
+        return -1;
+    }
+    if($b2_c =~ /chr[^xy\d]/ && (($a2_c =~ /chrx/) || ($a2_c =~ /chry/))) {
+        return 1;
+    }
+    if($a2_c =~ /chr(\d+)/ && !($b2_c =~ /chr(\d+)/)) {
+        return 1;
+    }
+    if($b2_c =~ /chr(\d+)/ && !($a2_c =~ /chr(\d+)/)) {
+        return -1;
+    }
+    if($a2_c =~ /chr([a-z])/ && !($b2_c =~ /chr(\d+)/) && !($b2_c =~ /chr[a-z]+/)) {
+        return 1;
+    }
+    if($b2_c =~ /chr([a-z])/ && !($a2_c =~ /chr(\d+)/) && !($a2_c =~ /chr[a-z]+/)) {
+        return -1;
+    }
+    if($a2_c =~ /chr([a-z]+)/) {
+        $letter_a = $1;
+        if($b2_c =~ /chr([a-z]+)/) {
+            $letter_b = $1;
+            if($letter_a lt $letter_b) {return 1;}
+	    if($letter_a gt $letter_b) {return -1;}
+        } else {
+            return -1;
+        }
+    }
+    $flag_c = 0;
+    while($flag_c == 0) {
+        $flag_c = 1;
+        if($a2_c =~ /^([^\d]*)(\d+)/) {
+            $stem1_c = $1;
+            $num1_c = $2;
+            if($b2_c =~ /^([^\d]*)(\d+)/) {
+                $stem2_c = $1;
+                $num2_c = $2;
+                if($stem1_c eq $stem2_c && $num1_c < $num2_c) {
+                    return 1;
+                }
+                if($stem1_c eq $stem2_c && $num1_c > $num2_c) {
+                    return -1;
+                }
+                if($stem1_c eq $stem2_c && $num1_c == $num2_c) {
+                    $a2_c =~ s/^$stem1_c$num1_c//;
+                    $b2_c =~ s/^$stem2_c$num2_c//;
+                    $flag_c = 0;
+                }
+            }
+        }
+    }
+    if($a2_c le $b2_c) {
+	return 1;
+    }
+    if($b2_c le $a2_c) {
+	return -1;
+    }
+
+
+    return 1;
+}
+
+sub isroman($) {
+    $arg = shift;
+    $arg ne '' and
+      $arg =~ /^(?: M{0,3})
+                (?: D?C{0,3} | C[DM])
+                (?: L?X{0,3} | X[LC])
+                (?: V?I{0,3} | I[VX])$/ix;
+}
+
+sub arabic($) {
+    $arg = shift;
+    %roman2arabic = qw(I 1 V 5 X 10 L 50 C 100 D 500 M 1000);
+    %roman_digit = qw(1 IV 10 XL 100 CD 1000 MMMMMM);
+    @figure = reverse sort keys %roman_digit;
+    $roman_digit{$_} = [split(//, $roman_digit{$_}, 2)] foreach @figure;
+    isroman $arg or return undef;
+    ($last_digit) = 1000;
+    $arabic=0;
+    ($arabic);
+    foreach (split(//, uc $arg)) {
+        ($digit) = $roman2arabic{$_};
+        $arabic -= 2 * $last_digit if $last_digit < $digit;
+        $arabic += ($last_digit = $digit);
+    }
+    $arabic;
+}
+
+sub Roman($) {
+    $arg = shift;
+    %roman2arabic = qw(I 1 V 5 X 10 L 50 C 100 D 500 M 1000);
+    %roman_digit = qw(1 IV 10 XL 100 CD 1000 MMMMMM);
+    @figure = reverse sort keys %roman_digit;
+    $roman_digit{$_} = [split(//, $roman_digit{$_}, 2)] foreach @figure;
+    0 < $arg and $arg < 4000 or return undef;
+    $roman="";
+    ($x, $roman);
+    foreach (@figure) {
+        ($digit, $i, $v) = (int($arg / $_), @{$roman_digit{$_}});
+        if (1 <= $digit and $digit <= 3) {
+            $roman .= $i x $digit;
+        } elsif ($digit == 4) {
+            $roman .= "$i$v";
+        } elsif ($digit == 5) {
+            $roman .= $v;
+        } elsif (6 <= $digit and $digit <= 8) {
+            $roman .= $v . $i x ($digit - 5);
+        } elsif ($digit == 9) {
+            $roman .= "$i$x";
+        }
+        $arg -= $digit * $_;
+        $x = $i;
+    }
+    $roman;
+}
+
+sub roman($) {
+    lc Roman shift;
 }
