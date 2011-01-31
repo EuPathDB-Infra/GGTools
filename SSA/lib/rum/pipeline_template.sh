@@ -52,7 +52,7 @@ BLATEXE GENOMEBLAT OUTDIR/R.CHUNK OUTDIR/R.CHUNK.blat -minScore=20 -minIdentity=
 echo "finished running BLAT" `date` `date +%s` >> OUTDIR/rum.log_chunk.CHUNK
 MDUSTEXE OUTDIR/R.CHUNK >> OUTDIR/R.mdust.CHUNK
 echo "finished running mdust on R" `date` `date +%s` >> OUTDIR/rum.log_chunk.CHUNK
-perl SCRIPTSDIR/parse_blat_out.pl OUTDIR/R.CHUNK OUTDIR/R.CHUNK.blat OUTDIR/R.mdust.CHUNK OUTDIR/BlatUnique.CHUNK OUTDIR/BlatNU.CHUNK MAXINSERTIONSALLOWED MATCHLENGTHCUTOFF
+perl SCRIPTSDIR/parse_blat_out.pl OUTDIR/R.CHUNK OUTDIR/R.CHUNK.blat OUTDIR/R.mdust.CHUNK OUTDIR/BlatUnique.CHUNK OUTDIR/BlatNU.CHUNK MAXINSERTIONSALLOWED MATCHLENGTHCUTOFF DNA
 echo "finished parsing BLAT output" `date` `date +%s` >> OUTDIR/rum.log_chunk.CHUNK
 ls -l OUTDIR/R.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
 ls -l OUTDIR/R.CHUNK.blat >> OUTDIR/rum.log_chunk.CHUNK
