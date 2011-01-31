@@ -39,7 +39,7 @@ Option:
                         junction so this number can be as large as the largest
                         intron.  Default value = 500,000
 
-       -dna           : set this flag is aligning dna sequence data
+       -dna           : set this flag if aligning dna sequence data
 
        -match_length_cutoff  : set this min length alignment to be reported
 

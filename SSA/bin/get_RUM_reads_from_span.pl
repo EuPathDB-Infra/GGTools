@@ -1,7 +1,7 @@
 
 if(@ARGV < 2) {
     die "
-Usage: get_reads.pl <chr> <start> <end> <chrdir> [options] | less -S
+Usage: get_RUM_reads_from_span.pl <chr> <start> <end> <chrdir> [options] | less -S
 
 This script gets all the reads from a RUM_Unique or RUM_NU
 file and prints them out in a multiple alignment.  The
@@ -15,7 +15,7 @@ Options: -v : output in vertical mode
 been broken into individual chromosomes (this is done for
 efficiency).  To do the breaking up for 'RUM_Unique', make
 a directory, say 'chrdir' and run the following:
-> perl get_reads.pl RUM_Unique -prepare chrdir
+> perl get_RUM_reads_from_span.pl RUM_Unique -prepare chrdir
 After that finishes you can run the program using the
 normal four arguments.
 

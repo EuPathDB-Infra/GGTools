@@ -2,6 +2,12 @@
 # Written by Gregory R Grant
 # University of Pennsylvania, 2010
 
+$version = "1.00.  Released Jan 31, 2011";
+
+if($ARGV[0] eq '-version' || $ARGV[0] eq '-v' || $ARGV[0] eq '--version' || $ARGV[0] eq '--v') {
+    die "RUM version: $version\n";
+}
+
 $date = `date`;
 
 if(@ARGV == 1 && @ARGV[0] eq "config") {
@@ -661,8 +667,8 @@ if(($readsfile =~ /,,,/) && ($paired_end eq "true") && ($postprocess eq "false")
 
     `perl $scripts_dir/parse2fasta.pl $a[0] $a[1] | head -10000 > $output_dir/reads_temp.fa`;
     `perl $scripts_dir/fastq2qualities.pl $a[0] $a[1] | head -10000 > $output_dir/quals_temp.fa`;
-    $X = `head -2 $output_dir/quals_temp.fa | tail -1`;
-    if($X =~ /\S/ && !($X =~ /Sorry, can't figure these files out/)) {
+    $X = `head -20 $output_dir/quals_temp.fa`;
+    if($X =~ /\S/s && !($X =~ /Sorry, can't figure these files out/s)) {
         open(RFILE, "$output_dir/reads_temp.fa");
         open(QFILE, "$output_dir/quals_temp.fa");
         while($linea = <RFILE>) {
@@ -672,8 +678,6 @@ if(($readsfile =~ /,,,/) && ($paired_end eq "true") && ($postprocess eq "false")
             chomp($line1);
             chomp($line2);
             if(length($line1) != length($line2)) {
-               $readlength = length($line1);
-               $quallength = length($line2);
                die "ERROR: It seems your read lengths differ from your quality string lengths.\nCheck line:\n$linea$line1\n$lineb$line2\n\n";
            }
         }
@@ -684,8 +688,8 @@ if(($readsfile =~ /,,,/) && ($paired_end eq "true") && ($postprocess eq "false")
     print STDERR "Reformatting reads file... please be patient.\n";
     `perl $scripts_dir/parse2fasta.pl $a[0] $a[1] > $output_dir/reads.fa`;
     `perl $scripts_dir/fastq2qualities.pl $a[0] $a[1] > $output_dir/quals.fa`;
-    $X = `head -2 $output_dir/quals.fa | tail -1`;
-    if($X =~ /\S/ && !($X =~ /Sorry, can't figure these files out/)) {
+    $X = `head -20 $output_dir/quals.fa`;
+    if($X =~ /\S/s && !($X =~ /Sorry, can't figure these files out/s)) {
 	 $quals = "true";
     }
     $qualsfile = "$output_dir/quals.fa";
@@ -700,9 +704,59 @@ if($postprocess eq "true") {
     $qualsfile = "$output_dir/quals.fa";
     $quals = "false";
     if(-e $qualsfile) {
-        $X = `head -2 $output_dir/quals.fa | tail -1`;
-        if($X =~ /\S/ && !($X =~ /Sorry, can't figure these files out/)) {
+        $X = `head -20 $output_dir/quals.fa`;
+        if($X =~ /\S/s && !($X =~ /Sorry, can't figure these files out/s)) {
 	    $quals = "true"
+        }
+    }
+}
+
+
+if($numchunks =~ /(\d+)s/) {
+    $numchunks = $1;
+    $fasta_already_fragmented = "true";
+} else {
+    $fasta_already_fragmented = "false";
+}
+
+$head = `head -2 $readsfile | tail -1`;
+chomp($head);
+@a = split(//,$head);
+if($variable_read_lengths eq "false") {
+   $readlength = @a;
+   if($minlength > $readlength) {
+       die "Error: you specified a minimum length alignment to report as '$minlength', however\nyour read length is only $readlength\n";
+   }
+} else {
+   $readlength = "v";
+}
+
+
+$head = `head -4 $readsfile`;
+$head =~ /seq.(\d+)(.).*seq.(\d+)(.)/s;
+$num1 = $1;
+$type1 = $2;
+$num2 = $3;
+$type2 = $4;
+if($postprocess eq "false") {
+    if($paired_end eq 'false') {
+        if($type1 ne "a") {
+	   print STDERR "Reformatting reads file... please be patient.\n";
+	   `perl $scripts_dir/parse2fasta.pl $readsfile > $output_dir/reads.fa`;
+
+	   `perl $scripts_dir/fastq2qualities.pl $readsfile > $output_dir/quals.fa`;
+	   $X = `head -20 $output_dir/quals.fa`;
+           if($X =~ /\S/s && !($X =~ /Sorry, can't figure these files out/s)) {
+	       $quals = "true"
+	   }
+	   $readsfile = "$output_dir/reads.fa";
+ 	   $qualsfile = "$output_dir/quals.fa";
+	   $head = `head -4 $readsfile`;
+	   $head =~ /seq.(\d+)(.).*seq.(\d+)(.)/s;
+	   $num1 = $1;
+	   $type1 = $2;
+	   $num2 = $3;
+	   $type2 = $4;
         }
     }
 }
@@ -733,80 +787,6 @@ if($minlength == 0) {
 	$match_length_cutoff = $minlength;
 }
 
-open(LOGFILE, ">$output_dir/rum.log_master");
-print LOGFILE "config file: $configfile\n";
-print LOGFILE "readsfile: $ARGV[1]\n";
-print LOGFILE "output_dir: $output_dir\n";
-print LOGFILE "readlength = $rl\n";
-$NR = &format_large_int($nr);
-if($paired_end eq 'false') {
-    print LOGFILE "number of reads: $NR\n";
-} else {
-    print LOGFILE "number of read pairs: $NR\n";
-}
-print LOGFILE "minimum length alignment to report = $match_length_cutoff\n";
-print LOGFILE "numchunks: $numchunks\n";
-print LOGFILE "name: $name\n";
-print LOGFILE "paired_end: $paired_end\n";
-print LOGFILE "fast: $fast\n";
-print LOGFILE "limitBowtieNU: $limitNU\n";
-print LOGFILE "limitNU: $limitNUhard\n";
-print LOGFILE "dna: $dna\n";
-print LOGFILE "qsub: $qsub\n";
-print LOGFILE "blat minidentity: $minidentity\n";
-print LOGFILE "output junctions: $junctions\n";
-print LOGFILE "output quantified values: $quantify\n";
-print LOGFILE "strand specific: $strandspecific\n";
-
-if($numchunks =~ /(\d+)s/) {
-    $numchunks = $1;
-    $fasta_already_fragmented = "true";
-} else {
-    $fasta_already_fragmented = "false";
-}
-
-$head = `head -2 $readsfile | tail -1`;
-chomp($head);
-@a = split(//,$head);
-if($variable_read_lengths eq "false") {
-   $readlength = @a;
-   if($minlength > $readlength) {
-       die "Error: you specified a minimum length alignment to report as '$minlength', however\nyour read length is only $readlength\n";
-   }
-} else {
-   $readlength = "v";
-}
-
-print LOGFILE "\nstart: $date\n";
-
-$head = `head -4 $readsfile`;
-$head =~ /seq.(\d+)(.).*seq.(\d+)(.)/s;
-$num1 = $1;
-$type1 = $2;
-$num2 = $3;
-$type2 = $4;
-if($postprocess eq "false") {
-    if($paired_end eq 'false') {
-        if($type1 ne "a") {
-	   print STDERR "Reformatting reads file... please be patient.\n";
-	   `perl $scripts_dir/parse2fasta.pl $readsfile > $output_dir/reads.fa`;
-	   `perl $scripts_dir/fastq2qualities.pl $readsfile > $output_dir/quals.fa`;
-	   $X = `head -2 $output_dir/quals.fa | tail -1`;
-           if($X =~ /\S/ && !($X =~ /Sorry, can't figure these files out/)) {
-	       $quals = "true"
-	   }
-	   $readsfile = "$output_dir/reads.fa";
- 	   $qualsfile = "$output_dir/quals.fa";
-	   $head = `head -4 $readsfile`;
-	   $head =~ /seq.(\d+)(.).*seq.(\d+)(.)/s;
-	   $num1 = $1;
-	   $type1 = $2;
-	   $num2 = $3;
-	   $type2 = $4;
-        }
-    }
-}
-
 if($quals_specified eq 'true') {
     open(TESTIN, "$output_dir/$quals_file") or die "\nError: cannot open '$quals_file' for reading, it should be in the '$output_dir' directory.\n\n";
     close(TESTIN);
@@ -823,9 +803,38 @@ if($postprocess eq "true") {
     $type2 = $4;
 }
 
+open(LOGFILE, ">$output_dir/rum.log_master");
+print LOGFILE "\nRUM version: $version\n";
+print LOGFILE "\nstart: $date\n";
+print LOGFILE "config file: $configfile\n";
+print LOGFILE "readsfile: $ARGV[1]\n";
+print LOGFILE "output_dir: $output_dir\n";
+print LOGFILE "readlength = $rl\n";
+$NR = &format_large_int($nr);
+if($paired_end eq 'false') {
+    print LOGFILE "number of reads: $NR\n";
+} else {
+    print LOGFILE "number of read pairs: $NR\n";
+}
+print LOGFILE "minimum length alignment to report = $match_length_cutoff\n";
+$nc = $numchunks;
+$nc =~ s/s//;
+print LOGFILE "numchunks: $nc\n";
+print LOGFILE "name: $name\n";
+print LOGFILE "paired_end: $paired_end\n";
+print LOGFILE "fast: $fast\n";
+print LOGFILE "limitBowtieNU: $limitNU\n";
+print LOGFILE "limitNU: $limitNUhard\n";
+print LOGFILE "dna: $dna\n";
+print LOGFILE "qsub: $qsub\n";
+print LOGFILE "blat minidentity: $minidentity\n";
+print LOGFILE "output junctions: $junctions\n";
+print LOGFILE "output quantified values: $quantify\n";
+print LOGFILE "strand specific: $strandspecific\n";
+
 if($type1 ne "a") {
-    print STDERR "ERROR: the fasta def lines are misformatted.  The first one should end in an 'a'.\n";
-    print LOGFILE "Error: fasta file misformatted... The first line should end in an 'a'.\n";
+    print STDERR "\n---------------------------------------------------------------\nERROR: the fasta def lines are misformatted.  The first one should end in an 'a'.\n\nAre you sure this isn't single end data?  If so use the -single option...\n\n";
+    print LOGFILE "\n----------------------------------------------------------------\nError: fasta file misformatted... The first line should end in an 'a'.\n\nAre you sure this isn't single end data?  If so use the -single option...\n\n";
     exit();
 }
 if($num2 ne "2" && $paired_end eq "false") {
@@ -1009,6 +1018,11 @@ if($postprocess eq "false") {
         if($limitNU eq "true") {
     	   $pipeline_file =~ s! -a ! -k 100 !gs;	
         }
+        if($dna eq 'true') {
+    	   $pipeline_file =~ s!DNA!-dna!gs;
+        } else {
+    	   $pipeline_file =~ s!DNA!!gs;
+        }
         if($minlength > 0) {
     	   $pipeline_file =~ s!MATCHLENGTHCUTOFF!-match_length_cutoff $minlength!gs;
         } else {
@@ -1047,14 +1061,14 @@ if($postprocess eq "false") {
         sleep(2);
         if($qsub eq "false" && $blatonly eq "false") {
     	    print STDERR "\nThe next thing to print here will (probably) be the status reports from bowtie for each chunk.\n";
-    	    print STDERR "     * Don't be alarmed by the number of reads that 'failed to align'\n       that's just referring to one stage, the end result will be better.\n\n";
+    	    print STDERR "     * Don't be alarmed by the number of reads that 'failed to align'\n       that's just referring to the bowtie step.\n\n";
         }
     } else {
         print STDERR "\nThe job has been initiated, now the long wait...\n";
         sleep(2);
         if($qsub eq "false" && $blatonly eq "false") {
     	    print STDERR "\nThe next thing to print here will (probably) be the status reports from bowtie for each chunk.\n";
-    	    print STDERR "     * Don't be alarmed by the number of reads that 'failed to align'\n       that's just referring to stage, the end result will be better.\n\n";
+    	    print STDERR "     * Don't be alarmed by the number of reads that 'failed to align'\n       that's just referring to the bowtie step.\n\n";
         }
     }
     
