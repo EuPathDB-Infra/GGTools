@@ -1,9 +1,3 @@
-
-if(@ARGV<1) {
-    die "usage: gtf2rum-index-builder-friendly.pl <gtf file>
-";
-}
-
 open(INFILE, $ARGV[0]);
 $|=1;
 while($line = <INFILE>) {

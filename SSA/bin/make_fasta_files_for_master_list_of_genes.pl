@@ -113,7 +113,7 @@ sub get_genes () {
 		}
 	    }
 	    $a[7] =~ s/::::.*//;
-	    $a[7] =~ s/\(.*//;
+	    $a[7] =~ s/\([^\(]+$//;
 	    print ">$a[7]:$CHR:$a[2]-$a[3]_$a[1]\n";
 	    if($a[1] eq '-') {
 		$SEQ = &reversecomplement($GENESEQ);
