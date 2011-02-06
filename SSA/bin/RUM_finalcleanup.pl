@@ -189,12 +189,7 @@ sub cmpChrs () {
     if($a2_c =~ /chr([ivx]+)/ && !($b2_c =~ /chr([a-z]+)/) && !($b2_c =~ /chr(\d+)/)) {
 	return 1;
     }
-    if($b2_c =~ /chr([ivx]+)/ && ($a2_c =~ /chrm/)) {
-	return -1;
-    }
-    if($a2_c =~ /chr([ivx]+)/ && ($b2_c =~ /chrm/)) {
-	return 1;
-    }
+
     # roman numerals ends here
     if($a2_c =~ /chr(\d+)$/ && $b2_c =~ /chr.*_/) {
         return 1;

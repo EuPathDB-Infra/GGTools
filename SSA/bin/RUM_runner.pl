@@ -2,7 +2,7 @@
 # Written by Gregory R Grant
 # University of Pennsylvania, 2010
 
-$version = "1.00.  Released Jan 31, 2011";
+$version = "1.02.  Released Feb 6th, 2011";
 
 if($ARGV[0] eq '-version' || $ARGV[0] eq '-v' || $ARGV[0] eq '--version' || $ARGV[0] eq '--v') {
     die "RUM version: $version\n";
@@ -1166,7 +1166,7 @@ print LOGFILE "finished creating RUM_Unique/RUM_NU/RUM.sam: $date\n";
 
 if($cleanup eq 'true') {
    print STDERR "\nCleaning up some temp files...\n\n";
-   `yes|rm $output_dir/RUM.sam.* $output_dir/RUM_Unique.* $output_dir/RUM_NU.* $output_dir/sam_header.* $output_dir/reads.fa.*`;
+   `yes|rm $output_dir/RUM.sam.* $output_dir/sam_header.* $output_dir/reads.fa.*`;
    if(-e "$output_dir/quals.fa.1") {
        `yes|rm $output_dir/quals.fa.*`;
    }
@@ -1192,12 +1192,23 @@ if($quantify eq "true") {
         $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications_$name\n";
     }
 }
-$shellscript = $shellscript . "echo sorting RUM_Unique > $output_dir/$PPlog\n";
+
+$string = "$output_dir/RUM_Unique.sorted";
+for($i=1; $i<$numchunks+1; $i++) {
+    $string = $string . " $output_dir/RUM_Unique.sorted.$i";
+}
+$shellscript = $shellscript . "perl $scripts_dir/merge_sorted_RUM_files.pl $string\n";
+$shellscript = $shellscript . "echo merging RUM_Unique.sorted.* files > $output_dir/$PPlog\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
-$shellscript = $shellscript . "perl $scripts_dir/sort_RUM_by_location.pl $output_dir/RUM_Unique $output_dir/RUM_Unique.sorted -ram $ram >> $output_dir/mapping_stats.txt\n";
-$shellscript = $shellscript . "echo sorting RUM_NU >> $output_dir/$PPlog\n";
+
+$string = "$output_dir/RUM_NU.sorted";
+for($i=1; $i<$numchunks+1; $i++) {
+    $string = $string . " $output_dir/RUM_NU.sorted.$i";
+}
+$shellscript = $shellscript . "perl $scripts_dir/merge_sorted_RUM_files.pl $string\n";
+$shellscript = $shellscript . "echo merging RUM_NU.sorted.* files > $output_dir/$PPlog\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
-$shellscript = $shellscript . "perl $scripts_dir/sort_RUM_by_location.pl $output_dir/RUM_NU $output_dir/RUM_NU.sorted -ram $ram >> $output_dir/mapping_stats.txt\n";
+
 $shellscript = $shellscript . "echo making coverage plots >> $output_dir/$PPlog\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
 $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_Unique.sorted $output_dir/RUM_Unique.cov -name \"$name Unique Mappers\"\n";
@@ -1227,6 +1238,11 @@ $str = "postprocessing_$name" . ".sh";
 open(OUTFILE2, ">$output_dir/$str");
 print OUTFILE2 $shellscript;
 close(OUTFILE2);
+
+if($cleanup eq 'true') {
+   print STDERR "\nCleaning up some temp files...\n\n";
+   `yes|rm $output_dir/RUM_Unique.* $output_dir/RUM_NU.*`;
+}
 
 if($qsub eq "true") {
     $ofile = $output_dir . "/postprocessing" . ".o";
