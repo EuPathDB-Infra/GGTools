@@ -1,117 +1,35 @@
 #!/usr/bin/perl
 
 if(@ARGV<2) {
-    die "Usage: merge_sorted_RUM_files.pl <outfile> <infile1> <infile2> [<infile3> ... <infileN>]
+    die "Usage: merge_chr_counts.pl <outfile> <infile1> <infile2> [<infile3> ... <infileN>]
 
-Where: the infiles are RUM_Unique or RUM_NU files, each sorted by location, without the forward
-and reverse reads separated.  They will be merged into a single sorted file output to <outfile>.
+Where: the infiles are chr_counts files.  They will be merged into a single
+sorted file output to <outfile>.
 
 ";
 }
+
 $outfile = $ARGV[0];
+open(OUTFILE, ">>$outfile");
 $numfiles = @ARGV - 1;
-if($numfiles == 1) {
-    $infile = $ARGV[1];
-    `cp $infile $outfile`;
-    exit(0);
-}
 
 for($i=0; $i<$numfiles; $i++) {
-    $file[$i] = $ARGV[$i+1];
-}
-open(OUTFILE, ">$outfile");
-
-for($i=0; $i<$numfiles; $i++) {
-    open $F1{$i}, $file[$i];
-}
-
-for($i=0; $i<$numfiles; $i++) {
-    $mergeFLAG = 0;
-    getNext1($i);
-}
-
-while($mergeFLAG < $numfiles) {
-    $S=0;
-    until($chr1[$S] ne 'finished1234') {
-	$S++;
+    open(INFILE, $ARGV[$i+1]);
+    $line = <INFILE>;
+    $line = <INFILE>;
+    $line = <INFILE>;
+    $line = <INFILE>;
+    while($line = <INFILE>) {
+	chomp($line);
+	@a1 = split(/\t/,$line);
+	$chrcnt{$a1[0]} = $chrcnt{$a1[0]} + $a1[1];
     }
-    $argmin = $S;
-    for($i=$S+1; $i<$numfiles; $i++) {
-	if(!($chr1[$i] eq "finished1234")) {
-	    if($chr1[$i] eq $chr1[$argmin]) {
-		if($start1[$argmin] > $start1[$i]) {
-		    $argmin = $i;
-		} elsif($start1[$argmin] == $start1[$i]) {
-		    if($end1[$argmin] > $end1[$i]) {
-			$argmin = $i;
-		    }
-		}
-	    } else  {
-		if(&cmpChrs($chr1[$i],$chr1[$argmin]) == 1) {
-		    $argmin = $i;
-		}
-	    }
-	}
-    }
-    print OUTFILE "$entry[$argmin]\n";
-    &getNext1($argmin);
-}
-close(OUTFILE);
-for($i=0; $i<$numfiles; $i++) {
-    close($F1{$i});
+    close(INFILE);
 }
 
-sub getNext1 () {
-    ($FN) = @_;
-    $FF = $F1{$FN};
-    $line1 = <$FF>;
-    chomp($line1);
-    if($line1 eq '') {
-	$mergeFLAG++;
-	$start1[$FN] = 1000000000000;  # effectively infinity, no chromosome should be this large;
-	$chr1[$FN] = "finished1234";
-	$entry[$FN] = "";
-	return "";
-    }
-    @a = split(/\t/,$line1);
-    $chr1[$FN] = $a[1];
-    $a[2] =~ /^(\d+)-/;
-    $start1[$FN] = $1;
-    if($a[0] =~ /a/) {
-	$a[0] =~ /(\d+)/;
-	$seqnum1 = $1;
-	$line2 = <$FF>;
-	chomp($line2);
-	@b = split(/\t/,$line2);
-	$b[0] =~ /(\d+)/;
-	$seqnum2 = $1;
-	if($seqnum1 == $seqnum2 && $b[0] =~ /b/) {
-	    if($a[3] eq "+") {
-		$b[2] =~ /-(\d+)$/;
-		$end1[$FN] = $1;
-	    } else {
-		$b[2] =~ /^(\d+)-/;
-		$start1[$FN] = $1;
-		$a[2] =~ /-(\d+)$/;
-		$end1[$FN] = $1;
-	    }
-	    $out1 = $line1 . "\n" . $line2;
-	} else {
-	    $a[2] =~ /-(\d+)$/;
-	    $end1[$FN] = $1;
-	    # reset the file handle so the last line read will be read again
-	    $len = -1 * (1 + length($line2));
-	    seek($FF, $len, 1);
-	    $out1 = $line1;
-	}
-    } else {
-	$a[2] =~ /-(\d+)$/;
-	$end1[$FN] = $1;
-	$out1 = $line1;
-    }
-    chomp($out1);
-
-    $entry[$FN] = $out1;
+foreach $chr (sort {cmpChrs($b,$a)} keys %chrcnt) {
+    $cnt = $chrcnt{$chr};
+    print OUTFILE "$chr\t$cnt\n";
 }
 
 sub cmpChrs () {

@@ -1209,6 +1209,32 @@ $shellscript = $shellscript . "perl $scripts_dir/merge_sorted_RUM_files.pl $stri
 $shellscript = $shellscript . "echo merging RUM_NU.sorted.* files > $output_dir/$PPlog\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
 
+$string = "$output_dir/mapping_stats.txt";
+for($i=1; $i<$numchunks+1; $i++) {
+    $string = $string . " $output_dir/chr_counts_u.$i";
+}
+$shellscript = $shellscript . "echo '' >> $output_dir/mapping_stats.txt\n";
+$shellscript = $shellscript . "echo RUM_Unique reads per chromosome >> $output_dir/mapping_stats.txt\n";
+$shellscript = $shellscript . "perl $scripts_dir/merge_chr_counts.pl $string\n";
+
+$string = "$output_dir/mapping_stats.txt";
+for($i=1; $i<$numchunks+1; $i++) {
+    $string = $string . " $output_dir/chr_counts_nu.$i";
+}
+$shellscript = $shellscript . "echo '' >> $output_dir/mapping_stats.txt\n";
+$shellscript = $shellscript . "echo RUM_NU reads per chromosome >> $output_dir/mapping_stats.txt\n";
+$shellscript = $shellscript . "perl $scripts_dir/merge_chr_counts.pl $string\n";
+
+if($junctions eq "true") {
+   $shellscript = $shellscript . "echo computing junctions >> $output_dir/$PPlog\n";
+   $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
+   if($altgenes eq "true") {
+       $shellscript = $shellscript . "perl $scripts_dir/make_RUM_junctions_file.pl $output_dir/RUM_Unique $output_dir/RUM_NU $genomefa $altgene_file $output_dir/junctions_all.rum $output_dir/junctions_all.bed $output_dir/junctions_high-quality.bed -faok\n";
+   } else {
+       $shellscript = $shellscript . "perl $scripts_dir/make_RUM_junctions_file.pl $output_dir/RUM_Unique $output_dir/RUM_NU $genomefa $gene_annot_file $output_dir/junctions_all.rum $output_dir/junctions_all.bed $output_dir/junctions_high-quality.bed -faok\n";
+   }
+}
+
 $shellscript = $shellscript . "echo making coverage plots >> $output_dir/$PPlog\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
 $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_Unique.sorted $output_dir/RUM_Unique.cov -name \"$name Unique Mappers\"\n";
@@ -1223,15 +1249,6 @@ if($strandspecific eq 'true') {
       $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_NU.sorted.plus $output_dir/RUM_NU.plus.cov -name \"$name Non-Unique Mappers Plus Strand\"\n";
       $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_NU.sorted.minus $output_dir/RUM_NU.minus.cov -name \"$name Non-Unique Mappers Minus Strand\"\n";
 }
-if($junctions eq "true") {
-   $shellscript = $shellscript . "echo starting to compute junctions >> $output_dir/$PPlog\n";
-   $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
-   if($altgenes eq "true") {
-       $shellscript = $shellscript . "perl $scripts_dir/make_RUM_junctions_file.pl $output_dir/RUM_Unique $output_dir/RUM_NU $genomefa $altgene_file $output_dir/junctions_all.rum $output_dir/junctions_all.bed $output_dir/junctions_high-quality.bed -faok\n";
-   } else {
-       $shellscript = $shellscript . "perl $scripts_dir/make_RUM_junctions_file.pl $output_dir/RUM_Unique $output_dir/RUM_NU $genomefa $gene_annot_file $output_dir/junctions_all.rum $output_dir/junctions_all.bed $output_dir/junctions_high-quality.bed -faok\n";
-   }
-}
 $shellscript = $shellscript . "echo finished >> $output_dir/$PPlog\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
 $str = "postprocessing_$name" . ".sh";
@@ -1241,7 +1258,7 @@ close(OUTFILE2);
 
 if($cleanup eq 'true') {
    print STDERR "\nCleaning up some temp files...\n\n";
-   `yes|rm $output_dir/RUM_Unique.* $output_dir/RUM_NU.*`;
+   `yes|rm $output_dir/RUM_Unique.* $output_dir/RUM_NU.*  $output_dir/chr_counts*`;
 }
 
 if($qsub eq "true") {
