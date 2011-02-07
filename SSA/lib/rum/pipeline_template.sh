@@ -99,10 +99,10 @@ yes|unlink OUTDIR/RUM_NU_idsorted.CHUNK
 perl SCRIPTSDIR/rum2sam.pl OUTDIR/RUM_Unique.CHUNK OUTDIR/RUM_NU.CHUNK READSFILE.CHUNK QUALSFILE.CHUNK OUTDIR/RUM.sam.CHUNK
 echo "finished converting to SAM" `date` `date +%s` >> OUTDIR/rum.log_chunk.CHUNK
 
-perl SCRIPTSDIR/sort_RUM_by_location.pl OUTDIR/RUM_Unique.CHUNK OUTDIR/RUM_Unique.sorted.CHUNK
+perl SCRIPTSDIR/sort_RUM_by_location.pl OUTDIR/RUM_Unique.CHUNK OUTDIR/RUM_Unique.sorted.CHUNK >> OUTDIR/chr_counts_u.CHUNK
 echo "finished sorting RUM_Unique" `date` `date +%s` >> OUTDIR/rum.log_chunk.CHUNK
 ls -l OUTDIR/RUM_Unique.sorted.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
-perl SCRIPTSDIR/sort_RUM_by_location.pl OUTDIR/RUM_NU.CHUNK OUTDIR/RUM_NU.sorted.CHUNK
+perl SCRIPTSDIR/sort_RUM_by_location.pl OUTDIR/RUM_NU.CHUNK OUTDIR/RUM_NU.sorted.CHUNK >> OUTDIR/chr_counts_nu.CHUNK
 echo "finished sorting RUM_NU" `date` `date +%s` >> OUTDIR/rum.log_chunk.CHUNK
 ls -l OUTDIR/RUM_NU.sorted.CHUNK >> OUTDIR/rum.log_chunk.CHUNK
 perl SCRIPTSDIR/rum2quantifications.pl GENEANNOTFILE OUTDIR/RUM_Unique.sorted.CHUNK OUTDIR/RUM_NU.sorted.CHUNK OUTDIR/quant.S1s.CHUNK -countsonly STRAND1s
