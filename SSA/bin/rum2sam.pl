@@ -78,10 +78,10 @@ $line = <INFILE>;
 chomp($line);
 $readlength = length($line);
 if($quals eq "false") {
-    $QUAL{$readlength} = "";
-    for($i=0; $i<$readlength; $i++) {
-	$QUAL{$readlength} = $QUAL{$readlength} . "I";
-    }
+    $QUAL{$readlength} = ".";
+#    for($i=0; $i<$readlength; $i++) {
+#	$QUAL{$readlength} = $QUAL{$readlength} . "I";
+#    }
 }
 $line = <INFILE>;
 chomp($line);
@@ -182,10 +182,10 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
     $forward_read_hold = $forward_read;
     $readlength_forward = length($forward_read);
     if($quals eq "false" && !($QUAL{$readlength_forward} =~ /\S/)) {
-	$QUAL{$readlength_forward} = "";
-	for($i=0; $i<$readlength_forward; $i++) {
-	    $QUAL{$readlength_forward} = $QUAL{$readlength_forward} . "I";
-	}
+	$QUAL{$readlength_forward} = ".";
+#	for($i=0; $i<$readlength_forward; $i++) {
+#	    $QUAL{$readlength_forward} = $QUAL{$readlength_forward} . "I";
+#	}
     }
     if($paired eq "true") {
 	$reverse_read = <READS>;
@@ -194,10 +194,10 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	$reverse_read_hold = $reverse_read;
 	$readlength_reverse = length($reverse_read);
 	if($quals eq "false" && !($QUAL{$readlength_reverse} =~ /\S/)) {
-	    $QUAL{$readlength_reverse} = "";
-	    for($i=0; $i<$readlength_reverse; $i++) {
-		$QUAL{$readlength_reverse} = $QUAL{$readlength_reverse} . "I";
-	    }
+	    $QUAL{$readlength_reverse} = ".";
+#	    for($i=0; $i<$readlength_reverse; $i++) {
+#		$QUAL{$readlength_reverse} = $QUAL{$readlength_reverse} . "I";
+#	    }
 	}
     }
 

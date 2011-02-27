@@ -2,7 +2,7 @@
 # Written by Gregory R Grant
 # University of Pennsylvania, 2010
 
-$version = "1.02.  Released Feb 6th, 2011";
+$version = "1.03.  Released Feb 21th, 2011";
 
 if($ARGV[0] eq '-version' || $ARGV[0] eq '-v' || $ARGV[0] eq '--version' || $ARGV[0] eq '--v') {
     die "RUM version: $version\n";
@@ -313,7 +313,7 @@ if(@ARGV > 5) {
 	    $countmismatches = "true";
 	    $optionrecognized = 1;
 	}
-	if($ARGV[$i] eq "-variable_read_lengths") {
+	if($ARGV[$i] eq "-variable_read_lengths" || $ARGV[$i] eq "-variable_length_reads") {
 	    $variable_read_lengths = "true";
 	    $optionrecognized = 1;
 	}
@@ -809,14 +809,22 @@ print LOGFILE "\nstart: $date\n";
 print LOGFILE "config file: $configfile\n";
 print LOGFILE "readsfile: $ARGV[1]\n";
 print LOGFILE "output_dir: $output_dir\n";
-print LOGFILE "readlength = $rl\n";
+if($variable_read_lengths eq "false") {
+    print LOGFILE "readlength: $rl\n";
+} else {
+    print LOGFILE "readlength: variable\n";
+}
 $NR = &format_large_int($nr);
 if($paired_end eq 'false') {
     print LOGFILE "number of reads: $NR\n";
 } else {
     print LOGFILE "number of read pairs: $NR\n";
 }
-print LOGFILE "minimum length alignment to report = $match_length_cutoff\n";
+if($variable_read_lengths eq "false") {
+    print LOGFILE "minimum length alignment to report: $match_length_cutoff\n";
+} else {
+    print LOGFILE "minimum length alignment to report: NA since read length is variable\n";
+}
 $nc = $numchunks;
 $nc =~ s/s//;
 print LOGFILE "numchunks: $nc\n";
@@ -1166,21 +1174,26 @@ print LOGFILE "finished creating RUM_Unique/RUM_NU/RUM.sam: $date\n";
 
 if($cleanup eq 'true') {
    print STDERR "\nCleaning up some temp files...\n\n";
-   `yes|rm $output_dir/RUM.sam.* $output_dir/sam_header.* $output_dir/reads.fa.*`;
-   if(-e "$output_dir/quals.fa.1") {
-       `yes|rm $output_dir/quals.fa.*`;
-   }
+   `yes|rm $output_dir/RUM.sam.* $output_dir/sam_header.*`;
 }
 
-print LOGFILE "starting the post processing: $date\n";
+# XXX 
+# Need to make a separate shell script now to handle the option -postprocess, becuase 
+# some of the relevant files have been cleaned up...
+
+print LOGFILE "starting the postprocessing: $date\n";
 $PPlog = "postprocessing_$name" . ".log";
 $shellscript = "#!/bin/sh\n";
 if($NumSeqs =~ /(\d+)/) {
+    $shellscript = $shellscript . "echo 'computing mapping statistics' > $output_dir/$PPlog\n";
+    $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
     $shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl $output_dir/RUM_Unique $output_dir/RUM_NU -minseq 1 -maxseq $NumSeqs > $output_dir/mapping_stats.txt\n";
 } else {
     $shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl $output_dir/RUM_Unique $output_dir/RUM_NU -minseq 1 > $output_dir/mapping_stats.txt\n";
 }
 if($quantify eq "true") {
+    $shellscript = $shellscript . "echo 'merging feature quantifications' >> $output_dir/$PPlog\n";
+    $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
     if($strandspecific eq 'true') {
         $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications.ps -strand ps\n";
         $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications.ms -strand ms\n";
@@ -1197,24 +1210,24 @@ $string = "$output_dir/RUM_Unique.sorted";
 for($i=1; $i<$numchunks+1; $i++) {
     $string = $string . " $output_dir/RUM_Unique.sorted.$i";
 }
-$shellscript = $shellscript . "perl $scripts_dir/merge_sorted_RUM_files.pl $string\n";
-$shellscript = $shellscript . "echo merging RUM_Unique.sorted.* files > $output_dir/$PPlog\n";
+$shellscript = $shellscript . "echo 'merging RUM_Unique.sorted files' > $output_dir/$PPlog\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
+$shellscript = $shellscript . "perl $scripts_dir/merge_sorted_RUM_files.pl $string\n";
 
 $string = "$output_dir/RUM_NU.sorted";
 for($i=1; $i<$numchunks+1; $i++) {
     $string = $string . " $output_dir/RUM_NU.sorted.$i";
 }
-$shellscript = $shellscript . "perl $scripts_dir/merge_sorted_RUM_files.pl $string\n";
-$shellscript = $shellscript . "echo merging RUM_NU.sorted.* files > $output_dir/$PPlog\n";
+$shellscript = $shellscript . "echo 'merging RUM_NU.sorted files' >> $output_dir/$PPlog\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
+$shellscript = $shellscript . "perl $scripts_dir/merge_sorted_RUM_files.pl $string\n";
 
 $string = "$output_dir/mapping_stats.txt";
 for($i=1; $i<$numchunks+1; $i++) {
     $string = $string . " $output_dir/chr_counts_u.$i";
 }
 $shellscript = $shellscript . "echo '' >> $output_dir/mapping_stats.txt\n";
-$shellscript = $shellscript . "echo RUM_Unique reads per chromosome >> $output_dir/mapping_stats.txt\n";
+$shellscript = $shellscript . "echo 'RUM_Unique reads per chromosome' >> $output_dir/mapping_stats.txt\n";
 $shellscript = $shellscript . "perl $scripts_dir/merge_chr_counts.pl $string\n";
 
 $string = "$output_dir/mapping_stats.txt";
@@ -1222,11 +1235,11 @@ for($i=1; $i<$numchunks+1; $i++) {
     $string = $string . " $output_dir/chr_counts_nu.$i";
 }
 $shellscript = $shellscript . "echo '' >> $output_dir/mapping_stats.txt\n";
-$shellscript = $shellscript . "echo RUM_NU reads per chromosome >> $output_dir/mapping_stats.txt\n";
+$shellscript = $shellscript . "echo 'RUM_NU reads per chromosome' >> $output_dir/mapping_stats.txt\n";
 $shellscript = $shellscript . "perl $scripts_dir/merge_chr_counts.pl $string\n";
 
 if($junctions eq "true") {
-   $shellscript = $shellscript . "echo computing junctions >> $output_dir/$PPlog\n";
+   $shellscript = $shellscript . "echo 'computing junctions' >> $output_dir/$PPlog\n";
    $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
    if($altgenes eq "true") {
        $shellscript = $shellscript . "perl $scripts_dir/make_RUM_junctions_file.pl $output_dir/RUM_Unique $output_dir/RUM_NU $genomefa $altgene_file $output_dir/junctions_all.rum $output_dir/junctions_all.bed $output_dir/junctions_high-quality.bed -faok\n";
@@ -1235,7 +1248,7 @@ if($junctions eq "true") {
    }
 }
 
-$shellscript = $shellscript . "echo making coverage plots >> $output_dir/$PPlog\n";
+$shellscript = $shellscript . "echo 'making coverage plots' >> $output_dir/$PPlog\n";
 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
 $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_Unique.sorted $output_dir/RUM_Unique.cov -name \"$name Unique Mappers\"\n";
 $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_NU.sorted $output_dir/RUM_NU.cov -name \"$name Non-Unique Mappers\"\n";
@@ -1255,11 +1268,6 @@ $str = "postprocessing_$name" . ".sh";
 open(OUTFILE2, ">$output_dir/$str");
 print OUTFILE2 $shellscript;
 close(OUTFILE2);
-
-if($cleanup eq 'true') {
-   print STDERR "\nCleaning up some temp files...\n\n";
-   `yes|rm $output_dir/RUM_Unique.* $output_dir/RUM_NU.*  $output_dir/chr_counts*`;
-}
 
 if($qsub eq "true") {
     $ofile = $output_dir . "/postprocessing" . ".o";
@@ -1287,8 +1295,19 @@ while($doneflag == 0) {
 }
 
 if($cleanup eq 'true') {
+   print STDERR "\nCleaning up some more temp files...\n\n";
+   for($i=1; $i<=$numchunks; $i++) {
+      `yes|rm $output_dir/RUM_Unique*$i* $output_dir/RUM_NU*$i*`;
+   }
+   `yes|rm $output_dir/chr_counts*`;
+   if(-e "$output_dir/reads.fa.1") {
+       `yes|rm $output_dir/reads.fa.*`;
+   }
    `yes|rm $output_dir/quant.*`;
    `yes|rm $output_dir/pipeline.*`;
+   if(-e "$output_dir/quals.fa.1") {
+       `yes|rm $output_dir/quals.fa.*`;
+   }
    if($strandspecific eq 'true') {
       `yes|rm $output_dir/feature_quantifications.ps`;
       `yes|rm $output_dir/feature_quantifications.ms`;

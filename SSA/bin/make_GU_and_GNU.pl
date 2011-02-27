@@ -246,7 +246,6 @@ for($seqnum=1; $seqnum<=$num_seqs; $seqnum++) {
 	undef %consistent_mappers;
 	foreach $akey (keys %a_reads) {
 	    foreach $bkey (keys %b_reads) {
-
 		@a = split(/\t/,$akey);
 		$aid = $a[0];
 		$astrand = $a[1];
@@ -287,7 +286,11 @@ for($seqnum=1; $seqnum<=$num_seqs; $seqnum++) {
 				$joined_seq = $joined_seq . $sq[$i];
 			    }
 			    $aid =~ s/a//;
-			    $consistent_mappers{"$aid\t$achr\t$astart-$bend\t$joined_seq\t$astrand\n"}++;
+			    if($bend >= $aend) {
+				$consistent_mappers{"$aid\t$achr\t$astart-$bend\t$joined_seq\t$astrand\n"}++;
+			    } else {
+				$consistent_mappers{"$aid\t$achr\t$astart-$aend\t$joined_seq\t$astrand\n"}++;
+			    }
 			}
 		    }
 		}
@@ -319,7 +322,11 @@ for($seqnum=1; $seqnum<=$num_seqs; $seqnum++) {
 			    }
 			    $joined_seq = $joined_seq . $aseq;
 			    $aid =~ s/a//;
-			    $consistent_mappers{"$aid\t$achr\t$bstart-$aend\t$joined_seq\t$astrand\n"}++;
+			    if($bstart <= $astart) {
+				$consistent_mappers{"$aid\t$achr\t$bstart-$aend\t$joined_seq\t$astrand\n"}++;
+			    } else {
+				$consistent_mappers{"$aid\t$achr\t$astart-$aend\t$joined_seq\t$astrand\n"}++;
+			    }
 			}
 		    }
 		}
