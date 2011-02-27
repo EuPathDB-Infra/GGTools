@@ -189,6 +189,7 @@ my %startloc2exons;
 my %endloc2exons;
 my %adjacent_and_connected;
 my @putative_exon_array;
+my %associated;
 
 open(RUMFILE, $rumfile);
 
@@ -209,6 +210,7 @@ foreach my $chr (sort {cmpChrs($a,$b)} keys %junctions) {
     undef %endloc2exons;
     undef %adjacent_and_connected;
     undef @putative_exon_array;
+    undef %associated;
 
     my $flag2 = 0;
     # read in the coverage file for one chromosome
@@ -408,8 +410,7 @@ foreach my $chr (sort {cmpChrs($a,$b)} keys %junctions) {
     #  iii) exons downstream with exons downstream if separated by at least one exon
 
     my $exon_index_start = 0;
-    my %upstream_exons;
-    my %downstream_exons;
+    my %exons_hitting_read;
     while(1 == 1) {  # one pass through this loop is one read (pair) in RUM_Unique
 	$line = <RUMFILE>;
 	chomp($line);
@@ -530,7 +531,7 @@ foreach my $chr (sort {cmpChrs($a,$b)} keys %junctions) {
 
 	my $exon_index = $exon_index_start - 1;
 	my $flag = 0;
-	undef %upstream_exons;
+	undef %exons_hitting_read;
 #	print "upstream search...\n";
 	while(2 == 2) { # this loop scrolls through the exons that overlap the upstream spans
 	    $exon_index++;
@@ -575,10 +576,11 @@ foreach my $chr (sort {cmpChrs($a,$b)} keys %junctions) {
 		}
 	    }
 	    if($flag_s == 1) {
-		$upstream_exons{$putative_exon_array[$exon_index]}=1;
+		$exons_hitting_read{$putative_exon_array[$exon_index]}[0]=$exonstart;
+		$exons_hitting_read{$putative_exon_array[$exon_index]}[1]=$exonend;
 	    }
 	}
-#	foreach my $exon (keys %upstream_exons) {
+#	foreach my $exon (keys %exons_hitting_read) {
 #	    print "upstream exon: $exon\n";
 #	}
 
@@ -586,7 +588,6 @@ foreach my $chr (sort {cmpChrs($a,$b)} keys %junctions) {
 
 	$exon_index = $exon_index_start - 1;
 	$flag = 0;
-	undef %downstream_exons;
 #	print "downstream search...\n";
 	while(2 == 2) { # this loop scrolls through the exons that overlap the upstream spans
 	    $exon_index++;
@@ -628,10 +629,11 @@ foreach my $chr (sort {cmpChrs($a,$b)} keys %junctions) {
 		}
 	    }
 	    if($flag_s == 1) {
-		$downstream_exons{$putative_exon_array[$exon_index]}=1;
+		$exons_hitting_read{$putative_exon_array[$exon_index]}[0]=$exonstart;
+		$exons_hitting_read{$putative_exon_array[$exon_index]}[1]=$exonend;
 	    }
 	}
-#	foreach my $exon (keys %downstream_exons) {
+#	foreach my $exon (keys %exons_hitting_read) {
 #	    print "downstream exon: $exon\n";
 #	}
 
@@ -640,6 +642,14 @@ foreach my $chr (sort {cmpChrs($a,$b)} keys %junctions) {
 	# between all pairs of them.  Note even two upstream or two downstream carry the
 	# same info as one up and one down, so record all.
 
+	foreach my $exon1 (keys %exons_hitting_read) {
+	    foreach my $exon2 (keys %exons_hitting_read) {	    
+		if($exons_hitting_read{$exon1}[1] + $min_intron <= $exons_hitting_read{$exon2}[0]) {
+		    $associated{$exon1} = $exon2;
+		    print "$exon1 --> $exon2\n";
+		}
+	    }
+	}
     }
 }
 
@@ -675,7 +685,7 @@ sub ave_coverage_in_span () {
 	$sum = $sum + $coverage[$i];
     }
     my $ave = $sum / ($end - $start + 1);
-    $ave_coverage_in_span_cache{$tmp}=$num_below;
+    $ave_coverage_in_span_cache{$tmp}=$ave;
     return $ave;
 }
 
