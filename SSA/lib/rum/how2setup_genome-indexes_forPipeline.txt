@@ -29,11 +29,12 @@ browser.  You can alternatively get it from the downloads page as follows:
 
   The downloads link is on the left of the home page, find the species and
   hit the "Full data set" and get the file with the genome sequence, unmasked,
-  the name probably ends .fa.gz or something like that.  When you unpack it,
+  sometimes it's called chromFA.tar.gz, or something like that.  When you unpack it,
   it may be in many pieces, possibly distributed into subdirectories.  You
   must concatenate them all together into one file and name that file
-  NAME_genome.txt (where "NAME" is defined below).  After that proceed with
-  the instructions to get the gene models file(s) using the table browser.
+  NAME_genome.txt (where "NAME" is defined below).  The file name MUST end in 'txt'
+  not 'fa'.  After that proceed with the instructions to get the gene models file(s)
+  using the table browser.
 
 If you do not opt to get the fasta files from the download page, then use
 the following instructions:
