@@ -19,7 +19,7 @@ and *do not* use the -separate option.
 # option not implemented:
 #       -strand s : s=p to use just + strand reads, s=m to use just - strand.
 
-print STDERR "\nMaking coverage plot $ARGV[1]...\n\n";
+print "\nMaking coverage plot $ARGV[1]...\n\n";
 
 $infile = $ARGV[0];
 $outfile = $ARGV[1];
@@ -38,18 +38,18 @@ for($i=2; $i<@ARGV; $i++) {
 	$strandspecific="true";
 	$i++;
 	if(!($strand eq 'p' || $strand eq 'm')) {
-	    die "\nError; -strand must equal either 'p' or 'm', not '$strand'\n\n";
+	    die "\nERROR: in script rum2cov.pl: -strand must equal either 'p' or 'm', not '$strand'\n\n";
 	}
 	$optionrecognized = 1;
     }
     if($optionrecognized == 0) {
-	die "\nERROR: option '$ARGV[$i]' not recognized\n";
+	die "\nERROR: in script rum2cov.pl: option '$ARGV[$i]' not recognized\n";
     }
 }
 
 
-open(INFILE, $infile) or die "ERROR: could not open the file '$infile' for reading";
-open(OUTFILE, ">$outfile") or die "ERROR: could not open the file '$outfile' for writing";
+open(INFILE, $infile) or die "ERROR: in script rum2cov.pl: could not open the file '$infile' for reading";
+open(OUTFILE, ">$outfile") or die "ERROR: in script rum2cov.pl: could not open the file '$outfile' for writing";
 print OUTFILE "track type=bedGraph name=\"$name\" description=\"$name\" visibility=full color=255,0,0 priority=10\n";
 
 $flag = 0;
@@ -125,22 +125,22 @@ if($timelapse < 0) {
     $timelapse = 0;
 }
 if($timelapse < 60) {
-    print STDERR "\nIt took $timelapse seconds to create the coverage file $outfile.\n\n";
+    print "\nIt took $timelapse seconds to create the coverage file $outfile.\n\n";
 }
 else {
     $sec = $timelapse % 60;
     $min = int($timelapse / 60);
     if($min > 1 && $sec > 1) {
-	print STDERR "\nIt took $min minutes, $sec seconds to create the coverage file $outfile.\n\n";
+	print "\nIt took $min minutes, $sec seconds to create the coverage file $outfile.\n\n";
     }
     if($min == 1 && $sec > 1) {
-	print STDERR "\nIt took $min minute, $sec seconds to create the coverage file $outfile.\n\n";
+	print "\nIt took $min minute, $sec seconds to create the coverage file $outfile.\n\n";
     }
     if($min > 1 && $sec == 1) {
-	print STDERR "\nIt took $min minutes, $sec second to create the coverage file $outfile.\n\n";
+	print "\nIt took $min minutes, $sec second to create the coverage file $outfile.\n\n";
     }
     if($min == 1 && $sec == 1) {
-	print STDERR "\nIt took $min minute, $sec second to create the coverage file $outfile.\n\n";
+	print "\nIt took $min minute, $sec second to create the coverage file $outfile.\n\n";
     }
 }
 
@@ -207,9 +207,9 @@ sub getStartEndandSpans_of_nextline () {
 	$chromosomes_finished{$chr_prev}++;
     }
     if($chromosomes_finished{$chr}+0>0) {
-	die "\nERROR: It appears your file '$infile' is not sorted.\nUse sort_RUM_by_location.pl to sort it.\n\n";
+	die "\nERROR: in script rum2cov.pl: It appears your file '$infile' is not sorted.\nUse sort_RUM_by_location.pl to sort it.\n\n";
     }
     if($chr eq $chr_prev && $start < $start_prev) {
-	die "\nERROR: It appears your file '$infile' is not sorted.\nUse sort_RUM_by_location.pl to sort it.\n\n";
+	die "\nERROR: in script rum2cov.pl: It appears your file '$infile' is not sorted.\nUse sort_RUM_by_location.pl to sort it.\n\n";
     }
 }

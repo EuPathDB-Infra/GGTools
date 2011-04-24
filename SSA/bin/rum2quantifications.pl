@@ -37,6 +37,10 @@ Options:
 
     -strand s : s=p to use just + strand reads, s=m to use just - strand.
 
+    -info f   : f is a file that maps gene id's to info (i.e. annotation or other gene ids).
+                f must be tab delmited with the first column of known ids and second
+                column of annotation.
+
     -anti     : Use in conjunction with -strand to record anti-sense transcripts instead
                 of sense. 
 
@@ -49,8 +53,6 @@ my $NU_readsfile = $ARGV[2];
 my $outfile1 = $ARGV[3];
 my $outfile2;
 
-open(INFILE, $annotfile) or die "Error: cannot open '$annotfile' for reading.\n\n";
-
 my %TRANSCRIPT;
 my %EXON_temp;
 my %INTRON_temp;
@@ -60,7 +62,7 @@ my @B;
 my %tcnt;
 my %ecnt;
 my %icnt;
-my %READS;
+my @READS;
 
 my $sepout = "false";
 my $posonly = "false";
@@ -68,6 +70,8 @@ my $countsonly = "false";
 my $strandspecific="false";
 my $strand = "";
 my $anti = "false";
+my $infofile;
+my $infofile_given = "false";
 for(my $i=4; $i<@ARGV; $i++) {
     my $optionrecognized = 0;
     if($ARGV[$i] eq "-sepout") {
@@ -76,12 +80,21 @@ for(my $i=4; $i<@ARGV; $i++) {
 	$i++;
 	$optionrecognized = 1;
     }
+    if($ARGV[$i] eq "-info") {
+	$infofile_given = "true";
+        $i++;
+        $infofile = $ARGV[$i];
+        if(!(-e $infofile)) {
+            die "ERROR: in script rum2quantifications.pl: info file '$infofile' does not seem to exist.\n\n";
+        }
+	$optionrecognized = 1;
+    }
     if($ARGV[$i] eq "-strand") {
 	$strand = $ARGV[$i+1];
 	$strandspecific="true";
 	$i++;
 	if(!($strand eq 'p' || $strand eq 'm')) {
-	    die "\nError; -strand must equal either 'p' or 'm', not '$strand'\n\n";
+	    die "\nERROR: in script rum2quantifications.pl: -strand must equal either 'p' or 'm', not '$strand'\n\n";
 	}
 	$optionrecognized = 1;
     }
@@ -98,12 +111,26 @@ for(my $i=4; $i<@ARGV; $i++) {
 	$optionrecognized = 1;
     }
     if($optionrecognized == 0) {
-	die "\nERROR: option '$ARGV[$i]' not recognized\n";
+	die "\nERROR: in script rum2quantifications.pl: option '$ARGV[$i]' not recognized\n";
     }
+}
+
+# read in the info file, if given
+
+my %INFO;
+if($infofile_given eq "true") {
+    open(INFILE, $infofile) or die "ERROR: in script rum2quantifications.pl: Cannot open the file '$infofile' for reading\n";
+    while(my $line = <INFILE>) {
+	chomp($line);
+	my @a = split(/\t/,$line);
+	$INFO{$a[0]} = $a[1];
+    }
+    close(INFILE);
 }
 
 # read in the transcript models
 
+open(INFILE, $annotfile) or die "ERROR: in script rum2quantifications.pl: cannot open '$annotfile' for reading.\n\n";
 while(my $line = <INFILE>) {
     chomp($line);
     my @a = split(/\t/,$line);
@@ -203,12 +230,17 @@ foreach my $chr (sort {cmpChrs($a,$b)} keys %INTRON) {
     }
 }
 
-open(OUTFILE1, ">$outfile1") or die "Error: cannot open file '$outfile1' for writing.\n\n";
+open(OUTFILE1, ">$outfile1") or die "ERROR: in script rum2quantifications.pl: cannot open file '$outfile1' for writing.\n\n";
 if($sepout eq "true") {
-    open(OUTFILE2, ">$outfile2") or die "Error: cannot open file '$outfile2' for writing.\n\n";
+    open(OUTFILE2, ">$outfile2") or die "ERROR: in script rum2quantifications.pl: cannot open file '$outfile2' for writing.\n\n";
 }
 
-my $num_reads = keys %READS;
+my $num_reads = 0;
+for(my $i=0; $i<@READS; $i++) {
+    if($READS[$i]+0 == 1) {
+	$num_reads++;
+    }
+}
 
 my $nr = $num_reads / 1000000;
 if($countsonly eq "true") {
@@ -254,6 +286,7 @@ foreach my $chr (sort {cmpChrs($a,$b)} keys %TRANSCRIPT) {
 			$x3 = int($x1 / $nl * 10000) / 10000;
 		    }
 		    print OUTFILE1 "transcript\t$chr:$s-$e\t$x1\t$x3\t$n1\t$tlen\t$y\n";
+
 		    if($nl == 0) {
 			$x3=0;
 		    } else {
@@ -263,10 +296,36 @@ foreach my $chr (sort {cmpChrs($a,$b)} keys %TRANSCRIPT) {
 		} else {
 		    print OUTFILE1 "$y\t$st\n";
 		    print OUTFILE1 "      Type\tLocation           \tmin\tmax\tLength\n";
-		    print OUTFILE1 "transcript\t$chr:$s-$e\t$n1\t$n2\t$tlen\n";
+		    print OUTFILE1 "transcript\t$chr:$s-$e\t$n1\t$n2\t$tlen";
+		    my $info = "";
+		    if($infofile_given eq "true") {
+			my @b = split(/:::/,$y);
+			for(my $k=0; $k<@b; $k++) {
+			    $b[$k] =~ s/\(.*//;
+			    $info = $INFO{$b[$k]};
+			    if($info =~ /\S/) {
+				$k=@b;
+			    }
+			}
+			print OUTFILE1 "\t$info";
+		    }
+		    print OUTFILE1 "\n";
 		}
 	    } else {
-		print OUTFILE1 "transcript\t$chr:$s-$e\t$x1\t$x2\t$tlen\t$st\t$y\n";
+		print OUTFILE1 "transcript\t$chr:$s-$e\t$x1\t$x2\t$tlen\t$st\t$y";
+		my $info = "";
+		if($infofile_given eq "true") {
+		    my @b = split(/:::/,$y);
+		    for(my $k=0; $k<@b; $k++) {
+			$b[$k] =~ s/\(.*//;
+			$info = $INFO{$b[$k]};
+			if($info =~ /\S/) {
+			    $k=@b;
+			}
+		    }
+		    print OUTFILE1 "\t$info";
+		}
+		print OUTFILE1 "\n";
 	    }
 	    my $N = @{$TRANSCRIPT{$chr}[$i]{coords}};
 	    if($st eq '+') {
@@ -442,7 +501,7 @@ foreach my $chr (sort {cmpChrs($a,$b)} keys %TRANSCRIPT) {
 
 sub readfile () {
     my ($filename, $type) = @_;
-    open(INFILE, $filename) or die "Error: cannot open '$filename' for reading.\n\n";
+    open(INFILE, $filename) or die "ERROR: in script rum2quantifications.pl: cannot open '$filename' for reading.\n\n";
     my $counter=0;
     my $line;
     my %indexstart_t;
@@ -456,7 +515,7 @@ sub readfile () {
     while($line = <INFILE>) {
 	$counter++;
 	if($counter % 100000 == 0 && $countsonly eq "false") {
-	    print STDERR "$type: counter=$counter\n";
+#	    print "$type: counter=$counter\n";
 	}
 	chomp($line);
 	if($line eq '') {
@@ -466,7 +525,7 @@ sub readfile () {
 	my $STRAND = $a[3];
 	$a[0] =~ /(\d+)/;
 	my $seqnum1 = $1;
-	$READS{$seqnum1}=0;
+	$READS[$seqnum1]=1;
 	if($strandspecific eq 'true') {
 	    if($strand eq 'p' && $STRAND eq '-' && $anti eq 'false') {
 		next;

@@ -62,9 +62,9 @@ $mdustfile = $ARGV[2];
 $outfile1 = $ARGV[3];
 $outfile2 = $ARGV[4];
 
-open(BLATHITS, $blatfile) or die "\nError: cannot open the file '$blatfile' for reading\n\n";
+open(BLATHITS, $blatfile) or die "\nERROR: in script parse_blat_out.pl: cannot open the file '$blatfile' for reading\n\n";
 # check the blat file is in sorted order
-print STDERR "Checking that the blat file is in correctly sorted order.\n";
+# print "Checking that the blat file is in correctly sorted order.\n";
 $line = <BLATHITS>;
 chomp($line);
 while(($line =~ /--------------------------------/) || ($line =~ /psLayout/) || ($line =~ /blockSizes/) || ($line =~ /match\s+match/) || (!($line =~ /\S/))) {
@@ -91,7 +91,8 @@ while($line2 = <BLATHITS>) {
 close(BLATHITS);
 
 if($blatsorted eq "false") {
-    print STDERR "The blat file is not sorted properly, I'm sorting it now.\n";
+    print STDERR "WARNING: The blat file is not sorted properly, I'm sorting it now.  This could indicate an error\n";
+    print "WARNING: The blat file is not sorted properly, I'm sorting it now.  This could indicate an error\n";
     $blatfile_sorted = $blatfile . ".sorted";
 
     open(INFILE, $blatfile);
@@ -134,13 +135,14 @@ if($blatsorted eq "false") {
     $N = -s $blatfile;
     $M = -s $blatfile_sorted;
     if($N != $M) {
-	die "\nERROR: I tried to sort the blat file but the sorted file is not the same size as the original.\n\n";
+	die "\nERROR: in script parse_blat_out.pl: I tried to sort the blat file but the sorted file is not the same size as the original.\n\n";
     } else {
 	print STDERR "The blat file is now sorted properly.\n";
+	print "The blat file is now sorted properly.\n";
     }
     $blatfile = $blatfile_sorted;
 } else {
-    print STDERR "The blat file is sorted properly.\n";
+#    print "The blat file is sorted properly.\n";
 }
 
 $head = `head -1 $seqfile`;
@@ -157,11 +159,11 @@ $tail = `tail -1 $blatfile`;
 $last_seq_num = $a[9];
 $last_seq_num =~ s/[^\d]//g;
 
-open(BLATHITS, $blatfile) or die "\nError: cannot open the file '$blatfile' for reading\n\n";
-open(SEQFILE, $seqfile) or die "\nError: cannot open the file '$seqfile' for reading\n\n";
-open(MDUST, $mdustfile) or die "\nError: cannot open the file '$mdustfile' for reading\n\n";
-open(RESULTS, ">$outfile1") or die "\nError: cannot open the file '$outfile1' for writing\n\n";
-open(RESULTS2, ">$outfile2") or die "\nError: cannot open the file '$outfile2' for writing\n\n";
+open(BLATHITS, $blatfile) or die "\nERROR: in script parse_blat_out.pl: cannot open the file '$blatfile' for reading\n\n";
+open(SEQFILE, $seqfile) or die "\nERROR: in script parse_blat_out.pl: cannot open the file '$seqfile' for reading\n\n";
+open(MDUST, $mdustfile) or die "\nERROR: in script parse_blat_out.pl: cannot open the file '$mdustfile' for reading\n\n";
+open(RESULTS, ">$outfile1") or die "\nERROR: in script parse_blat_out.pl: cannot open the file '$outfile1' for writing\n\n";
+open(RESULTS2, ">$outfile2") or die "\nERROR: in script parse_blat_out.pl: cannot open the file '$outfile2' for writing\n\n";
 
 $max_distance_between_paired_reads = 500000;
 $dna = 'false';
@@ -195,12 +197,12 @@ for($i=5; $i<@ARGV; $i++) {
 	}
     }
     if($optionrecognized == 0) {
-	die "\nERROR: option '$ARGV[$i-1] $ARGV[$i]' not recognized\n";
+	die "\nERROR: in script parse_blat_out.pl: option '$ARGV[$i-1] $ARGV[$i]' not recognized\n";
     }
 }
 
 if($num_insertions_allowed > 1 && $paired_end eq "true") {
-    die "\nError: for paired end data, you cannot set -num_insertions_allowed to be greater than 1.\n\n";
+    die "\nERROR: in script parse_blat_out.pl: for paired end data, you cannot set -num_insertions_allowed to be greater than 1.\n\n";
 }
 
 # NOTE: insertions instead are indicated in the final output file with the "+" notation
@@ -960,13 +962,6 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			if($flag != 1) {
 			    $consistent = 0;
 			}
-			
-#			$NT = @astarts;
-#			print "size of astarts = $NT\n";
-#			$NT = @bstarts;
-#			print "size of bstarts = $NT\n";
-#			print "first_overlap_exon = $first_overlap_exon\n";
-#			print "last_overlap_exon = $last_overlap_exon\n";
 			
 			if($first_overlap_exon < @astarts-1 || $last_overlap_exon > 0) {
 			    if($bends[0] != $aends[$first_overlap_exon]) {

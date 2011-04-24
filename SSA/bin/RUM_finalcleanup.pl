@@ -46,12 +46,12 @@ for($i=6; $i<@ARGV; $i++) {
 	$optionrecognized = 1;
     }
     if($optionrecognized == 0) {
-	die "\nERROR: option '$ARGV[$i]' not recognized\n";
+	die "\nERROR: in script RUM_finalcleanup.pl: option '$ARGV[$i]' not recognized\n";
     }
 }
 
 if($faok eq "false") {
-    print STDERR "Modifying genome fa file\n";
+    print "Modifying genome fa file\n";
     $r = int(rand(1000));
     $f = "temp_" . $r . ".fa";
     open(OUTFILE, ">$f");

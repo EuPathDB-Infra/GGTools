@@ -45,7 +45,7 @@ for($i=5; $i<@ARGV; $i++) {
 	$optionrecognized = 1;
     }
     if($optionrecognized == 0) {
-	die "\nERROR: option '$ARGV[$i]' not recognized\n";
+	die "\nERROR: in script rum2sam.pl: option '$ARGV[$i]' not recognized\n";
     }
 }
 
@@ -110,12 +110,12 @@ $bitflag[9] = "the read fails platform/vendor quality checks";
 $bitflag[10] = "the read is either a PCR duplicate or an optical duplicate";
 
 if($uniquers eq "true") {
-    open(RUMU, $rum_unique_file) or die "\nError: cannot open the file '$rum_unique_file' for reading\n\n";
+    open(RUMU, $rum_unique_file) or die "\nERROR: in script rum2sam.pl: cannot open the file '$rum_unique_file' for reading\n\n";
 }
 if($non_uniquers eq "true") {
-    open(RUMNU, $rum_nu_file) or die "\nError: cannot open the file '$rum_nu_file' for reading\n\n";
+    open(RUMNU, $rum_nu_file) or die "\nERROR: in script rum2sam.pl: cannot open the file '$rum_nu_file' for reading\n\n";
 }
-open(READS, $reads_file) or die "\nError: cannot open the file '$reads_file' for reading\n\n";
+open(READS, $reads_file) or die "\nERROR: in script rum2sam.pl: cannot open the file '$reads_file' for reading\n\n";
 
 # checking that the first line in RUMU really looks like it should:
 
@@ -137,9 +137,9 @@ if($uniquers eq "true") {
 	$flag = 1;
     }
     if($flag == 1) {
-	die "\nError: the first line of the file '$rum_unique_file' is misformatted,\nit does not look like a RUM output file.\n";
+	die "\nERROR: in script rum2sam.pl: the first line of the file '$rum_unique_file' is misformatted,\nit does not look like a RUM output file.\n";
     }
-    open(RUMU, $rum_unique_file) or die "\nError: cannot open the file '$rum_unique_file' for reading\n\n";
+    open(RUMU, $rum_unique_file) or die "\nERROR: in script rum2sam.pl: cannot open the file '$rum_unique_file' for reading\n\n";
 }
 if($non_uniquers eq "true") {
     $line = <RUMNU>;
@@ -159,9 +159,9 @@ if($non_uniquers eq "true") {
 	$flag = 1;
     }
     if($flag == 1) {
-	die "\nError: the first line of the file '$rum_nu_file' is misformatted,\nit does not look like a RUM output file.\n";
+	die "\nERROR: in script rum2sam.pl: the first line of the file '$rum_nu_file' is misformatted,\nit does not look like a RUM output file.\n";
     }
-    open(RUMNU, $rum_nu_file) or die "\nError: cannot open the file '$rum_nu_file' for reading\n\n";
+    open(RUMNU, $rum_nu_file) or die "\nERROR: in script rum2sam.pl: cannot open the file '$rum_nu_file' for reading\n\n";
 }
 
 if($quals eq "true") {
@@ -914,7 +914,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    
 	    $forward_record = "";
 	    $forward_record = $forward_record . "seq.$seqnum";
-	    $forward_record = $forward_record . "a\t$bitscore_f";
+	    $forward_record = $forward_record . "\t$bitscore_f";
+#	    $forward_record = $forward_record . "a\t$bitscore_f";
 	    
 	    if(!($rum_u_forward =~ /\S/) && $rum_u_reverse =~ /\S/) { # forward unmapped, reverse mapped
 		$forward_record = $forward_record . "\t$rur[1]\t$start_reverse\t255\t*\t=\t$start_reverse\t0\t$forward_read\t$forward_qual";
@@ -955,7 +956,8 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    if($paired eq "true") {
 		$reverse_record = "";
 		$reverse_record = $reverse_record . "seq.$seqnum";
-		$reverse_record = $reverse_record . "b\t$bitscore_r";
+		$reverse_record = $reverse_record . "\t$bitscore_r";
+#		$reverse_record = $reverse_record . "b\t$bitscore_r";
 		if(!($rum_u_reverse =~ /\S/) && $rum_u_forward =~ /\S/) {  # reverse unmapped, forward mapped
 		    $reverse_record = $reverse_record . "\t$ruf[1]\t$start_forward\t255\t*\t=\t$start_forward\t0\t$reverse_read\t$reverse_qual";
 		}
@@ -993,16 +995,19 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	# neither forward nor reverse map
 	if($paired eq "false") {
 	    $record = "seq.$seqnum";
-	    $record = $record . "a\t4\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
+	    $record = $record . "\t4\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
+#	    $record = $record . "a\t4\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
 	    if($suppress1 eq "false" && $suppress2 eq "false" && $suppress3 eq "false") {
 		print SAM $record;
 #		print $record;
 	    }
 	} else {
 	    $record = "seq.$seqnum";
-	    $record = $record . "a\t77\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
+	    $record = $record . "\t77\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
+#	    $record = $record . "a\t77\t*\t0\t255\t*\t*\t0\t0\t$forward_read\t$forward_qual\n";
 	    $record = $record . "seq.$seqnum";
-	    $record = $record . "b\t141\t*\t0\t255\t*\t*\t0\t0\t$reverse_read\t$reverse_qual\n";
+	    $record = $record . "\t141\t*\t0\t255\t*\t*\t0\t0\t$reverse_read\t$reverse_qual\n";
+#	    $record = $record . "b\t141\t*\t0\t255\t*\t*\t0\t0\t$reverse_read\t$reverse_qual\n";
 	    if($suppress1 eq "false" && $suppress2 eq "false" && $suppress3 eq "false") {
 		print SAM $record;
 #		print $record;

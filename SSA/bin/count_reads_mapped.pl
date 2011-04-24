@@ -32,7 +32,7 @@ for($i=2; $i<@ARGV; $i++) {
 	$max_num_seqs_specified = "true";
 	if(!($max_seq_num =~ /^\d+$/)) {
 	    $x = $ARGV[$i+1];
-	    die "\nError: option $ARGV[$i] $x is not recognized, you need a number here, not '$x'...\n\n";
+	    die "\nError: in script count_reads_mapped.pl: option $ARGV[$i] $x is not recognized, you need a number here, not '$x'...\n\n";
 	}
 	$optionrecognized = 1;
 	$i++;
@@ -42,13 +42,13 @@ for($i=2; $i<@ARGV; $i++) {
 	$min_num_seqs_specified = "true";
 	if(!($min_seq_num =~ /^\d+$/)) {
 	    $x = $ARGV[$i+1];
-	    die "\nError: option $ARGV[$i] $x is not recognized, you need a number here, not '$x'...\n\n";
+	    die "\nError: in script count_reads_mapped.pl: option $ARGV[$i] $x is not recognized, you need a number here, not '$x'...\n\n";
 	}
 	$optionrecognized = 1;
 	$i++;
     }
     if($optionrecognized == 0) {
-	die "\nError: option $ARGV[$i] is not recognized\n\n";
+	die "\nError: in script count_reads_mapped.pl: option $ARGV[$i] is not recognized\n\n";
     }
 }
 
@@ -94,7 +94,7 @@ while($line = <INFILE>) {
 	$joined{$seqnum}++;
 	$numjoined++;
 	if($joined{$seqnum} > 1) {
-	    print "SOMETHING IS WRONG: $seqnum ($joined{$seqnum}) $line\n";
+	    print STDERR "in script count_reads_mapped.pl: SOMETHING IS WRONG, looks like there's\na multi-mapper in the RUM_Unique file.  $seqnum ($joined{$seqnum}) $line\n";
 	}
     }
     if($type eq "a" || $type eq "b") {
@@ -103,21 +103,21 @@ while($line = <INFILE>) {
 	    $num_unjoined_consistent++;
 	}
 	if($unjoined{$seqnum} > 2) {
-	    print "SOMETHING IS WRONG: $seqnum ($unjoined{$seqnum}) $line\n";
+	    print STDERR "in script count_reads_mapped.pl: SOMETHING IS WRONG, looks like there's\na multi-mapper in the RUM_Unique file.  $seqnum ($unjoined{$seqnum}) $line\n";
 	}
     }
     if($type eq "a") {
 	$typea{$seqnum}++;
 	$num_areads++;
 	if($typea{$seqnum} > 1) {
-	    print "SOMETHING IS WRONG: $seqnum ($typea{$seqnum}) $line\n";
+	    print STDERR "in script count_reads_mapped.pl: SOMETHING IS WRONG, looks like there's\na multi-mapper in the RUM_Unique file.  $seqnum ($typea{$seqnum}) $line\n";
 	}
     }
     if($type eq "b") {
 	$typeb{$seqnum}++;
 	$num_breads++;
 	if($typeb{$seqnum} > 1) {
-	    print "SOMETHING IS WRONG: $seqnum ($typeb{$seqnum}) $line\n";
+	    print STDERR "in script count_reads_mapped.pl: SOMETHING IS WRONG, looks like there's\na multi-mapper in the RUM_Unique file.  $seqnum ($typeb{$seqnum}) $line\n";
 	}
     }
 }

@@ -98,7 +98,7 @@ specified by -signal) are colored a shade lighter.
 ";
 }
 
-print STDERR "\nMaking junctions files...\n";
+print "\nMaking junctions files...\n";
 
 $allowable_overlap = 8;
 $rumU = $ARGV[0];
@@ -109,19 +109,19 @@ $outfile1 = $ARGV[4];
 $outfile2 = $ARGV[5];
 $outfile3 = $ARGV[6];
 
-open(OUTFILE1, ">$outfile1") or die "\nError: cannot open file '$outfile1' for writing\n\n";
+open(OUTFILE1, ">$outfile1") or die "\nError: in script make_RUM_junctions_file.pl: cannot open file '$outfile1' for writing\n\n";
 print OUTFILE1 "intron\tscore\tknown\tstandard_splice_signal\tsignal_not_canonical\tambiguous\tlong_overlap_unique_reads\tshort_overlap_unique_reads\tlong_overlap_nu_reads\tshort_overlap_nu_reads\n";
 
-open(OUTFILE2, ">$outfile2") or die "\nError: cannot open file '$outfile2' for writing\n\n";
+open(OUTFILE2, ">$outfile2") or die "\nError: in script make_RUM_junctions_file.pl: cannot open file '$outfile2' for writing\n\n";
 print OUTFILE2 "track\tname=rum_junctions_all\tvisibility=3\tdescription=\"RUM junctions (all)\" itemRgb=\"On\"\n";
 
-open(OUTFILE3, ">$outfile3") or die "\nError: cannot open file '$outfile3' for writing\n\n";
+open(OUTFILE3, ">$outfile3") or die "\nError: in script make_RUM_junctions_file.pl: cannot open file '$outfile3' for writing\n\n";
 print OUTFILE3 "track\tname=rum_junctions_hq\tvisibility=3\tdescription=\"RUM high quality junctions\" itemRgb=\"On\"\n";
 
 # read in known junctions to color them green in the hq track:
 
 if($gene_annot ne "none") {
-    open(INFILE, $gene_annot) or die "\nError: cannot open file '$gene_annot' for reading\n\n";
+    open(INFILE, $gene_annot) or die "\nError: in script make_RUM_junctions_file.pl: cannot open file '$gene_annot' for reading\n\n";
     while($line = <INFILE>) {
 	@a = split(/\t/, $line);
 	$chr = $a[0];
@@ -159,7 +159,7 @@ for($i=7; $i<@ARGV; $i++) {
 		$donor_rev[$j] = reversesignal($donor[$j]);
 		$acceptor_rev[$j] = reversesignal($acceptor[$j]);
 	    } else {
-		die "\nError: the -signal argument is misformatted, check signal $i: '$AR[$j]'\n\n";
+		die "\nError: in scritp make_RUM_junctions_file.pl: the -signal argument is misformatted, check signal $i: '$AR[$j]'\n\n";
 	    }
 	}
 	$optionrecognized = 1;
@@ -171,9 +171,9 @@ for($i=7; $i<@ARGV; $i++) {
     if($ARGV[$i] eq "-minintron") {
 	$minintron = $ARGV[$i+1];
 	if(!($minintron =~ /^\d+$/)) {
-	    die "\nError: -minintron must be an integer greater than zero, you gave '$minintron'.\n\n";
+	    die "\nError: in script make_RUM_junctions_file.pl: -minintron must be an integer greater than zero, you gave '$minintron'.\n\n";
 	} elsif($minintron==0) {
-	    die "\nError: -minintron must be an integer greater than zero, you gave '$minintron'.\n\n";
+	    die "\nError: in script make_RUM_junctions_file.pl: -minintron must be an integer greater than zero, you gave '$minintron'.\n\n";
 	}
 	$i++;
 	$optionrecognized = 1;
@@ -181,26 +181,26 @@ for($i=7; $i<@ARGV; $i++) {
     if($ARGV[$i] eq "-overlap") {
 	$allowable_overlap = $ARGV[$i+1];
 	if(!($allowable_overlap =~ /^\d+$/)) {
-	    die "\nError: -overlap must be an integer greater than zero, you gave '$allowable_overlap'.\n\n";
+	    die "\nError: in script make_RUM_junctions_file.pl: -overlap must be an integer greater than zero, you gave '$allowable_overlap'.\n\n";
 	} elsif($allowable_overlap==0) {
-	    die "\nError: -overlap must be an integer greater than zero, you gave '$allowable_overlap'.\n\n";
+	    die "\nError: in script make_RUM_junctions_file.pl: -overlap must be an integer greater than zero, you gave '$allowable_overlap'.\n\n";
 	}
 	$i++;
 	$optionrecognized = 1;
     }
     if($optionrecognized == 0) {
-	die "\nERROR: option '$ARGV[$i]' not recognized\n";
+	die "\nERROR: in script make_RUM_junctions_file.pl: option '$ARGV[$i]' not recognized\n";
     }
 }
 
 if($faok eq "false") {
-    print STDERR "Modifying genome fa file\n";
+    print "Modifying genome fa file\n";
     $r = int(rand(1000));
     $f = "temp_" . $r . ".fa";
     `perl modify_fa_to_have_seq_on_one_line.pl $genome_sequence > $f`;
-    open(GENOMESEQ, $f) or die "\nError: cannot open file '$f' for reading\n\n";
+    open(GENOMESEQ, $f) or die "\nError: in script make_RUM_junctions_file.pl: cannot open file '$f' for reading\n\n";
 } else {
-    open(GENOMESEQ, $genome_sequence) or die "\nError: cannot open file '$genome_sequence' for reading\n\n";
+    open(GENOMESEQ, $genome_sequence) or die "\nError: in script make_RUM_junctions_file.pl: cannot open file '$genome_sequence' for reading\n\n";
 }
 
 # DEBUG
@@ -237,7 +237,7 @@ while($FLAG == 0) {
 	    $line =~ />(.*)/;
 	    $chr = $1;
 	    $chr =~ s/:[^:]*$//;
-	    print STDERR "chr=$chr\n";
+#	    print "chr=$chr\n";
 	    $ref_seq = <GENOMESEQ>;
 	    chomp($ref_seq);
 	    $CHR2SEQ{$chr} = $ref_seq;
@@ -332,8 +332,8 @@ sub printjunctions () {
 
 
 sub getjunctions () {
-    open(INFILE, $rumU) or die "\nError: cannot open file '$rumU' for reading\n\n";
-    print STDERR "please wait...\n";
+    open(INFILE, $rumU) or die "\nError: in script make_RUM_junctions_file.pl: cannot open file '$rumU' for reading\n\n";
+#    print "please wait...\n";
     while($line = <INFILE>) {
 	if(!($line =~ /, /)) {
 	    next;
@@ -419,8 +419,8 @@ sub getjunctions () {
     }
     close(INFILE);
 #    print STDERR "finished Unique\n";
-    print STDERR "please wait some more...\n";
-    open(INFILE, $rumNU) or die "\nError: cannot open file '$rumNU' for reading\n\n";
+#    print "please wait some more...\n";
+    open(INFILE, $rumNU) or die "\nError: in script make_RUM_junctions_file.pl: cannot open file '$rumNU' for reading\n\n";
     while($line = <INFILE>) {
 	if(!($line =~ /, /)) {
 	    next;

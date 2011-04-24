@@ -77,18 +77,18 @@ Usage: make_TU_and_TNU.pl <bowtie file> <gene_annot_file> <tu_filename> <tnu_fil
 ";
     exit(1);
 }
-open(INFILE, $ARGV[0]) or die "\nError: input file '$ARGV[0]' is not a valid file.\n\n";
+open(INFILE, $ARGV[0]) or die "\nError: in script make_TU_and_TNU.pl: input file '$ARGV[0]' cannot be opened for reading.\n\n";
 $line = <INFILE>;
 close(INFILE);
 chomp($line);
 @a = split(/\t/,$line);
 
-open(INFILE, $ARGV[0]) or die "\nError: input file '$ARGV[0]' is not a valid file.\n\n";
-open(ANNOTFILE, $ARGV[1]) or die "\nError: gene models file '$ARGV[1]' is not a valid file.\n\n";
+open(INFILE, $ARGV[0]) or die "\nError: in script make_TU_and_TNU.pl: input file '$ARGV[0]' cannot be opened for reading.\n\n";
+open(ANNOTFILE, $ARGV[1]) or die "\nError: in script make_TU_and_TNU.pl: gene models file '$ARGV[1]' cannot be opened for reading.\n\n";
 $outfile1 = $ARGV[2];
 $outfile2 = $ARGV[3];
-open(OUTFILE1, ">$outfile1") or die "\nError: output file '$ARGV[2]' cannot be opened for writing.\n\n";
-open(OUTFILE2, ">$outfile2") or die "\nError: output file '$ARGV[3]' cannot be opened for writing.\n\n";
+open(OUTFILE1, ">$outfile1") or die "\nError: in script make_TU_and_TNU.pl: output file '$ARGV[2]' cannot be opened for writing.\n\n";
+open(OUTFILE2, ">$outfile2") or die "\nError: in script make_TU_and_TNU.pl: output file '$ARGV[3]' cannot be opened for writing.\n\n";
 
 $type = $ARGV[4];
 $typerecognized = 1;
@@ -101,7 +101,7 @@ if($type eq "paired") {
     $typerecognized = 0;
 }
 if($typerecognized == 1) {
-    die "\nERROR: type '$type' not recognized.  Must be 'single' or 'paired'.\n";
+    die "\nERROR: in script make_TU_and_TNU.pl: type '$type' not recognized.  Must be 'single' or 'paired'.\n";
 }
 
 $max_distance_between_paired_reads = 500000;
@@ -114,7 +114,7 @@ for($i=5; $i<@ARGV; $i++) {
     }
 
     if($optionrecognized == 0) {
-	die "\nERROR: option '$ARGV[$i-1] $ARGV[$i]' not recognized\n";
+	die "\nERROR: in script make_TU_and_TNU.pl: option '$ARGV[$i-1] $ARGV[$i]' not recognized\n";
     }
 }
 
@@ -684,7 +684,7 @@ while(1 == 1) {
 	$i++;
 	$s[$i] = $s[$i-1] + $ends[$i-1] - $starts[$i-1];
 	if($i > 100000) {
-	    print STDERR "\n\nERROR: Something is wrong, probably with the gene annotation file: $ARGV[1]\nAre you sure it is zero-based, half-open?\n\nExiting...\n\n";
+	    print STDERR "\n\nERROR: in script make_TU_and_TNU.pl: Something is wrong, probably with the gene annotation file: $ARGV[1].  Are you sure it is zero-based, half-open?  Script make_TU_and_TNU is exiting due to this error.\n\n";
 	    exit(0);
 	}
     }
@@ -697,7 +697,7 @@ while(1 == 1) {
 	$cnt++;
 	$readstart[$cnt] = $starts[$i-1] + 1;
 	if($i > 100000) {
-	    print STDERR "\n\nERROR: Something is wrong, probably with the gene annotation file: $ARGV[1]\nAre you sure it is zero-based, half-open?\n\nExiting...\n\n";
+	    print STDERR "\n\nERROR: in script make_TU_and_TNU.pl: Something is wrong, probably with the gene annotation file: $ARGV[1].  Are you sure it is zero-based, half-open?  Script make_TU_and_TNU is exiting due to this error.\n\n";
 	    exit(0);
 	}
     }

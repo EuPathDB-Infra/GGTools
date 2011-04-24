@@ -30,7 +30,7 @@ for($i=3; $i<@ARGV; $i++) {
 	$strandspecific="true";
 	$i++;
 	if(!($strand eq 'pa' || $strand eq 'ma' || $strand eq 'ps' || $strand eq 'ms')) {
-	    die "\nError; -strand must equal either ps, ms, pa or ma, not '$strand'\n\n";
+	    die "\nError: in file merge_quants.pl: -strand must equal either ps, ms, pa or ma, not '$strand'\n\n";
 	}
 	$optionrecognized = 1;
     }

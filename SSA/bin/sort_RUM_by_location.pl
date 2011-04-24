@@ -26,20 +26,18 @@ Options: -separate : Do not (necessarily) keep forward and reverse
 }
 
 
-print STDERR "\n";
-
 $separate = "false";
-$ram = 8;
+$ram = 6;
 $infile = $ARGV[0];
 $outfile = $ARGV[1];
 $running_indicator_file = $ARGV[1];
 $running_indicator_file =~ s![^/]+$!!;
 $running_indicator_file = $running_indicator_file . ".running";
-open(OUTFILE, ">$running_indicator_file") or die "Error: cannot open file '$running_indicator_file' for writing.\n\n";
+open(OUTFILE, ">$running_indicator_file") or die "ERROR: in script sort_RUM_by_location.pl: cannot open file '$running_indicator_file' for writing.\n\n";
 print OUTFILE "0";
 close(OUTFILE);
 
-$maxchunksize = 10000000;
+$maxchunksize = 9000000;
 $maxchunksize_specified = "false";
 for($i=2; $i<@ARGV; $i++) {
     $optionrecognized = 0;
@@ -50,9 +48,9 @@ for($i=2; $i<@ARGV; $i++) {
     if($ARGV[$i] eq "-ram") {
 	$ram = $ARGV[$i+1];
 	if(!($ram =~ /^\d+$/)) {
-	    die "\nError: -ram must be an integer greater than zero, you gave '$ram'.\n\n";
+	    die "\nERROR: in script sort_RUM_by_location.pl: -ram must be an integer greater than zero, you gave '$ram'.\n\n";
 	} elsif($ram==0) {
-	    die "\nError: -ram must be an integer greater than zero, you gave '$ram'.\n\n";
+	    die "\nERROR: in script sort_RUM_by_location.pl: -ram must be an integer greater than zero, you gave '$ram'.\n\n";
 	}
 	$i++;
 	$optionrecognized = 1;
@@ -60,9 +58,9 @@ for($i=2; $i<@ARGV; $i++) {
     if($ARGV[$i] eq "-maxchunksize") {
 	$maxchunksize = $ARGV[$i+1];
 	if(!($maxchunksize =~ /^\d+$/)) {
-	    die "\nError: -maxchunksize must be an integer greater than zero, you gave '$maxchunksize'.\n\n";
+	    die "\nERROR: in script sort_RUM_by_location.pl: -maxchunksize must be an integer greater than zero, you gave '$maxchunksize'.\n\n";
 	} elsif($maxchunksize==0) {
-	    die "\nError: -maxchunksize must be an integer greater than zero, you gave '$maxchunksize'.\n\n";
+	    die "\nERROR: in script sort_RUM_by_location.pl: -maxchunksize must be an integer greater than zero, you gave '$maxchunksize'.\n\n";
 	}
 	$i++;
 	$optionrecognized = 1;
@@ -74,18 +72,18 @@ for($i=2; $i<@ARGV; $i++) {
 	$optionrecognized = 1;
     }
     if($optionrecognized == 0) {
-	die "\nERROR: option '$ARGV[$i]' not recognized\n";
+	die "\nERROR: in script sort_RUM_by_location.pl: option '$ARGV[$i]' not recognized\n";
     }
 }
 if ($maxchunksize < 500000) {
-    die "Error: <max chunk size> must at least 500,000.\n\n";
+    die "ERROR: in script sort_RUM_by_location.pl: <max chunk size> must at least 500,000.\n\n";
 }
 
 if($maxchunksize_specified eq "false") {
     if($ram >= 7) {
 	$max_count_at_once = 10000000;
     } elsif($ram >=6) {
-	$max_count_at_once = 9000000;
+	$max_count_at_once = 8500000;
     } elsif($ram >=5) {
 	$max_count_at_once = 7500000;
     } elsif($ram >=4) {
@@ -94,7 +92,7 @@ if($maxchunksize_specified eq "false") {
 	$max_count_at_once = 4500000;
     } elsif($ram >=2) {
 	$max_count_at_once = 3000000;
-    } elsif($ram == 1) {
+    } else {
 	$max_count_at_once = 1500000;
     }
 } else {
@@ -165,13 +163,12 @@ for($chunk=0;$chunk<$numchunks;$chunk++) {
 
 $cnt=0;
 $chunk=0;
-print STDERR "\nsorting reads by chromosome and location...\n";
+
 while($cnt < @CHR) {
     undef %chrs_current;
     undef %hash;
     $running_count = $chr_counts{$CHR[$cnt]};
     $chrs_current{$CHR[$cnt]} = 1;
-    print STDERR "working on: $CHR[$cnt] ";
     if($chr_counts{$CHR[$cnt]} > $max_count_at_once) { # it's a monster chromosome, going to do it in
                                                        # pieces for fear of running out of RAM.
 	$INFILE = $infile . "_sorting_tempfile." . $CHUNK{$CHR[$cnt]};
@@ -281,11 +278,8 @@ while($cnt < @CHR) {
     while($running_count+$chr_counts{$CHR[$cnt]} < $max_count_at_once && $cnt < @CHR) {
 	$running_count = $running_count + $chr_counts{$CHR[$cnt]};
 	$chrs_current{$CHR[$cnt]} = 1;
-	print STDERR " $CHR[$cnt] ";
 	$cnt++;
     }
-    print STDERR "\n";
-#    print "-----------\n";
     $INFILE = $infile . "_sorting_tempfile." . $chunk;
     open(INFILE, $INFILE);
     while($line = <INFILE>) {
@@ -350,31 +344,31 @@ for($chunk=0;$chunk<$numchunks;$chunk++) {
     $tempfile =  $infile . "_sorting_tempfile." . $chunk;
     unlink($tempfile);
 }
-$timeend = time();
-$timelapse = $timeend - $timestart;
-if($timelapse < 60) {
-    if($timelapse == 1) {
-	print STDERR "\nIt took one second to sort '$infile'.\n\n";
-    } else {
-	print STDERR "\nIt took $timelapse seconds to sort '$infile'.\n\n";
-    }
-}
-else {
-    $sec = $timelapse % 60;
-    $min = int($timelapse / 60);
-    if($min > 1 && $sec > 1) {
-	print STDERR "\nIt took $min minutes, $sec seconds to sort '$infile'.\n\n";
-    }
-    if($min == 1 && $sec > 1) {
-	print STDERR "\nIt took $min minute, $sec seconds to sort '$infile'.\n\n";
-    }
-    if($min > 1 && $sec == 1) {
-	print STDERR "\nIt took $min minutes, $sec second to sort '$infile'.\n\n";
-    }
-    if($min == 1 && $sec == 1) {
-	print STDERR "\nIt took $min minute, $sec second to sort '$infile'.\n\n";
-    }
-}
+#$timeend = time();
+#$timelapse = $timeend - $timestart;
+#if($timelapse < 60) {
+#    if($timelapse == 1) {
+#	print "\nIt took one second to sort '$infile'.\n\n";
+#    } else {
+#	print "\nIt took $timelapse seconds to sort '$infile'.\n\n";
+#    }
+#}
+#else {
+#    $sec = $timelapse % 60;
+#    $min = int($timelapse / 60);
+#    if($min > 1 && $sec > 1) {
+#	print "\nIt took $min minutes, $sec seconds to sort '$infile'.\n\n";
+#    }
+#    if($min == 1 && $sec > 1) {
+#	print "\nIt took $min minute, $sec seconds to sort '$infile'.\n\n";
+#    }
+#    if($min > 1 && $sec == 1) {
+#	print "\nIt took $min minutes, $sec second to sort '$infile'.\n\n";
+#    }
+#    if($min == 1 && $sec == 1) {
+#	print "\nIt took $min minute, $sec second to sort '$infile'.\n\n";
+#    }
+#}
 
 unlink($running_indicator_file);
 

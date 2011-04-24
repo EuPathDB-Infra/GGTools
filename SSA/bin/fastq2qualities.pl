@@ -53,11 +53,11 @@ for(my $i=$optionsstart; $i<@ARGV; $i++) {
 	$i++;
     }
     if($optionrecognized == 1) {
-	die "\nERROR: option '$ARGV[$i-1]' not recognized.  Must be 'single' or 'paired'.\n";
+	die "\nERROR: in script fastq2qualities.pl: option '$ARGV[$i-1]' not recognized.  Must be 'single' or 'paired'.\n";
     }
 }
 if(($firstNArow =~ /\S/ && !($secondNArow =~ /\S/)) && ($secondNArow =~ /\S/ && !($firstNArow =~ /\S/))) {
-    die "\nERROR: you must set *both* -firstrow and -secondrow, or neither\n";
+    die "\nERROR: in script fastq2qualities.pl: you must set *both* -firstrow and -secondrow, or neither\n";
 }
 
 my $standard = "true";
@@ -134,6 +134,7 @@ while(my $line = <INFILE1>) {    # this loop writes out the fasta file
 	chomp($line);
 	my $line_hold = $line;
 	if(($line =~ /[^!-~]/ || !($line =~ /\S/))) {
+	    print STDERR"\nWARNING: in script fastq2qualities.pl: There seems to be something wrong with line $linecnt in file $ARGV[0]\nIt should be a line of quality scores but it is:\n$line_hold\n\n";
 	    print "\nWARNING: There seems to be something wrong with line $linecnt in file $ARGV[0]\nIt should be a line of quality scores but it is:\n$line_hold\n\n";
 	    print "\nSorry, can't figure these files out, maybe they're not fastq, they're corrupt, or you might have to write a custom parser.\n";
 	    exit();
@@ -145,6 +146,7 @@ while(my $line = <INFILE1>) {    # this loop writes out the fasta file
 	    print "b\n";
 	    $line_hold = $line2;
 	    if(($line2 =~ /[^!-~]/ || !($line2 =~ /\S/))) {
+		print STDERR "\nWARNING: in fastq2qualities.pl: There's something wrong with line $linecnt in file $ARGV[1]\nIt should be a line of quality scores but it is:\n$line_hold\n\n";
 		print "\nWARNING: There's something wrong with line $linecnt in file $ARGV[1]\nIt should be a line of quality scores but it is:\n$line_hold\n\n";
 		print "\nSorry, can't figure these files out, maybe they're not fastq, they're corrupt, or you might have to write a custom parser.\n";
 		exit();
@@ -158,7 +160,5 @@ while(my $line = <INFILE1>) {    # this loop writes out the fasta file
 close(INFILE1);
 close(INFILE2);
 if($linecnt % $block != 0) {
-    print STDERR "\nWarning: the last block of lines in file $ARGV[0] is not the right size.\n\n";
+    print STDERR "\nWarning: in script fastq2qualities.pl: the last block of lines in file $ARGV[0] is not the right size.\n\n";
 }
-
-
