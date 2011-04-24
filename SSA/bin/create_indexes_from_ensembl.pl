@@ -59,7 +59,7 @@ print "perl create_gene_indexes.pl $name1 $F3\n";
 $temp1 = $genome;
 $temp1 =~ s/.txt$//;
 
-print STDERR "building the bowtie genome index, this could take some time...\n\n";
+print STDERR "\nBuilding the bowtie genome index, this could take some time...\n\n";
 
 `bowtie-build $F3 $temp1`;
 
@@ -70,7 +70,7 @@ $F3 = $name1 . "_one-line-seqs.fa";
 $name1 = $name1 . "_genes";
 $temp2 = $name1 . ".fa";
 
-print STDERR "building the bowtie gene index...\n\n";
+print STDERR "Building the bowtie gene index...\n\n";
 
 `bowtie-build $temp2 $name1`;
 

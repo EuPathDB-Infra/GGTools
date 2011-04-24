@@ -19,7 +19,8 @@ for which there is no sequence in the <genome fasta> file.
 
 $final_gene_info_file = $ARGV[3];
 
-open(INFILE, $ARGV[0]);  # fasta file must have seq all on one line
+# Note: fasta file $ARGV[0] must have seq all on one line
+open(INFILE, $ARGV[0]) or die "ERROR: cannot open '$ARGV[0]' for reading\n";
 $line = <INFILE>;
 chomp($line);
 $line =~ />(.*)/;
@@ -70,7 +71,7 @@ sub get_exons () {
     ($chr, $seq) = @_;
 
     undef %exons;
-    open(EXONINFILE, $ARGV[1]);
+    open(EXONINFILE, $ARGV[1]) or die "ERROR: cannot open '$ARGV[1]' for reading.\n";
     while($line2 = <EXONINFILE>) {
 	chomp($line2);
 	$line2 =~ /(.*):(\d+)-(\d+)/;
@@ -89,7 +90,7 @@ sub get_exons () {
 sub get_genes () {
     ($chr, $seq) = @_;
 
-    open(GENEINFILE, $ARGV[2]);
+    open(GENEINFILE, $ARGV[2]) or die "ERROR: cannot open '$ARGV[2]' for reading.\n";
     while($line2 = <GENEINFILE>) {
 	chomp($line2);
 	@a = split(/\t/,$line2);

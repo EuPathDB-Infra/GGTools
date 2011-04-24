@@ -34,6 +34,16 @@ while($line = <INFILE>) {
     @a = split(/\t/, $line);
     $starts = $a[$starts_col];
     $ends = $a[$ends_col];
+    if(!($starts =~ /\S/)) {
+	die "ERROR: the 'starts' column has empty entries\n";
+    }
+    if(!($ends =~ /\S/)) {
+	die "ERROR: the 'ends' column has empty entries\n";
+    }
+    if(!($a[$exon_counts_col] =~ /\S/)) {
+	die "ERROR: the 'exon counts' column has empty entries\n";
+    }
+
     $starts =~ s/,\s*$//;
     $ends =~ s/,\s*$//;
     @S = split(/,/, $starts);

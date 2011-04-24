@@ -17,6 +17,9 @@ Genome fasta file must be formatted as described in:
 }
 
 $infile = $ARGV[0];
+if(!($infile =~ /\.txt$/)) {
+    die "ERROR: the <NAME_gnome.txt> file has to end in '.txt', yours doesn't...\n";
+}
 $F1 = $infile;
 $F1 =~ s/.txt$/.fa/;
 $F2 = $infile;
@@ -24,8 +27,11 @@ $F2 =~ s/.txt$/_one-line-seqs_temp.fa/;
 $F3 = $infile;
 $F3 =~ s/.txt$/_one-line-seqs.fa/;
 
+print STDERR "perl modify_fasta_header_for_genome_seq_database.pl $infile > $F1\n";
 `perl modify_fasta_header_for_genome_seq_database.pl $infile > $F1`;
+print STDERR "perl modify_fa_to_have_seq_on_one_line.pl $F1 > $F2\n";
 `perl modify_fa_to_have_seq_on_one_line.pl $F1 > $F2`;
+print STDERR "perl sort_genome_fa_by_chr.pl $F2 >  $F3\n";
 `perl sort_genome_fa_by_chr.pl $F2 >  $F3`;
 
 unlink($F1);
@@ -40,15 +46,26 @@ $N4 = $NAME . "_gene_info_unsorted.txt";
 $N5 = $NAME . "_genes.fa";
 $N6 = $NAME . "_gene_info.txt";
 
+print STDERR "perl make_master_file_of_genes.pl gene_info_files > gene_info_merged_unsorted.txt\n";
 `perl make_master_file_of_genes.pl gene_info_files > gene_info_merged_unsorted.txt`;
+print STDERR "perl fix_geneinfofile_for_neg_introns.pl gene_info_merged_unsorted.txt 5 6 4 > gene_info_merged_unsorted_fixed.txt\n";
 `perl fix_geneinfofile_for_neg_introns.pl gene_info_merged_unsorted.txt 5 6 4 > gene_info_merged_unsorted_fixed.txt`;
+print STDERR "perl sort_geneinfofile.pl gene_info_merged_unsorted_fixed.txt > gene_info_merged_sorted_fixed.txt\n";
 `perl sort_geneinfofile.pl gene_info_merged_unsorted_fixed.txt > gene_info_merged_sorted_fixed.txt`;
-`perl make_ids_unique4geneinfofile.pl gene_info_merged_sorted_fixed.txt $N1;`;
+print STDERR "perl make_ids_unique4geneinfofile.pl gene_info_merged_sorted_fixed.txt $N1\n";
+`perl make_ids_unique4geneinfofile.pl gene_info_merged_sorted_fixed.txt $N1`;
+print STDERR "perl get_master_list_of_exons_from_geneinfofile.pl $N1\n";
 `perl get_master_list_of_exons_from_geneinfofile.pl $N1`;
+print STDERR "perl modify_fa_to_have_seq_on_one_line.pl $N2 > temp.fa\n";
 `perl modify_fa_to_have_seq_on_one_line.pl $N2 > temp.fa`;
+print STDERR "perl make_fasta_files_for_master_list_of_genes.pl temp.fa master_list_of_exons.txt $N1 $N4 > $N3\n";
+print "perl make_fasta_files_for_master_list_of_genes.pl temp.fa master_list_of_exons.txt $N1 $N4 > $N3\n";
 `perl make_fasta_files_for_master_list_of_genes.pl temp.fa master_list_of_exons.txt $N1 $N4 > $N3`;
+print STDERR "perl sort_gene_info.pl $N4 > $N6\n";
 `perl sort_gene_info.pl $N4 > $N6`;
+print STDERR "perl sort_gene_fa_by_chr.pl $N3 > $N5\n";
 `perl sort_gene_fa_by_chr.pl $N3 > $N5`;
+
 unlink($N3);
 unlink($N4);
 unlink("temp.fa");
@@ -71,8 +88,13 @@ open(OUTFILE, ">$configfile");
 print OUTFILE $config;
 close(OUTFILE);
 
+unlink("gene_info_merged_unsorted.txt");
+unlink("gene_info_merged_unsorted_fixed.txt");
+unlink("gene_info_merged_sorted_fixed.txt");
+unlink("master_list_of_exons.txt");
+
 # run bowtie on genes index
-print STDERR "running bowtie on the gene index, please wait...\n\n";
+print STDERR "\nRunning bowtie on the gene index, please wait...\n\n";
 $O = $organism . "_genes";
 `bowtie-build $N5 $O`;
 
