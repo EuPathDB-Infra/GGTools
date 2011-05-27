@@ -4,6 +4,8 @@
 
 $version = "1.08.  Released April 24th, 2011";
 
+$| = 1;
+
 if($ARGV[0] eq '-version' || $ARGV[0] eq '-v' || $ARGV[0] eq '--version' || $ARGV[0] eq '--v') {
     die "RUM version: $version\n";
 }
@@ -81,14 +83,9 @@ Usage: RUM_runner.pl <config file> <reads file(s)> <output dir> <num chunks>
                    file, run this program with the single argument 'config' for
                    more information on the config file.
 
-<reads file(s)> :  What to put here depends on whether your data is paired or
-                   unpaired:
-
-                   1) For unpaired data, the single file of reads.
-                   2) For paired data, either: 
-                      - The files of forward and reverse reads, separated
-                        by three commas ',,,' (with no spaces).
-                      - One file formatted using parse2fasta.pl.
+<reads file(s)> :  1) For unpaired data, the single file of reads.
+                   2) For paired data the files of forward and reverse reads,
+                      separated by three commas ',,,' (with no spaces).
 
                    NOTE ON FILE FORMATS: Files can be either fasta or fastq,
                    the type is inferred.
@@ -185,6 +182,8 @@ Options: There are many options, but RUM is typically run with the defaults. The
                 the number of Gb of ram you want to dedicate to each chunk.
                 This is rarely necessary and never necessary if you have at
                 least 6 Gb per chunk.
+
+       -version : Returns the current version.
 
 Default config files are supplied with each organism.  If you need to make or
 modify one then running RUM_runner.pl with the one argument 'config' gives an
@@ -431,6 +430,8 @@ if($kill eq "true") {
 
 
 print "
+
+RUM version: $version
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                  _   _   _   _   _   _   
@@ -1123,6 +1124,10 @@ if($blatonly eq "true" && $dna eq "true") {
     $dna = "false";  # because blat only is dna only anyway, and setting them both breaks things below
 }
 
+open(OUT, ">$output_dir/restart.ids");
+print OUT "";
+close(OUT);
+
 if($postprocess eq "false") {
     $pipeline_template = `cat $lib/pipeline_template.sh`;
     if($cleanup eq 'false') {
@@ -1252,6 +1257,9 @@ if($postprocess eq "false") {
             print ERRORLOG "\nERROR: cannot open '$output_dir/$outfile' for writing\n\n";
             die "\nERROR: cannot open '$output_dir/$outfile' for writing\n\n";
         }
+        if($qsub eq "true") {
+    	   $pipeline_file =~ s!2>[^\n]*\n!\n!gs;
+        }
         print OUTFILE $pipeline_file;
 
         # Add postprocessing steps to the last chunk only:
@@ -1262,26 +1270,25 @@ if($postprocess eq "false") {
             $NumSeqs = $1;
             $PPlog = "postprocessing_$name" . ".log";
             $shellscript = "\n\n# Postprocessing stuff starts here...\n\n";
-            $shellscript = $shellscript . "perl $scripts_dir/wait.pl $output_dir $JID 2>> $output_dir/PostProcessing-errorlog\n";
+            $shellscript = $shellscript . "perl $scripts_dir/wait.pl $output_dir $JID 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
             if($NumSeqs =~ /(\d+)/) {
                 $shellscript = $shellscript . "echo 'computing mapping statistics' > $output_dir/$PPlog\n";
                 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
-                $shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl $output_dir/RUM_Unique $output_dir/RUM_NU -minseq 1 -maxseq $NumSeqs > $output_dir/mapping_stats.txt 2>> $output_dir/PostProcessing-errorlog\n";
+                $shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl $output_dir/RUM_Unique $output_dir/RUM_NU -minseq 1 -maxseq $NumSeqs > $output_dir/mapping_stats.txt 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
             } else {
-                $shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl $output_dir/RUM_Unique $output_dir/RUM_NU -minseq 1 > $output_dir/mapping_stats.txt 2>> $output_dir/PostProcessing-errorlog\n";
+                $shellscript = $shellscript . "perl $scripts_dir/count_reads_mapped.pl $output_dir/RUM_Unique $output_dir/RUM_NU -minseq 1 > $output_dir/mapping_stats.txt 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
             }
             if($quantify eq "true") {
                 $shellscript = $shellscript . "echo 'merging feature quantifications' >> $output_dir/$PPlog\n";
                 $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
                 if($strandspecific eq 'true') {
-                    $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications.ps -strand ps 2>> $output_dir/PostProcessing-errorlog\n";
-                    $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications.ms -strand ms 2>> $output_dir/PostProcessing-errorlog\n";
-                    $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications.pa -strand pa 2>> $output_dir/PostProcessing-errorlog\n";
-                    $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications.ma -strand ma 2>> $output_dir/PostProcessing-errorlog\n";
-                    $shellscript = $shellscript . "perl $scripts_dir/merge_quants_strandspecific.pl $output_dir/feature_quantifications.ps $output_dir/feature_quantifications.ms $output_dir/feature_quantifications.pa $output_dir/feature_quantifications.ma $gene_annot_file $output_dir/feature_quantifications_$name 2>> $output_dir/PostProcessing-errorlog\n";
-            
+                    $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications.ps -strand ps -chunk_ids_file $output_dir/restart.ids 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
+                    $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications.ms -strand ms -chunk_ids_file $output_dir/restart.ids 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
+                    $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications.pa -strand pa -chunk_ids_file $output_dir/restart.ids 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
+                    $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications.ma -strand ma -chunk_ids_file $output_dir/restart.ids 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
+                    $shellscript = $shellscript . "perl $scripts_dir/merge_quants_strandspecific.pl $output_dir/feature_quantifications.ps $output_dir/feature_quantifications.ms $output_dir/feature_quantifications.pa $output_dir/feature_quantifications.ma $gene_annot_file $output_dir/feature_quantifications_$name 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
                 } else {
-                    $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications_$name 2>> $output_dir/PostProcessing-errorlog\n";
+                    $shellscript = $shellscript . "perl $scripts_dir/merge_quants.pl $output_dir $numchunks $output_dir/feature_quantifications_$name -chunk_ids_file $output_dir/restart.ids 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
                 }
             }
 
@@ -1291,15 +1298,14 @@ if($postprocess eq "false") {
             }
             $shellscript = $shellscript . "echo 'merging RUM_Unique.sorted files' > $output_dir/$PPlog\n";
             $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
-            $shellscript = $shellscript . "perl $scripts_dir/merge_sorted_RUM_files.pl $string 2>> $output_dir/PostProcessing-errorlog\n";
-            
+            $shellscript = $shellscript . "perl $scripts_dir/merge_sorted_RUM_files.pl $string -chunk_ids_file $output_dir/restart.ids 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
             $string = "$output_dir/RUM_NU.sorted";
             for($j=1; $j<$numchunks+1; $j++) {
                 $string = $string . " $output_dir/RUM_NU.sorted.$j";
             }
             $shellscript = $shellscript . "echo 'merging RUM_NU.sorted files' >> $output_dir/$PPlog\n";
             $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
-            $shellscript = $shellscript . "perl $scripts_dir/merge_sorted_RUM_files.pl $string 2>> $output_dir/PostProcessing-errorlog\n";
+            $shellscript = $shellscript . "perl $scripts_dir/merge_sorted_RUM_files.pl $string -chunk_ids_file $output_dir/restart.ids 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
             
             $string = "$output_dir/mapping_stats.txt";
             for($j=1; $j<$numchunks+1; $j++) {
@@ -1307,7 +1313,7 @@ if($postprocess eq "false") {
             }
             $shellscript = $shellscript . "echo '' >> $output_dir/mapping_stats.txt\n";
             $shellscript = $shellscript . "echo 'RUM_Unique reads per chromosome' >> $output_dir/mapping_stats.txt\n";
-            $shellscript = $shellscript . "perl $scripts_dir/merge_chr_counts.pl $string 2>> $output_dir/PostProcessing-errorlog\n";
+            $shellscript = $shellscript . "perl $scripts_dir/merge_chr_counts.pl $string -chunk_ids_file $output_dir/restart.ids 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
             
             $string = "$output_dir/mapping_stats.txt";
             for($j=1; $j<$numchunks+1; $j++) {
@@ -1315,41 +1321,44 @@ if($postprocess eq "false") {
             }
             $shellscript = $shellscript . "echo '' >> $output_dir/mapping_stats.txt\n";
             $shellscript = $shellscript . "echo 'RUM_NU reads per chromosome' >> $output_dir/mapping_stats.txt\n";
-            $shellscript = $shellscript . "perl $scripts_dir/merge_chr_counts.pl $string 2>> $output_dir/PostProcessing-errorlog\n";
+            $shellscript = $shellscript . "perl $scripts_dir/merge_chr_counts.pl $string -chunk_ids_file $output_dir/restart.ids 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
             
             if($junctions eq "true") {
                $shellscript = $shellscript . "echo 'computing junctions' >> $output_dir/$PPlog\n";
                $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
                if($altgenes eq "true") {
-                   $shellscript = $shellscript . "perl $scripts_dir/make_RUM_junctions_file.pl $output_dir/RUM_Unique $output_dir/RUM_NU $genomefa $altgene_file $output_dir/junctions_all.rum $output_dir/junctions_all.bed $output_dir/junctions_high-quality.bed -faok 2>> $output_dir/PostProcessing-errorlog\n";
+                   $shellscript = $shellscript . "perl $scripts_dir/make_RUM_junctions_file.pl $output_dir/RUM_Unique $output_dir/RUM_NU $genomefa $altgene_file $output_dir/junctions_all.rum $output_dir/junctions_all.bed $output_dir/junctions_high-quality.bed -faok 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
                } else {
-                   $shellscript = $shellscript . "perl $scripts_dir/make_RUM_junctions_file.pl $output_dir/RUM_Unique $output_dir/RUM_NU $genomefa $gene_annot_file $output_dir/junctions_all.rum $output_dir/junctions_all.bed $output_dir/junctions_high-quality.bed -faok 2>> $output_dir/PostProcessing-errorlog\n";
+                   $shellscript = $shellscript . "perl $scripts_dir/make_RUM_junctions_file.pl $output_dir/RUM_Unique $output_dir/RUM_NU $genomefa $gene_annot_file $output_dir/junctions_all.rum $output_dir/junctions_all.bed $output_dir/junctions_high-quality.bed -faok 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
                }
             }
             
             $shellscript = $shellscript . "echo 'making coverage plots' >> $output_dir/$PPlog\n";
             $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
-            $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_Unique.sorted $output_dir/RUM_Unique.cov -name \"$name Unique Mappers\" 2>> $output_dir/PostProcessing-errorlog\n";
-            $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_NU.sorted $output_dir/RUM_NU.cov -name \"$name Non-Unique Mappers\" 2>> $output_dir/PostProcessing-errorlog\n";
+            $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_Unique.sorted $output_dir/RUM_Unique.cov -name \"$name Unique Mappers\" 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
+            $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_NU.sorted $output_dir/RUM_NU.cov -name \"$name Non-Unique Mappers\" 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
             if($strandspecific eq 'true') {
                   # breakup RUM_Unique and RUM_NU files into plus and minus
-                  $shellscript = $shellscript . "perl $scripts_dir/breakup_RUM_files_by_strand.pl $output_dir/RUM_Unique.sorted $output_dir/RUM_Unique.sorted.plus $output_dir/RUM_Unique.sorted.minus 2>> $output_dir/PostProcessing-errorlog\n";
-                  $shellscript = $shellscript . "perl $scripts_dir/breakup_RUM_files_by_strand.pl $output_dir/RUM_NU.sorted $output_dir/RUM_NU.sorted.plus $output_dir/RUM_NU.sorted.minus 2>> $output_dir/PostProcessing-errorlog\n";
+                  $shellscript = $shellscript . "perl $scripts_dir/breakup_RUM_files_by_strand.pl $output_dir/RUM_Unique.sorted $output_dir/RUM_Unique.sorted.plus $output_dir/RUM_Unique.sorted.minus 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
+                  $shellscript = $shellscript . "perl $scripts_dir/breakup_RUM_files_by_strand.pl $output_dir/RUM_NU.sorted $output_dir/RUM_NU.sorted.plus $output_dir/RUM_NU.sorted.minus 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
                   # run rum2cov on all four files
-                  $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_Unique.sorted.plus $output_dir/RUM_Unique.plus.cov -name \"$name Unique Mappers Plus Strand\" 2>> $output_dir/PostProcessing-errorlog\n";
-                  $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_Unique.sorted.minus $output_dir/RUM_Unique.minus.cov -name \"$name Unique Mappers Minus Strand\" 2>> $output_dir/PostProcessing-errorlog\n";
-                  $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_NU.sorted.plus $output_dir/RUM_NU.plus.cov -name \"$name Non-Unique Mappers Plus Strand\" 2>> $output_dir/PostProcessing-errorlog\n";
-                  $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_NU.sorted.minus $output_dir/RUM_NU.minus.cov -name \"$name Non-Unique Mappers Minus Strand\" 2>> $output_dir/PostProcessing-errorlog\n";
+                  $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_Unique.sorted.plus $output_dir/RUM_Unique.plus.cov -name \"$name Unique Mappers Plus Strand\" 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
+                  $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_Unique.sorted.minus $output_dir/RUM_Unique.minus.cov -name \"$name Unique Mappers Minus Strand\" 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
+                  $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_NU.sorted.plus $output_dir/RUM_NU.plus.cov -name \"$name Non-Unique Mappers Plus Strand\" 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
+                  $shellscript = $shellscript . "perl $scripts_dir/rum2cov.pl $output_dir/RUM_NU.sorted.minus $output_dir/RUM_NU.minus.cov -name \"$name Non-Unique Mappers Minus Strand\" 2>> $output_dir/PostProcessing-errorlog || exit 1\n";
             }
             $shellscript = $shellscript . "echo finished >> $output_dir/$PPlog\n";
             $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
+            if($qsub eq "true") {
+        	   $shellscript =~ s!2>[^\n]*\n!\n!gs;
+            }
             print OUTFILE $shellscript;
         }
         close(OUTFILE);
     
         if($qsub eq "true") {
            $ofile = $output_dir . "/chunk.$i" . ".o";
-           $efile = $output_dir . "/chunk.$i" . ".e";
+           $efile = $output_dir . "/errorlog.$i";
            $MEM = $ram . "G";
     	   $Q = `qsub -l mem_free=$MEM -o $ofile -e $efile $output_dir/$outfile`;
            $Q =~ /Your job (\d+)/;
@@ -1364,17 +1373,9 @@ if($postprocess eq "false") {
         print "\nAll chunks initiated, now the long wait...\n";
         print "\nI'm going to watch for all chunks to finish, then I will merge everything...\n\n";
         sleep(2);
-        if($qsub eq "false" && $blatonly eq "false") {
-    	    print "\nThe next thing to print here will (probably) be the status reports from bowtie for each chunk.\n";
-    	    print "     * Don't be alarmed by the number of reads that 'failed to align'\n       that's just referring to the bowtie step.\n\n";
-        }
     } else {
         print "\nThe job has been initiated, now the long wait...\n";
         sleep(2);
-        if($qsub eq "false" && $blatonly eq "false") {
-    	    print "\nThe next thing to print here will (probably) be the status reports from bowtie for each chunk.\n";
-    	    print "     * Don't be alarmed by the number of reads that 'failed to align'\n       that's just referring to the bowtie step.\n\n";
-        }
     }
     
     $currenttime = time();
@@ -1383,6 +1384,7 @@ if($postprocess eq "false") {
     $doneflag = 0;
     
     while($doneflag == 0) {
+        sleep(30);
         $doneflag = 1;
         $numdone = 0;
         for($i=1; $i<=$numchunks; $i++) {
@@ -1396,6 +1398,9 @@ if($postprocess eq "false") {
     		    if($status{$i} == 1) {
     		        $status{$i} = 2;
 		        print "\n *** Chunk $i has finished.\n";
+                        if($i != $numchunks) {
+                            delete $jobid{$i};
+                        }
 		    }
 	        }
 	    }
@@ -1404,7 +1409,6 @@ if($postprocess eq "false") {
 	    }
         }
         if($doneflag == 0) {
-	    sleep(30);
 	    $currenttime = time();
     	    if($currenttime - $lastannouncetime > 3600) {
 	        $lastannouncetime = $currenttime;
@@ -1426,35 +1430,82 @@ if($postprocess eq "false") {
         }
         for($i=1; $i<=$numchunks; $i++) {
           # Check here to make sure node still running
-          if($qsub eq 'true') {
-              $Jobid = $jobid{$i};
-              $X = `qstat -j $Jobid | grep job_number`;
-              if(!($X =~ /job_number:\s+$Jobid/s)) {
-                   $DATE = `date`;
-                   $DATE =~ s/^\s+//;
-                   $DATE =~ s/\s+$//;
-                   print ERRORLOG "\n *** Chunk $i seems to have failed sometime around $DATE!\nDon't panic, I'm going to try to restart it.\n";
-                   print "\n *** Chunk $i seems to have failed sometime around $DATE!\nDon't panic, I'm going to try to restart it.\n";
-                   $ofile = $output_dir . "/chunk.$i" . ".o";
-                   $efile = $output_dir . "/chunk.$i" . ".e";
-                   $outfile = "pipeline." . $i . ".sh";
-                   $MEM = $ram . "G";
-                   $Q = `qsub -l mem_free=$MEM -o $ofile -e $efile $output_dir/$outfile`;
-                   $Q =~ /Your job (\d+)/;
-                   $jobid{$i} = $1;
-                   if($jobid{$i} =~ /^\d+$/) {
-                         sleep(2);
-                         print ERRORLOG " *** OK chunk $i seems to have restarted.\n\n";
-                         print " *** OK chunk $i seems to have restarted.\n\n";
-                   } else {
-                         print ERRORLOG " *** Hmph, that didn't seem to work.  I'm going to try again in 30 seconds.\nIf this keeps happening then something bigger might be wrong.  If you\ncan't figure it out, write ggrant@pcbi.upenn.edu and let him know.\n\n";
-                         print " *** Hmph, that didn't seem to work.  I'm going to try again in 30 seconds.\nIf this keeps happening then something bigger might be wrong.  If you\ncan't figure it out, write ggrant@pcbi.upenn.edu and let him know.\n\n";
-                   }
-              }
-         } else {
-              # still need to implement this for the non qsub case
+              if($qsub eq 'true') {
+                  $logfile = "$output_dir/rum.log_chunk.$i";
+                  $x = "";
+                  if (-e $logfile) {
+        	        $x = `cat $logfile`;
+                  }
+                  $Jobid = $jobid{$i};
+                  $X = `qstat -j $Jobid | grep job_number 2> $output_dir/temp.12321`;
+                  unlink("$output_dir/temp.12321");
+                  if(!($X =~ /job_number:\s+$Jobid/s) && (!($x =~ /pipeline complete/s) || ($x =~ /pipeline complete/s && $i == $numchunks && $status{$i} == 2))) {
+                       $DATE = `date`;
+                       $DATE =~ s/^\s+//;
+                       $DATE =~ s/\s+$//;
+                       print ERRORLOG "\n *** Chunk $i seems to have failed sometime around $DATE!  Trying to restart it...\n";
+                       print "\n *** Chunk $i seems to have failed sometime around $DATE!\nDon't panic, I'm going to try to restart it.\n";
+                       $ofile = $output_dir . "/chunk.restart.$i" . ".o";
+                       $efile = $output_dir . "/errorlog.restart.$i";
+                       $outfile = "pipeline." . $i . ".sh";
+                       $FILE = `cat $output_dir/$outfile`;
+                       $restarted{$i}++;
+                       open(OUT, ">$output_dir/restart.ids");
+                       foreach $key (keys %restarted) {
+                           print OUT "$key\t$restarted{$key}\n";
+                       }
+                       close(OUT);
+                       # changing the names of the files of this chunk to avoid possible collision with
+                       # phantom processes that didn't die properly..
+                       if($restarted{$i} == 1) {
+                           $FILE =~ s/\.$i/.$i.1/g;
+                       } else {
+                           $J1 = $restarted{$i} - 1;
+                           $J2 = $restarted{$i};
+                           $FILE =~ s/\.$i\.$J1/.$i.$J2/g;
+                       }
+
+# Note, can't modify the postprocessing chunk to reflect the new file names, since it
+# has already been submmitted.  Instead the postprocessin scripts that need file names
+# will recover the correct ones from the restart.ids file
+
+                       # remove the old files...
+                       open(OUT, ">$output_dir/restart_deleted_logs");
+                       print OUT "------ chunk $J1 restarted, here is its error log before it was deleted --------\n";
+                       close(OUT);
+                       `cat $output_dir/errorlog.$J1 >> $output_dir/restart_deleted_logs`;
+                       unlink("$output_dir/*.$J1");
+                       unlink("$output_dir/*.$J1.*");
+                       if($i == $numchunks) {
+                           # this is the post-processing node.  Check if it finished up to the
+                           # post-processing, if so then remove that part so as not to repeat it.
+                           if($status{$i} == 2) {  # it has finished
+                               $FILE =~ s/# xxx0.*Postprocessing stuff starts here.../\n/s;
+                               open(OUTFILE, ">$output_dir/$outfile");
+                               print OUTFILE $FILE;
+                               close(OUTFILE);
+                           }
+                       }
+                       $MEM = $ram . "G";
+                       $Q = `qsub -l mem_free=$MEM -o $ofile -e $efile $output_dir/$outfile`;
+                       $Q =~ /Your job (\d+)/;
+                       $jobid{$i} = $1;
+                       if($jobid{$i} =~ /^\d+$/) {
+                             $DATE = `date`;
+                             $DATE =~ s/^\s+//;
+                             $DATE =~ s/\s+$//;
+                             sleep(2);
+                             print ERRORLOG " *** Chunk $i seems to have restarted successfully at $DATE.\n\n";
+                             print " *** OK chunk $i seems to have restarted.\n\n";
+                       } else {
+                             print ERRORLOG " *** Hmph, that didn't seem to work.  I'm going to try again in 30 seconds.\nIf this keeps happening then something bigger might be wrong.  If you\ncan't figure it out, write ggrant@pcbi.upenn.edu and let him know.\n\n";
+                             print " *** Hmph, that didn't seem to work.  I'm going to try again in 30 seconds.\nIf this keeps happening then something bigger might be wrong.  If you\ncan't figure it out, write ggrant@pcbi.upenn.edu and let him know.\n\n";
+                       }
+                  }
+             } else {
+                  # still need to implement this for the non qsub case
+             }
          }
-       }
     }
 }
 
@@ -1464,20 +1515,45 @@ if($postprocess eq "false") {
      print "\nOK, will now merge everything, create the coverage plots and\ncalculate the quantified values, etc.  This could take some time...\n\n";
 }
 
+if($qsub eq "true") {
+    $efile = $output_dir . "/errorlog.$numchunks";
+    open(EFILE, ">>$efile");
+    print EFILE "\nPost-Processing Log Starts Here\n";
+    close(EFILE);
+}
+
 if($nocat eq "false") {
     $date = `date`;
-    $x = `cp $output_dir/RUM_Unique.1 $output_dir/RUM_Unique`;
-    for($i=2; $i<=$numchunks; $i++) {
-        $x = `cat $output_dir/RUM_Unique.$i >> $output_dir/RUM_Unique`;
+    if(defined $restarted{1}) {
+        $R = $restarted{1};
+        $x = `cp $output_dir/RUM_Unique.1.$R $output_dir/RUM_Unique`;
+        $x = `cp $output_dir/RUM_NU.1.$R $output_dir/RUM_NU`;
+    } else {
+        $x = `cp $output_dir/RUM_Unique.1 $output_dir/RUM_Unique`;
+        $x = `cp $output_dir/RUM_NU.1 $output_dir/RUM_NU`;
     }
-    $x = `cp $output_dir/RUM_NU.1 $output_dir/RUM_NU`;
     for($i=2; $i<=$numchunks; $i++) {
-        $x = `cat $output_dir/RUM_NU.$i >> $output_dir/RUM_NU`;
+        if(defined $restarted{$i}) {
+            $R = $restarted{1};
+            $x = `cat $output_dir/RUM_Unique.$i.$R >> $output_dir/RUM_Unique`;
+            $x = `cat $output_dir/RUM_NU.$i.$R >> $output_dir/RUM_NU`;
+        } else {
+            $x = `cat $output_dir/RUM_Unique.$i >> $output_dir/RUM_Unique`;
+            $x = `cat $output_dir/RUM_NU.$i >> $output_dir/RUM_NU`;
+        }
     }
     for($i=1; $i<=$numchunks; $i++) {
-       if(!(open(SAMHEADER, "$output_dir/sam_header.$i"))) {
-           print ERRORLOG "\nERROR: Cannot open '$output_dir/sam_header.$i' for writing.\n\n";
-           die "\nERROR: Cannot open '$output_dir/sam_header.$i' for reading.\n\n";
+       if(defined $restarted{$i}) {
+           $R = $restarted{1};
+           if(!(open(SAMHEADER, "$output_dir/sam_header.$i.$R"))) {
+              print ERRORLOG "\nERROR: Cannot open '$output_dir/sam_header.$i.$R' for reading.\n\n";
+              die "\nERROR: Cannot open '$output_dir/sam_header.$i.$R' for reading.\n\n";
+           }
+       } else {
+           if(!(open(SAMHEADER, "$output_dir/sam_header.$i"))) {
+              print ERRORLOG "\nERROR: Cannot open '$output_dir/sam_header.$i' for reading.\n\n";
+              die "\nERROR: Cannot open '$output_dir/sam_header.$i' for reading.\n\n";
+           }
        }
        while($line = <SAMHEADER>) {
            chomp($line);
@@ -1496,7 +1572,12 @@ if($nocat eq "false") {
     }
     close(SAMOUT);
     for($i=1; $i<=$numchunks; $i++) {
-        $x = `cat $output_dir/RUM.sam.$i >> $output_dir/RUM.sam`;
+       if(defined $restarted{$i}) {
+           $R = $restarted{1};
+           $x = `cat $output_dir/RUM.sam.$i.$R >> $output_dir/RUM.sam`;
+       } else {
+           $x = `cat $output_dir/RUM.sam.$i >> $output_dir/RUM.sam`;
+       }
     }
 }
 
@@ -1526,8 +1607,10 @@ close(OUTFILE);
 print "\nWorking, now another wait...\n\n";
 
 $doneflag = 0;
+
 while($doneflag == 0) {
     $doneflag = 1;
+    $x = "";
     if (-e "$output_dir/$PPlog") {
 	$x = `cat $output_dir/$PPlog`;
 	if(!($x =~ /finished/s)) {
@@ -1539,42 +1622,42 @@ while($doneflag == 0) {
 
 # check here for node failure, and restart if necessary
 
-    if($qsub eq 'true') {
+
+    if($qsub eq 'true' && $doneflag == 0) {
         $Jobid = $jobid{$numchunks};
         $X = `qstat -j $Jobid | grep job_number`;
         if(!($X =~ /job_number:\s+$Jobid/s)) {
-             $DATE = `date`;
-             $DATE =~ s/^\s+//;
-             $DATE =~ s/\s+$//;
-             print ERRORLOG "\n *** Chunk $numchunks seems to have failed during post-processing, sometime around $DATE!\nDon't panic, I'm going to try to restart it.\n";
-             print "\n *** Chunk $numchunks seems to have failed during post-processing, sometime around $DATE!\nDon't panic, I'm going to try to restart it.\n";
-             $ofile = $output_dir . "/chunk.$numchunks" . ".restarted.o";
-             $efile = $output_dir . "/chunk.$numchunks" . ".restarted.e";
-             $outfile = "pipeline." . $numchunks . ".sh";
+            $DATE = `date`;
+            $DATE =~ s/^\s+//;
+            $DATE =~ s/\s+$//;
+            print ERRORLOG "\n *** Chunk $numchunks seems to have failed during post-processing, sometime around $DATE!\nI'm going to try to restart it.\n";
+            print "\n *** Chunk $numchunks seems to have failed during post-processing, sometime around $DATE!\nDon't panic, I'm going to try to restart it.\n";
+            $ofile = $output_dir . "/chunk.restart.$numchunks" . ".o";
+            $efile = $output_dir . "/errorlog.restart.$numchunks";
+            $outfile = "pipeline." . $numchunks . ".sh";
 
-             # first remove the pre-processing stuff from the shell script
-             $FILE = `cat $output_dir/$outfile`;
-             $FILE =~ s/# xxx0.*Postprocessing stuff starts here.../\n/s;
-             $FILE =~ s/perl scripts.wait.pl test_human \d+[^\n]*//s;
-             open(OUTFILE, ">$output_dir/$outfile");
-             print OUTFILE $FILE;
-             close(OUTFILE);
+            # first remove the pre-post-processing stuff from the shell script
+            $FILE = `cat $output_dir/$outfile`;
+            $FILE =~ s/# xxx0.*Postprocessing stuff starts here.../\n/s;
+            $FILE =~ s/perl scripts.wait.pl [^\s]+ \d+[^\n]*//s;
+            open(OUTFILE, ">$output_dir/$outfile");
+            print OUTFILE $FILE;
+            close(OUTFILE);
 
-             $MEM = $ram . "G";
-             $Q = `qsub -l mem_free=$MEM -o $ofile -e $efile $output_dir/$outfile`;
-             $Q =~ /Your job (\d+)/;
-             $jobid{$numchunks} = $1;
-             if($jobid{$numchunks} =~ /^\d+$/) {
-                   sleep(2);
-                   print ERRORLOG " *** OK, post-processing seems to have restarted.\n\n";
-                   print " *** OK, post-processing seems to have restarted.\n\n";
-             } else {
-                   print ERRORLOG " *** Hmph, that didn't seem to work.  I'm going to try again in 30 seconds.\nIf this keeps happening then something bigger might be wrong.  If you\ncan't figure it out, write ggrant@pcbi.upenn.edu and let him know.\n\n";
-                   print " *** Hmph, that didn't seem to work.  I'm going to try again in 30 seconds.\nIf this keeps happening then something bigger might be wrong.  If you\ncan't figure it out, write ggrant@pcbi.upenn.edu and let him know.\n\n";
-             }
-        }
+            $MEM = $ram . "G";
+            $Q = `qsub -l mem_free=$MEM -o $ofile -e $efile $output_dir/$outfile`;
+            $Q =~ /Your job (\d+)/;
+            $jobid{$numchunks} = $1;
+            if($jobid{$numchunks} =~ /^\d+$/) {
+                  sleep(2);
+                  print ERRORLOG " *** OK, post-processing seems to have restarted.\n\n";
+                  print " *** OK, post-processing seems to have restarted.\n\n";
+            } else {
+                  print ERRORLOG " *** Hmph, that didn't seem to work.  I'm going to try again in 30 seconds.\nIf this keeps happening then something bigger might be wrong.  If you\ncan't figure it out, write ggrant@pcbi.upenn.edu and let him know.\n\n";
+                  print " *** Hmph, that didn't seem to work.  I'm going to try again in 30 seconds.\nIf this keeps happening then something bigger might be wrong.  If you\ncan't figure it out, write ggrant@pcbi.upenn.edu and let him know.\n\n";
+            }
+       }
    }
-
    if($doneflag == 0) {
       sleep(30);
    }
@@ -1610,18 +1693,43 @@ if(!($check_if_any_errors_already_reported =~ /\S/)) {
    $noerrors = "false";
 }
 
-$E = `cat $output_dir/PostProcessing-errorlog`;
-$E =~ s/^\s*//s;
-$E =~ s/\s*$//s;
+if($qsub eq "false") {
+    $E = `cat $output_dir/PostProcessing-errorlog`;
+    $E =~ s/^\s*//s;
+    $E =~ s/\s*$//s;
+} else {
+    if(-e "$output_dir/errorlog.restart.$numchunks") {
+        $E1 = `cat $output_dir/errorlog.$numchunks`;
+        $E1 =~ s/^.*Post-Processing Log Starts Here//s;
+        $E = `cat $output_dir/errorlog.restart.$numchunks`;
+        $E =~ s/^.*Post-Processing Log Starts Here//s;
+        $E = $E1 . "\n" . $E;
+    } else {
+        $E = `cat $output_dir/errorlog.$numchunks`;
+        $E =~ s/^.*Post-Processing Log Starts Here//s;
+    }
+}
 if($E =~ /\S/) {
     print ERRORLOG "\n------- Post Processing Errors -------\n";
     print ERRORLOG "$E\n";
-   $noerrors = "false";
+    $noerrors = "false";
 }
 for($i=1; $i<=$numchunks; $i++) {
     $E = `cat $output_dir/errorlog.$i`;
+    $E =~ s/# reads[^\n]+\n//sg;
+    $E =~ s/Reported \d+ [^\n]+\n//sg;
     $E =~ s/^\s*//s;
     $E =~ s/\s*$//s;
+    if($qsub eq "true") {
+        $E =~ s/Post-Processing Log Starts Here.*$//s;
+        if(-e "$output_dir/errorlog.restart.$i") {
+            $E1 = `cat $output_dir/errorlog.restart.$i`;
+            $E1 =~ s/Post-Processing Log Starts Here.*$//s;
+            $E1 =~ s/# reads[^\n]+\n//sg;
+            $E1 =~ s/Reported \d+ [^\n]+\n//sg;
+            $E = $E1 . "\n" . $E;
+        }
+    }
     if($E =~ /\S/) {
         print ERRORLOG "\n------- errors from chunk $i -------\n";
         print ERRORLOG "$E\n";
@@ -1647,7 +1755,7 @@ for($i=1; $i<=$numchunks; $i++) {
     }
 }
 if($noerrors eq "true") {
-    print ERRORLOG "\nVery good, no errors.\n\n";
+    print ERRORLOG "\nNo Errors. Very good!\n\n";
 }
 print ERRORLOG "--------------------------------------\n";
 
