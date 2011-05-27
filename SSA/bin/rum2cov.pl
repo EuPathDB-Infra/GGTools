@@ -60,6 +60,7 @@ $current_cov = 0;
 $first_span_on_chr = 1;
 $end_max = 0;
 $span_ended = 1;
+$prev_end = $end+2;
 while($flag < 2) {
     if($flag == 1) {
 	$flag = 2;
@@ -73,7 +74,12 @@ while($flag < 2) {
 	    }
 	}
 	if($start > $current_loc) {
-	    for($j=$current_loc+1; $j<$start; $j++) {
+	    if($prev_end < $start) {
+		$M = $prev_end;
+	    } else {
+		$M = $start;
+	    }
+	    for($j=$current_loc+1; $j<$M; $j++) {
 		if($position_coverage{$j}+0 != $current_cov) { # span ends here
 		    if($current_cov > 0) {
 			$k=$j-1;
@@ -90,6 +96,9 @@ while($flag < 2) {
 		delete $position_coverage{$j};
 	    }
 	    $current_loc = $start - 1;
+	    if($end+2 >= $prev_end) {
+		$prev_end = $end + 2;
+	    }
 	}
 	&getStartEndandSpans_of_nextline();
     } else {
@@ -116,6 +125,7 @@ while($flag < 2) {
 	$current_loc = $start-1;
 	$current_cov = 0;
 	$end_max = 0;
+	$prev_end = $end+2;
     }
 }
 
