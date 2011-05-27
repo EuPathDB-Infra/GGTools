@@ -1,15 +1,36 @@
 #!/usr/bin/perl
 
 if(@ARGV<2) {
-    die "Usage: merge_sorted_RUM_files.pl <outfile> <infile1> <infile2> [<infile3> ... <infileN>]
+    die "Usage: merge_sorted_RUM_files.pl <outfile> <infile1> <infile2> [<infile3> ... <infileN>] [option]
 
-Where: the infiles are RUM_Unique or RUM_NU files, each sorted by location, without the forward
-and reverse reads separated.  They will be merged into a single sorted file output to <outfile>.
+    Where: the infiles are RUM_Unique or RUM_NU files, each sorted by location,
+           without the forward and reverse reads separated.  They will be merged
+           into a single sorted file output to <outfile>.
+
+    Option:
+           -chunk_ids_file f : If a file mapping chunk N to N.M.  This is used
+                               specifically for the RUM pipeline when chunks were
+                               restarted and names changed. 
 
 ";
 }
+$chunk_ids_file = "";
+if($ARGV[@ARGV-2] eq '-chunk_ids_file') {
+    $chunk_ids_file = $ARGV[@ARGV-1];
+    open(INFILE, $chunk_ids_file);
+    while($line = <INFILE>) {
+	chomp($line);
+	@a = split(/\t/,$line);
+	$chunk_id_mapping{$a[0]} = $a[1];
+    }
+    close(INFILE);
+}
+
 $outfile = $ARGV[0];
 $numfiles = @ARGV - 1;
+if($chunk_id_file =~ /\S/) {
+    $numfiles = $numfiles - 2;
+}
 if($numfiles == 1) {
     $infile = $ARGV[1];
     `cp $infile $outfile`;
@@ -18,6 +39,9 @@ if($numfiles == 1) {
 
 for($i=0; $i<$numfiles; $i++) {
     $file[$i] = $ARGV[$i+1];
+    if($chunk_ids_file =~ /\S/ && $chunk_ids_mapping{$i} =~ /\S/) {
+	$file[$i] = $file[$i] . "." . $chunk_ids_mapping{$i};
+    }
 }
 open(OUTFILE, ">$outfile");
 
@@ -53,7 +77,9 @@ while($mergeFLAG < $numfiles) {
 	    }
 	}
     }
-   print OUTFILE "$entry[$argmin]\n";
+    if($entry[$argmin] =~ /\S/) {
+	print OUTFILE "$entry[$argmin]\n";
+    }
     &getNext1($argmin);
 }
 close(OUTFILE);

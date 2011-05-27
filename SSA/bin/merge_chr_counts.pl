@@ -1,20 +1,45 @@
 #!/usr/bin/perl
 
 if(@ARGV<2) {
-    die "Usage: merge_chr_counts.pl <outfile> <infile1> <infile2> [<infile3> ... <infileN>]
+    die "Usage: merge_chr_counts.pl <outfile> <infile1> <infile2> [<infile3> ... <infileN>] [option]
 
 Where: the infiles are chr_counts files.  They will be merged into a single
 sorted file output to <outfile>.
 
+    Option:
+           -chunk_ids_file f : If a file mapping chunk N to N.M.  This is used
+                               specifically for the RUM pipeline when chunks were
+                               restarted and names changed. 
 ";
 }
+$chunk_ids_file = "";
+if($ARGV[@ARGV-2] eq '-chunk_ids_file') {
+    $chunk_ids_file = $ARGV[@ARGV-1];
+}
+open(INFILE, $chunk_ids_file);
+while($line = <INFILE>) {
+    chomp($line);
+    @a = split(/\t/,$line);
+    $chunk_ids_mapping{$a[0]} = $a[1];
+}
+close(INFILE);
 
 $outfile = $ARGV[0];
 open(OUTFILE, ">>$outfile");
 $numfiles = @ARGV - 1;
+if($chunk_id_file =~ /\S/) {
+    $numfiles = $numfiles - 2;
+}
 
 for($i=0; $i<$numfiles; $i++) {
-    open(INFILE, $ARGV[$i+1]);
+    $file[$i] = $ARGV[$i+1];
+    if($chunk_ids_file =~ /\S/ && $chunk_ids_mapping{$i} =~ /\S/) {
+	$file[$i] = $file[$i] . "." . $chunk_ids_mapping{$i};
+    }
+}
+
+for($i=0; $i<$numfiles; $i++) {
+    open(INFILE, $file[$i]);
     $line = <INFILE>;
     $line = <INFILE>;
     $line = <INFILE>;

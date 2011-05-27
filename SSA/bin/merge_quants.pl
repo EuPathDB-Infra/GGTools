@@ -11,6 +11,10 @@ option:
 
     -strand s : ps, ms, pa, or ma (p: plus, m: minus, s: sense, a: antisense)
 
+    -chunk_ids_file f : If a file mapping chunk N to N.M.  This is used
+                        specifically for the RUM pipeline when chunks were
+                        restarted and names changed. 
+
 This script will look in <dir> for files named quant.1, quant.2, etc..
 up to quant.numchunks.  Unless -strand S is set in which case it looks
 for quant.S.1, quant.S.2, etc...
@@ -23,6 +27,7 @@ $numchunks = $ARGV[1];
 $outfile = $ARGV[2];
 $strandspecific = "false";
 $strand = "";
+$chunk_ids_file = "";
 for($i=3; $i<@ARGV; $i++) {
     $optionrecognized = 0;
     if($ARGV[$i] eq "-strand") {
@@ -34,15 +39,34 @@ for($i=3; $i<@ARGV; $i++) {
 	}
 	$optionrecognized = 1;
     }
+    if($ARGV[$i] eq "-chunk_ids_file") {
+	$chunk_ids_file = $ARGV[$i+1];
+	$i++;
+	open(INFILE, $chunk_ids_file) or die "Error: cannot open '$chunk_ids_file' for reading.\n\n";
+	while($line = <INFILE>) {
+	    chomp($line);
+	    @a = split(/\t/,$line);
+	    $chunk_ids_mapping{$a[0]} = $a[1];
+	}
+	close(INFILE);
+	$optionrecognized = 1;
+    }
+    if($optionrecognized == 0) {
+	die "\nError: option '$ARGV[$i]' not recognized.\n\n";
+    }
 }
 
 $num_reads = 0;
 $first = 1;
 for($i=1; $i<=$numchunks; $i++) {
+# xxx still need to correct these names when -chunk_ids_file specified
     if($strandspecific eq "true") {
 	$filename = "quant.$strand.$i";
     } else {
 	$filename = "quant.$i";
+    }
+    if($chunk_ids_file =~ /\S/ && $chunk_ids_mapping{$i} =~ /\S/) {
+	$filename = $filename . "." . $chunk_ids_mapping{$i};
     }
     open(INFILE, "$output_dir/$filename");
     $line = <INFILE>;
