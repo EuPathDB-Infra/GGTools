@@ -14,34 +14,52 @@ if(@ARGV<2) {
 
 ";
 }
-$chunk_ids_file = "";
-if($ARGV[@ARGV-2] eq '-chunk_ids_file') {
-    $chunk_ids_file = $ARGV[@ARGV-1];
-    open(INFILE, $chunk_ids_file);
-    while($line = <INFILE>) {
-	chomp($line);
-	@a = split(/\t/,$line);
-	$chunk_id_mapping{$a[0]} = $a[1];
+$options = "false";
+$numfiles = 0;
+for($i=0; $i<@ARGV; $i++) {
+    if($ARGV[$i] =~ /^-/) {
+	$options = "true";
+	$options_start_index = $i;
+	$i = @ARGV;
+    } else {
+	$numfiles = $i;
     }
-    close(INFILE);
 }
 
-$outfile = $ARGV[0];
-$numfiles = @ARGV - 1;
-if($chunk_id_file =~ /\S/) {
-    $numfiles = $numfiles - 2;
+$chunk_ids_file = "";
+if($options eq "true") {
+    for($i=$options_start_index; $i<@ARGV; $i++) {
+	if($ARGV[$i] eq '-chunk_ids_file') {
+	    $chunk_ids_file = $ARGV[$i+1];
+	    if(-e $chunk_ids_file) {
+		open(INFILE, $chunk_ids_file) or die "Error: cannot open '$chunk_ids_file' for reading.\n\n";
+		while($line = <INFILE>) {
+		    chomp($line);
+		    @a = split(/\t/,$line);
+		    $chunk_ids_mapping{$a[0]} = $a[1];
+		}
+		close(INFILE);
+	    } else {
+
+	    }
+	}
+    }
 }
+$outfile = $ARGV[0];
+
 if($numfiles == 1) {
     $infile = $ARGV[1];
     `cp $infile $outfile`;
     exit(0);
 }
-
 for($i=0; $i<$numfiles; $i++) {
     $file[$i] = $ARGV[$i+1];
-    if($chunk_ids_file =~ /\S/ && $chunk_ids_mapping{$i} =~ /\S/) {
-	$file[$i] = $file[$i] . "." . $chunk_ids_mapping{$i};
+    $j = $i+1;
+    if($chunk_ids_file =~ /\S/ && $chunk_ids_mapping{$j} =~ /\S/) {
+	$file[$i] =~ s/(\d|\.)+$//;
+	$file[$i] = $file[$i] . ".$j." . $chunk_ids_mapping{$j};
     }
+    print "file[$i] = $file[$i]\n";
 }
 open(OUTFILE, ">$outfile");
 
@@ -579,3 +597,4 @@ sub cmpChrs () {
 
     return 1;
 }
+

@@ -1388,7 +1388,11 @@ if($postprocess eq "false") {
         $doneflag = 1;
         $numdone = 0;
         for($i=1; $i<=$numchunks; $i++) {
-            $logfile = "$output_dir/rum.log_chunk.$i";
+            if($restarted{$i} =~ /\S/) {
+                $logfile = "$output_dir/rum.log_chunk.$i.$restarted{$i}";
+            } else {
+                $logfile = "$output_dir/rum.log_chunk.$i";
+            }
             if (-e $logfile) {
     	        $x = `cat $logfile`;
     	        if(!($x =~ /pipeline complete/s)) {
@@ -1431,7 +1435,11 @@ if($postprocess eq "false") {
         for($i=1; $i<=$numchunks; $i++) {
           # Check here to make sure node still running
               if($qsub eq 'true') {
-                  $logfile = "$output_dir/rum.log_chunk.$i";
+                  if($restarted{$i} =~ /\S/) {
+                      $logfile = "$output_dir/rum.log_chunk.$i.$restarted{$i}";
+                  } else {
+                      $logfile = "$output_dir/rum.log_chunk.$i";
+                  }
                   $x = "";
                   if (-e $logfile) {
         	        $x = `cat $logfile`;
@@ -1446,7 +1454,7 @@ if($postprocess eq "false") {
                        print ERRORLOG "\n *** Chunk $i seems to have failed sometime around $DATE!  Trying to restart it...\n";
                        print "\n *** Chunk $i seems to have failed sometime around $DATE!\nDon't panic, I'm going to try to restart it.\n";
                        $ofile = $output_dir . "/chunk.restart.$i" . ".o";
-                       $efile = $output_dir . "/errorlog.restart.$i";
+                       $efile = $output_dir . "/chunk.restart.$i" . ".e";
                        $outfile = "pipeline." . $i . ".sh";
                        $FILE = `cat $output_dir/$outfile`;
                        $restarted{$i}++;
@@ -1459,23 +1467,38 @@ if($postprocess eq "false") {
                        # phantom processes that didn't die properly..
                        if($restarted{$i} == 1) {
                            $FILE =~ s/\.$i/.$i.1/g;
+                           $J1 = $i;
+                           $J3 = $i;
+                           `mv $output_dir/reads.fa.$i $output_dir/reads.fa.$i.1`;
+                           if(-e "$output_dir/quals.fa.$i") {
+                               `mv $output_dir/quals.fa.$i $output_dir/quals.fa.$i.1`;
+                           }
                        } else {
                            $J1 = $restarted{$i} - 1;
                            $J2 = $restarted{$i};
                            $FILE =~ s/\.$i\.$J1/.$i.$J2/g;
+                           $J3 = "$i.$J1";
+                           `mv $output_dir/reads.fa.$i.$J1 $output_dir/reads.fa.$i.$j2`;
+                           if(-e "$output_dir/quals.fa.$i.$J1") {
+                              `mv $output_dir/quals.fa.$i.$J1 $output_dir/quals.fa.$i.$j2`;
+                           }
                        }
+                       open(OUTX, ">$output_dir/$outfile");
+                       print OUTX $FILE;
+                       close(OUTX);
 
 # Note, can't modify the postprocessing chunk to reflect the new file names, since it
-# has already been submmitted.  Instead the postprocessin scripts that need file names
+# has already been submmitted.  Instead the postprocessing scripts that need file names
 # will recover the correct ones from the restart.ids file
 
-                       # remove the old files...
-                       open(OUT, ">$output_dir/restart_deleted_logs");
-                       print OUT "------ chunk $J1 restarted, here is its error log before it was deleted --------\n";
+                       # remove the old files...  
+                       open(OUT, ">>$output_dir/restart_deleted_logs");
+                       print OUT "------ chunk $i restarted, here is its error log before it was deleted --------\n";
                        close(OUT);
-                       `cat $output_dir/errorlog.$J1 >> $output_dir/restart_deleted_logs`;
-                       unlink("$output_dir/*.$J1");
-                       unlink("$output_dir/*.$J1.*");
+                       `cat $output_dir/errorlog.$J3 >> $output_dir/restart_deleted_logs`;
+
+                       &deletefiles($output_dir, $J3);
+
                        if($i == $numchunks) {
                            # this is the post-processing node.  Check if it finished up to the
                            # post-processing, if so then remove that part so as not to repeat it.
@@ -1534,7 +1557,7 @@ if($nocat eq "false") {
     }
     for($i=2; $i<=$numchunks; $i++) {
         if(defined $restarted{$i}) {
-            $R = $restarted{1};
+            $R = $restarted{$i};
             $x = `cat $output_dir/RUM_Unique.$i.$R >> $output_dir/RUM_Unique`;
             $x = `cat $output_dir/RUM_NU.$i.$R >> $output_dir/RUM_NU`;
         } else {
@@ -1544,7 +1567,7 @@ if($nocat eq "false") {
     }
     for($i=1; $i<=$numchunks; $i++) {
        if(defined $restarted{$i}) {
-           $R = $restarted{1};
+           $R = $restarted{$i};
            if(!(open(SAMHEADER, "$output_dir/sam_header.$i.$R"))) {
               print ERRORLOG "\nERROR: Cannot open '$output_dir/sam_header.$i.$R' for reading.\n\n";
               die "\nERROR: Cannot open '$output_dir/sam_header.$i.$R' for reading.\n\n";
@@ -1573,7 +1596,7 @@ if($nocat eq "false") {
     close(SAMOUT);
     for($i=1; $i<=$numchunks; $i++) {
        if(defined $restarted{$i}) {
-           $R = $restarted{1};
+           $R = $restarted{$i};
            $x = `cat $output_dir/RUM.sam.$i.$R >> $output_dir/RUM.sam`;
        } else {
            $x = `cat $output_dir/RUM.sam.$i >> $output_dir/RUM.sam`;
@@ -1667,16 +1690,16 @@ while($doneflag == 0) {
 $filesize1 = -s "$output_dir/RUM_Unique";
 $filesize2 = -s "$output_dir/RUM_Unique.sorted";
 if($filesize1 != $filesize2) {
-    print ERRORLOG "WARNING: RUM_Unique and RUM_Unique.sorted are not the same size.  This probably indicates a problem.\n";
-    print "WARNING: RUM_Unique and RUM_Unique.sorted are not the same size.  This probably indicates a problem.\n";
+    print ERRORLOG "ERROR: RUM_Unique and RUM_Unique.sorted are not the same size.  This probably indicates a problem.\n";
+    print "ERROR: RUM_Unique and RUM_Unique.sorted are not the same size.  This probably indicates a problem.\n";
 }
 
 # Check RUM_NU and RUM_NU.sorted are the same size
 $filesize1 = -s "$output_dir/RUM_NU";
 $filesize2 = -s "$output_dir/RUM_NU.sorted";
 if($filesize1 != $filesize2) {
-    print ERRORLOG "WARNING: RUM_NU and RUM_NU.sorted are not the same size.  This could indicates a problem.\n";
-    print "WARNING: RUM_NU and RUM_NU.sorted are not the same size.  This could indicates a problem.\n";
+    print ERRORLOG "ERROR: RUM_NU and RUM_NU.sorted are not the same size.  This could indicates a problem.\n";
+    print "ERROR: RUM_NU and RUM_NU.sorted are not the same size.  This could indicates a problem.\n";
 }
 
 # XXX   More error checks to implement:
@@ -1762,18 +1785,19 @@ print ERRORLOG "--------------------------------------\n";
 if($cleanup eq 'true') {
    print "\nCleaning up some more temp files...\n\n";
    for($i=1; $i<=$numchunks; $i++) {
-      `yes|rm $output_dir/RUM_Unique.$i $output_dir/RUM_NU.$i`;
-      `yes|rm $output_dir/RUM_Unique.sorted.$i $output_dir/RUM_NU.sorted.$i`;
+      if(defined $restarted{$i}) {
+         $ext = ".$restarted{$i}";
+      } else {
+         $ext = "";
+      }
+      `yes|rm $output_dir/RUM_Unique.$i$ext $output_dir/RUM_NU.$i$ext`;
+      `yes|rm $output_dir/RUM_Unique.sorted.$i$ext $output_dir/RUM_NU.sorted.$i$ext`;
+      `yes|rm $output_dir/reads.fa.$i$ext`;
+      `yes|rm $output_dir/quals.fa.$i$ext`;
    }
    `yes|rm $output_dir/chr_counts*`;
-   if(-e "$output_dir/reads.fa.1") {
-       `yes|rm $output_dir/reads.fa.*`;
-   }
    `yes|rm $output_dir/quant.*`;
    `yes|rm $output_dir/pipeline.*`;
-   if(-e "$output_dir/quals.fa.1") {
-       `yes|rm $output_dir/quals.fa.*`;
-   }
    if($strandspecific eq 'true') {
       `yes|rm $output_dir/feature_quantifications.ps`;
       `yes|rm $output_dir/feature_quantifications.ms`;
@@ -2257,4 +2281,54 @@ sub Roman($) {
 
 sub roman($) {
     lc Roman shift;
+}
+
+sub deletefiles () {
+    ($dir, $suffix) = @_;
+
+    $dir =~ s!/$!!;
+    $suffix =~ s/^\.//;
+
+    $file[0] = "BlatNU.XXX";
+    $file[1] = "BlatUnique.XXX";
+    $file[2] = "BowtieNU.XXX";
+    $file[3] = "BowtieUnique.XXX";
+    $file[4] = "chr_counts_nu.XXX";
+    $file[5] = "chr_counts_u.XXX";
+    $file[6] = "CNU.XXX";
+    $file[7] = "GNU.XXX";
+    $file[8] = "GU.XXX";
+    $file[9] = "quant.XXX";
+    $file[10] = "R.XXX";
+    $file[11] = "R.mdust.XXX";
+    $file[12] = "rum.log_chunk.XXX";
+    $file[13] = "RUM_NU.XXX";
+    $file[14] = "RUM_NU_idsorted.XXX";
+    $file[15] = "RUM_NU.sorted.XXX";
+    $file[16] = "RUM_NU_temp.XXX";
+    $file[17] = "RUM_NU_temp2.1";
+    $file[18] = "RUM_NU_temp2.XXX";
+    $file[19] = "RUM_NU_temp2.3";
+    $file[20] = "RUM_NU_temp2.4";
+    $file[21] = "RUM_NU_temp3.XXX";
+    $file[22] = "RUM.sam.XXX";
+    $file[23] = "R.XXX.blat";
+    $file[24] = "RUM_Unique.XXX";
+    $file[25] = "RUM_Unique.sorted.XXX";
+    $file[26] = "RUM_Unique_temp.XXX";
+    $file[27] = "RUM_Unique_temp2.XXX";
+    $file[28] = "sam_header.XXX";
+    $file[29] = "TNU.XXX";
+    $file[30] = "TU.XXX";
+    $file[31] = "X.XXX";
+    $file[32] = "Y.XXX";
+
+    for($i_d=0; $i_d<@file; $i_d++) {
+	$F = $dir . "/" . $file[$i_d];
+	$F =~ s/XXX/$suffix/;
+	if(-e $F) {
+	    `yes|rm $F`;
+	}
+    }
+    return "";
 }

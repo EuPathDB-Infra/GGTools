@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 $| = 1;
 
 if(@ARGV < 1) {

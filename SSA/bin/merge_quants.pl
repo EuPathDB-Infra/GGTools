@@ -42,13 +42,15 @@ for($i=3; $i<@ARGV; $i++) {
     if($ARGV[$i] eq "-chunk_ids_file") {
 	$chunk_ids_file = $ARGV[$i+1];
 	$i++;
-	open(INFILE, $chunk_ids_file) or die "Error: cannot open '$chunk_ids_file' for reading.\n\n";
-	while($line = <INFILE>) {
-	    chomp($line);
-	    @a = split(/\t/,$line);
-	    $chunk_ids_mapping{$a[0]} = $a[1];
+	if(-e $chunk_ids_file) {
+	    open(INFILE, $chunk_ids_file) or die "Error: cannot open '$chunk_ids_file' for reading.\n\n";
+	    while($line = <INFILE>) {
+		chomp($line);
+		@a = split(/\t/,$line);
+		$chunk_ids_mapping{$a[0]} = $a[1];
+	    }
+	    close(INFILE);
 	}
-	close(INFILE);
 	$optionrecognized = 1;
     }
     if($optionrecognized == 0) {
@@ -59,7 +61,6 @@ for($i=3; $i<@ARGV; $i++) {
 $num_reads = 0;
 $first = 1;
 for($i=1; $i<=$numchunks; $i++) {
-# xxx still need to correct these names when -chunk_ids_file specified
     if($strandspecific eq "true") {
 	$filename = "quant.$strand.$i";
     } else {
