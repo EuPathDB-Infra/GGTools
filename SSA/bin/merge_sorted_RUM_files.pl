@@ -59,7 +59,6 @@ for($i=0; $i<$numfiles; $i++) {
 	$file[$i] =~ s/(\d|\.)+$//;
 	$file[$i] = $file[$i] . ".$j." . $chunk_ids_mapping{$j};
     }
-    print "file[$i] = $file[$i]\n";
 }
 open(OUTFILE, ">$outfile");
 

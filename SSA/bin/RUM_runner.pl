@@ -2,7 +2,7 @@
 # Written by Gregory R Grant
 # University of Pennsylvania, 2010
 
-$version = "1.08.  Released April 24th, 2011";
+$version = "1.09.  Released May 28th, 2011";
 
 $| = 1;
 
@@ -41,7 +41,8 @@ Note: All entries can be absolute path, or relative path to where the RUM_runner
 }
 if(@ARGV < 5) {
     die "
-
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+RUM version: $version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                  _   _   _   _   _   _   
                // \\// \\// \\// \\// \\// \\/                       
@@ -1258,7 +1259,8 @@ if($postprocess eq "false") {
             die "\nERROR: cannot open '$output_dir/$outfile' for writing\n\n";
         }
         if($qsub eq "true") {
-    	   $pipeline_file =~ s!2>[^\n]*\n!\n!gs;
+    	   $pipeline_file =~ s!2>>\s*[^\s]*!!gs;
+    	   $pipeline_file =~ s!2>\s*[^\s]*!!gs;
         }
         print OUTFILE $pipeline_file;
 
@@ -1350,7 +1352,8 @@ if($postprocess eq "false") {
             $shellscript = $shellscript . "echo finished >> $output_dir/$PPlog\n";
             $shellscript = $shellscript . "echo `date` >> $output_dir/$PPlog\n";
             if($qsub eq "true") {
-        	   $shellscript =~ s!2>[^\n]*\n!\n!gs;
+        	   $shellscript =~ s!2>>\s*[^\s]*!!gs;
+        	   $shellscript =~ s!2>\s*[^\s]*!!gs;
             }
             print OUTFILE $shellscript;
         }
@@ -1478,9 +1481,9 @@ if($postprocess eq "false") {
                            $J2 = $restarted{$i};
                            $FILE =~ s/\.$i\.$J1/.$i.$J2/g;
                            $J3 = "$i.$J1";
-                           `mv $output_dir/reads.fa.$i.$J1 $output_dir/reads.fa.$i.$j2`;
+                           `mv $output_dir/reads.fa.$i.$J1 $output_dir/reads.fa.$i.$J2`;
                            if(-e "$output_dir/quals.fa.$i.$J1") {
-                              `mv $output_dir/quals.fa.$i.$J1 $output_dir/quals.fa.$i.$j2`;
+                              `mv $output_dir/quals.fa.$i.$J1 $output_dir/quals.fa.$i.$J2`;
                            }
                        }
                        open(OUTX, ">$output_dir/$outfile");
@@ -1495,7 +1498,7 @@ if($postprocess eq "false") {
                        open(OUT, ">>$output_dir/restart_deleted_logs");
                        print OUT "------ chunk $i restarted, here is its error log before it was deleted --------\n";
                        close(OUT);
-                       `cat $output_dir/errorlog.$J3 >> $output_dir/restart_deleted_logs`;
+                       `cat $output_dir/errorlog.$i >> $output_dir/restart_deleted_logs`;
 
                        &deletefiles($output_dir, $J3);
 
@@ -1759,7 +1762,12 @@ for($i=1; $i<=$numchunks; $i++) {
         `yes|rm $output_dir/errorlog.$i`;
         $noerrors = "false";
     }
-    $E = `grep \"$output_dir\" $output_dir/rum.log_chunk.$i | grep -v finished`;
+    if(defined $restarted{$i}) {
+        $R = $restarted{$i};
+        $E = `grep \"$output_dir\" $output_dir/rum.log_chunk.$i.$R | grep -v finished`;
+    } else {
+        $E = `grep \"$output_dir\" $output_dir/rum.log_chunk.$i | grep -v finished`;
+    }
     $E =~ s/^\s*//s;
     $E =~ s/\s*$//s;
     @a = split(/\n/,$E);
