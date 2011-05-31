@@ -19,7 +19,7 @@ $pattern = $ARGV[1];
 $type = $ARGV[2];
 $minlength = $ARGV[3];
 
-if($Minlength < 5) {
+if($minlength < 5) {
     die "Error: the <minlength> parameter must be at least 5\n\n";
 }
 
