@@ -15,6 +15,8 @@ option:
                         specifically for the RUM pipeline when chunks were
                         restarted and names changed. 
 
+    -countsonly :  Output only a simple file with feature names and counts.
+
 This script will look in <dir> for files named quant.1, quant.2, etc..
 up to quant.numchunks.  Unless -strand S is set in which case it looks
 for quant.S.1, quant.S.2, etc...
@@ -28,6 +30,7 @@ $outfile = $ARGV[2];
 $strandspecific = "false";
 $strand = "";
 $chunk_ids_file = "";
+$countsonly = "false";
 for($i=3; $i<@ARGV; $i++) {
     $optionrecognized = 0;
     if($ARGV[$i] eq "-strand") {
@@ -51,6 +54,10 @@ for($i=3; $i<@ARGV; $i++) {
 	    }
 	    close(INFILE);
 	}
+	$optionrecognized = 1;
+    }
+    if($ARGV[$i] eq "-countsonly") {
+	$countsonly = "true";
 	$optionrecognized = 1;
     }
     if($optionrecognized == 0) {
@@ -94,8 +101,13 @@ $num_reads = $num_reads / 1000000;
 open(OUTFILE, ">$outfile");
 for($i=0; $i<$cnt; $i++) {
     $NL = $counts[$i]{len} / 1000;
-    $ucnt_normalized = int( $counts[$i]{Ucnt} / $NL / $num_reads * 10000 ) / 10000;
-    $totalcnt_normalized = int( ($counts[$i]{NUcnt}+$counts[$i]{Ucnt}) / $NL / $num_reads * 10000 ) / 10000;
+    if($countsonly eq "false") {
+	$ucnt_normalized = int( $counts[$i]{Ucnt} / $NL / $num_reads * 10000 ) / 10000;
+	$totalcnt_normalized = int( ($counts[$i]{NUcnt}+$counts[$i]{Ucnt}) / $NL / $num_reads * 10000 ) / 10000;
+    } else {
+	$ucnt_normalized = $counts[$i]{Ucnt};
+	$totalcnt_normalized = $counts[$i]{NUcnt}+$counts[$i]{Ucnt};
+    }
     if($counts[$i]{type} eq 'transcript') {
 	print OUTFILE "--------------------------------------------------------------------\n";
 	print OUTFILE "$counts[$i]{id}\t$counts[$i]{strand}\n";
