@@ -45,7 +45,6 @@ if($type eq 'fasta') {
     }
 }
 if($type eq 'fastq') {
-    print "here\n";
     while($line1 = <INFILE>) {
 	$line2 = <INFILE>;
 	chomp($line2);
