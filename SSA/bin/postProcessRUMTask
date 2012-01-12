@@ -83,69 +83,74 @@ if (!-e "$mainResultDir/RUM_NU") {
 
 my $NumSeqs;
 $date = `date`; chomp $date;
-print STDERR "[$date] Concatenating RUM.sam files\n";
-if (!-e "$mainResultDir/RUM.bam") { 
-  unlink("$mainResultDir/RUM.sam_tmp");
-  my %samheader;
-  my @samheaders = &sortResultFiles('sam_header.*');
-  foreach my $f (@samheaders) {
-    open(SAMHEADER, $f);
-    while (my $line = <SAMHEADER>) {
-      chomp($line);
-      $line =~ /SN:([^\s]+)\s/;
-      $samheader{$1}=$line;
+if(-e "$mainResultDir/RUM_sam.1"){  #createSAMFile=true, so need to concatenate RUM_sam.* to RUM.sam, and run samtools to create soreted bam file
+
+    print STDERR "[$date] Concatenating RUM.sam files\n";
+    if (!-e "$mainResultDir/RUM.bam") { 
+	unlink("$mainResultDir/RUM.sam_tmp");
+	my %samheader;
+	my @samheaders = &sortResultFiles('sam_header.*');
+	foreach my $f (@samheaders) {
+	    open(SAMHEADER, $f);
+	    while (my $line = <SAMHEADER>) {
+		chomp($line);
+		$line =~ /SN:([^\s]+)\s/;
+		$samheader{$1}=$line;
+	    }
+	    close(SAMHEADER);
+	}
+	open(SAMOUT, ">RUM.sam_tmp");
+	foreach my $key (sort {cmpChrs($a,$b)} keys %samheader) {
+	    my $shout = $samheader{$key};
+	    print SAMOUT "$shout\n";
+	}
+	close(SAMOUT);
+	foreach my $f (&sortResultFiles('RUM_sam.*')) {
+	    print STDERR "  Adding $f\n";
+	    &runCmd("cat $mainResultDir/$f >> $mainResultDir/RUM.sam_tmp");
+	}
+	&runCmd("/bin/mv $mainResultDir/RUM.sam_tmp $mainResultDir/RUM.sam");
+	foreach my $f (&sortResultFiles('RUM_sam.*')) {
+	    unlink($f);
+	}
+
+	# I did the following because sometimes the file RUM.sam isn't written
+	# by the time it reaches this, because of occasional turgid file system on the cluster.
+	my $flag_x = 0;
+	my $cnt_x = 0;
+	while ($flag_x == 0) {
+	    $cnt_x++;
+	    if ($cnt_x > 100) {
+		$flag_x = 1;
+	    }
+	    my $X = `tail -1 $mainResultDir/RUM.sam`;
+	    $X =~ /^seq.(\d+)/;
+	    $NumSeqs = $1;
+	    if ($NumSeqs =~ /^\d+$/) {
+		$flag_x = 1;
+	    } else {
+		sleep(5);
+	    }
+	}
     }
-    close(SAMHEADER);
-  }
-  open(SAMOUT, ">RUM.sam_tmp");
-  foreach my $key (sort {cmpChrs($a,$b)} keys %samheader) {
-    my $shout = $samheader{$key};
-    print SAMOUT "$shout\n";
-  }
-  close(SAMOUT);
-  foreach my $f (&sortResultFiles('RUM_sam.*')) {
-    print STDERR "  Adding $f\n";
-    &runCmd("cat $mainResultDir/$f >> $mainResultDir/RUM.sam_tmp");
-  }
-  &runCmd("/bin/mv $mainResultDir/RUM.sam_tmp $mainResultDir/RUM.sam");
-  foreach my $f (&sortResultFiles('RUM_sam.*')) {
-    unlink($f);
-  }
-  # I did the following because sometimes the file RUM.sam isn't written
-  # by the time it reaches this, because of occasional turgid file system on the cluster.
-  my $flag_x = 0;
-  my $cnt_x = 0;
-  while ($flag_x == 0) {
-    $cnt_x++;
-    if ($cnt_x > 100) {
-      $flag_x = 1;
+
+    $date = `date`; chomp $date;
+    print STDERR "[$date] running samtools on file to create sorted bam file\n";
+    if (!-e "$mainResultDir/RUM.bam") {
+	unlink("$mainResultDir/RUM.bam_tmp");
+	&runCmd("samtools view -b -S $mainResultDir/RUM.sam > $mainResultDir/RUM.bam_tmp");
+	&runCmd("/bin/mv $mainResultDir/RUM.bam_tmp $mainResultDir/RUM.bam");
     }
-    my $X = `tail -1 $mainResultDir/RUM.sam`;
-    $X =~ /^seq.(\d+)/;
-    $NumSeqs = $1;
-    if ($NumSeqs =~ /^\d+$/) {
-      $flag_x = 1;
-    } else {
-      sleep(5);
+    if (!-e "$mainResultDir/RUM.sorted.bam") {
+	unlink("$mainResultDir/RUM.sorted_tmp.bam");
+	&runCmd("samtools sort $mainResultDir/RUM.bam $mainResultDir/RUM.sorted_tmp");
+	&runCmd("/bin/mv $mainResultDir/RUM.sorted_tmp.bam $mainResultDir/RUM.sorted.bam");
     }
-  }
-}
-$date = `date`; chomp $date;
-print STDERR "[$date] running samtools on file to create sorted bam file\n";
-if (!-e "$mainResultDir/RUM.bam") {
-  unlink("$mainResultDir/RUM.bam_tmp");
-  &runCmd("samtools view -b -S $mainResultDir/RUM.sam > $mainResultDir/RUM.bam_tmp");
-  &runCmd("/bin/mv $mainResultDir/RUM.bam_tmp $mainResultDir/RUM.bam");
-}
-if (!-e "$mainResultDir/RUM.sorted.bam") {
-  unlink("$mainResultDir/RUM.sorted_tmp.bam");
-  &runCmd("samtools sort $mainResultDir/RUM.bam $mainResultDir/RUM.sorted_tmp");
-  &runCmd("/bin/mv $mainResultDir/RUM.sorted_tmp.bam $mainResultDir/RUM.sorted.bam");
-}
-if (!-e "$mainResultDir/RUM.sorted.bam.bai") {
-  unlink("$mainResultDir/RUM.sorted.bam_tmp.bai");
-  &runCmd("samtools index $mainResultDir/RUM.sorted.bam $mainResultDir/RUM.sorted.bam_tmp.bai");
-  &runCmd("/bin/mv $mainResultDir/RUM.sorted.bam_tmp.bai $mainResultDir/RUM.sorted.bam.bai");
+    if (!-e "$mainResultDir/RUM.sorted.bam.bai") {
+	unlink("$mainResultDir/RUM.sorted.bam_tmp.bai");
+	&runCmd("samtools index $mainResultDir/RUM.sorted.bam $mainResultDir/RUM.sorted.bam_tmp.bai");
+	&runCmd("/bin/mv $mainResultDir/RUM.sorted.bam_tmp.bai $mainResultDir/RUM.sorted.bam.bai");
+    }
 }
 
 $date = `date`; chomp $date;
