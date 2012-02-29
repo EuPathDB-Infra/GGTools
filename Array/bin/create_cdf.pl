@@ -31,6 +31,9 @@ ChipReference=
 
          <tbase-pbase> is the file output from get_pbase-tbase.pl
 
+         <minProbes> The minimum number of probes that are required for a gene to be
+         included in the cdf file (default is 3)
+
 ";
 }
 
@@ -47,6 +50,14 @@ while($line = <INFILE>) {
 }
 close(INFILE);
 
+my $minProbes;
+
+if ($ARGV[3]) {
+   $minProbes = $ARGV[3];
+   }
+else { 
+  $minProbes = 3;
+     }
 open(OUTFILE, ">>$ARGV[0]");
 
 # ARGV[0] is the name of the file with the header above
@@ -61,7 +72,7 @@ while($line = <INFILE>) {
     @a = split(/\t/,$line,2);
     @probes = split(/\t/,$a[1]);
     $numprobes = @probes;
-    if($numprobes >= 3) {
+    if($numprobes >= $minProbes) {
 	print OUTFILE "[Unit$unit]\n";
 	print OUTFILE "Name=NONE\n";
 	print OUTFILE "Direction=1\n";
