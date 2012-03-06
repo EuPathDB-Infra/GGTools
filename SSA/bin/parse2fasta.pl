@@ -25,7 +25,7 @@ if(@ARGV < 1) {
     print "OUTPUT: ";
     print "Output is written to standard out, you should redirect it to a file.\n\n";
 
-    exit();
+    exit(1);
 }
 my $optionsstart = 1;
 my $paired = "false";
@@ -166,8 +166,7 @@ if($userparamsgiven == 0) {  # the following figures out how many rows per block
 # print "secondNArow = $secondNArow\n";
 
 if($firstNArow == 0 && $secondNArow == 0) {
-    print "\nThis does not appear to be a valid file.\n\n";
-    exit();
+    die "\n $ARGV[0] does not appear to be a valid file.\n";
 }
 
 my $block = $secondNArow - $firstNArow;
@@ -198,8 +197,7 @@ while($line = <INFILE1>) {    # this loop writes out the fasta file
 	my $line_hold = $line;
 	$line =~ s/[^ACGTN.]$//;
 	if($line =~ /[^ACGTN.]/ || !($line =~ /\S/)) {
-	    print STDERR "\nERROR: in script parse2fasta.pl: There's something wrong with line $linecnt in file $ARGV[0]\nIt should be a line of sequence but it is:\n$line_hold\n\n";
-	    exit();
+	    die "\nERROR: in script parse2fasta.pl: There's something wrong with line $linecnt in file $ARGV[0]\nIt should be a line of sequence but it is:\n$line_hold\n\n";
 	}
 	$line =~ s/\./N/g;
 	print "$line\n";
@@ -210,8 +208,7 @@ while($line = <INFILE1>) {    # this loop writes out the fasta file
 	    $line_hold = $line2;
 	    $line2 =~ s/[^ACGTN.]$//;
 	    if($line2 =~ /[^ACGTN.]/ || !($line2 =~ /\S/)) {
-		print STDERR "\nERROR: in script parse2fasta.pl: There's something wrong with line $linecnt in file $ARGV[1]\nIt should be a line of sequence but it is:\n$line_hold\n\n";
-		exit();
+		die "\nERROR: in script parse2fasta.pl: There's something wrong with line $linecnt in file $ARGV[1]\nIt should be a line of sequence but it is:\n$line_hold\n\n";
 	    }
 	    $line2 =~ s/\./N/g;
 	    print "$line2\n";
