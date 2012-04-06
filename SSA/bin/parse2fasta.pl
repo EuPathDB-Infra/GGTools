@@ -72,7 +72,7 @@ if($userparamsgiven == 0) {  # the following figures out how many rows per block
 	}
 	chomp($line);
 	$line =~ s/[^ACGTN.]$//;
-	if($line =~ /^(A|C|G|T|N|\.){10}(A|C|G|T|N|\.)+$/) {
+	if($line =~ /^(A|C|G|T|N|\.){4}(A|C|G|T|N|\.)+$/) {
 	    $linearray[$cnt] = 1;
 	} else {
 	    $linearray[$cnt] = 0;
