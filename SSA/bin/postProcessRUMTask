@@ -372,12 +372,12 @@ if ($strandSpecific) {
 $date = `date`; chomp $date;
 print STDERR "[$date] Cleaning up temp files\n";
 
-if ($strandSpecific) {
-  `rm RUM_Unique.sorted.plus`;
-  `rm RUM_Unique.sorted.minus`;
-  `rm RUM_NU.sorted.plus`;
-  `rm RUM_NU.sorted.minus`;
-}
+#if ($strandSpecific) {
+#  `rm RUM_Unique.sorted.plus`;
+#  `rm RUM_Unique.sorted.minus`;
+#  `rm RUM_NU.sorted.plus`;
+#  `rm RUM_NU.sorted.minus`;
+#}
 for (my $j=1; $j<$numchunks+1; $j++) {
   `rm RUM_Unique.sorted.$j`;
   `rm RUM_NU.sorted.$j`;
