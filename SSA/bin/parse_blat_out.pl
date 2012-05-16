@@ -3,6 +3,11 @@
 # Written by Gregory R Grant 
 # University of Pennsylvania, 2010
 
+use FindBin qw($Bin);
+use lib "$Bin/../lib";
+
+#use RUM::Common qw(getave addJunctionsToSeq);
+
 $| = 1;
 # blat run on forward/reverse reads separately, reported in order
 # first make hash 'blathits' which is all alignments of the read that we would accept (indexed by t=0,1 for forward/reverse)
@@ -56,6 +61,32 @@ so make sure they conform.
 
 ";}
 
+# Given a filehandle, skip over all rows that appear to be header
+# rows. After I return, the filehandle will be positioned at the first
+# data row.
+sub skip_headers {
+    my ($fh) = @_;
+
+    my $off;
+    local $_;
+    # Skip over header lines
+    while (1) {
+        
+        $off = tell $fh;
+
+        defined ($_ = <$fh>) or last;
+
+        unless (/--------------------------------/ ||
+                /psLayout/ || 
+                /blockSizes/ || 
+                /match\s+match/ || 
+                !/\S/) {
+            last;
+        }
+    }
+    seek $fh, $off, 0;
+}
+
 $seqfile = $ARGV[0];
 $blatfile = $ARGV[1];
 $mdustfile = $ARGV[2];
@@ -65,19 +96,11 @@ $outfile2 = $ARGV[4];
 open(BLATHITS, $blatfile) or die "\nERROR: in script parse_blat_out.pl: cannot open the file '$blatfile' for reading\n\n";
 # check the blat file is in sorted order
 # print "Checking that the blat file is in correctly sorted order.\n";
+
+skip_headers(\*BLATHITS);
+
 $line = <BLATHITS>;
 chomp($line);
-
-# Skip over header lines
-while(($line =~ /--------------------------------/) || ($line =~ /psLayout/) || ($line =~ /blockSizes/) || ($line =~ /match\s+match/) || (!($line =~ /\S/))) {
-
-    # If the blat file is empty, then the line of dashes will be the
-    # last one in the file. So we need to watch for EOF while
-    # searching for the end of the header lines.
-    defined($line = <BLATHITS>) or last;
-    chomp($line);
-}
-
 $line1 = $line;
 $blatsorted = "true";
 while($line2 = <BLATHITS>) {
@@ -214,13 +237,13 @@ if($num_insertions_allowed > 1 && $paired_end eq "true") {
 
 # NOTE: insertions instead are indicated in the final output file with the "+" notation
 for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
+
     if($seq_count == $first_seq_num) {
-	$line = <BLATHITS>;
-	chomp($line);
-	while(($line =~ /--------------------------------/) || ($line =~ /psLayout/) || ($line =~ /blockSizes/) || ($line =~ /match\s+match/) || (!($line =~ /\S/))) {
-	    $line = <BLATHITS>;
-	    chomp($line);
-	}
+
+        skip_headers(\*BLATHITS);
+        $line = <BLATHITS>;
+        chomp($line);
+
 	@a = split(/\t/,$line);
 	$readlength = $a[10];
 	if($readlength < 80) {
@@ -236,9 +259,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	}
 	if($min_size_intersection_allowed >= .8 * $readlength) {
 	    $min_size_intersection_allowed = int(.6 * $readlength);
-            if($match_length_cutoff == 0) {
-		$match_length_cutoff = int(.6 * $readlength);
-	    }
+	    $match_length_cutoff = int(.6 * $readlength);
 	}
 	@a_x = split(/\t/,$line);
 	$seqname = $a[9];
@@ -327,7 +348,11 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
     }
     @a = split(/\t/,$line);
     @a_x = split(/\t/,$line);
-    while($seqnum == $seq_count) {
+
+    # We need to check if the $seqnum is defined, in case we got an
+    # empty input file.
+    while(defined($seqnum) && $seqnum == $seq_count) {
+
 	$LENGTH = getTotalSizeFromBlockSizes($a[18]);
 	$SCORE = $LENGTH - $a[1]; # This is the number of matches minus the number of mismatches, ignoring N's and gaps
 	if($SCORE > $cutoff{$seqname}) {   # so match is at least cutoff long (and this cutoff was set to be longer if there are a lot of N's (bad reads or low complexity masked by dust)
@@ -362,7 +387,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 				}
 				@qs = split(/,/,$a[19]);
 				@bs = split(/,/,$a[18]);
-				
+
 				for($h=0; $h<@qs-1; $h++) { # gap at least 8 bases from the end of a block
 				    if($qs[$h]+$bs[$h] < $qs[$h+1]) {
 					if($bs[$h] < 8 || $bs[$h+1] < 8) {
@@ -383,7 +408,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 				$blathits{$seqname}[$cnt{$seqname}][4] = $a[20];  # the t starts
 				$blathits{$seqname}[$cnt{$seqname}][5] = $a[1];   # the number of mismatches (not including N's)
 				$blathits{$seqname}[$cnt{$seqname}][6] = $a[19];  # the q starts
-				
+
 #			    print "blathits{$seqname}[$cnt{$seqname}][0]=$blathits{$seqname}[$cnt{$seqname}][0]\n";
 #			    print "blathits{$seqname}[$cnt{$seqname}][1]=$blathits{$seqname}[$cnt{$seqname}][1]\n";
 #			    print "blathits{$seqname}[$cnt{$seqname}][2]=$blathits{$seqname}[$cnt{$seqname}][2]\n";
@@ -467,15 +492,10 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 		}
 	    }
 	}
+        skip_headers(\*BLATHITS);
 	$line = <BLATHITS>;
 	chomp($line);
-	while(($line =~ /--------------------------------/) || ($line =~ /psLayout/) || ($line =~ /blockSizes/) || ($line =~ /match\s+match/) || (!($line =~ /\S/))) {
-	    $line = <BLATHITS>;
-	    if($line eq '') {
-		last;
-	    }
-	    chomp($line);
-	}	    
+
 	@a = split(/\t/,$line);
 	@a_x = split(/\t/,$line);
 	$seqname = $a[9];
@@ -496,9 +516,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 	    }
 	    if($min_size_intersection_allowed >= .8 * $readlength) {
 		$min_size_intersection_allowed = int(.6 * $readlength);
-		if($match_length_cutoff == 0) {
-		    $match_length_cutoff = int(.6 * $readlength);
-		}
+		$match_length_cutoff = int(.6 * $readlength);
 	    }
 	}
     }
@@ -820,13 +838,13 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 		}
 		$bstart = $bstarts[0];
 		$bend = $bends[$e-1];
-		
+
 #		    print "----------------\n";
 #		    print "$read_mapping_to_genome_coords[0][$i]\n";
 #		    print "$read_mapping_to_genome_coords[1][$j]\n";
 #		    print "aave = $aave\n";
 #		    print "bave = $bave\n";
-		
+
 		$proceedflag = 0;
 		if($astrand eq "+" && $bstrand eq "+" && $aave <= $bave) {
 		    $proceedflag = 1;
@@ -969,7 +987,7 @@ for($seq_count=$first_seq_num; $seq_count<=$last_seq_num; $seq_count++) {
 			if($flag != 1) {
 			    $consistent = 0;
 			}
-			
+
 			if($first_overlap_exon < @astarts-1 || $last_overlap_exon > 0) {
 			    if($bends[0] != $aends[$first_overlap_exon]) {
 				$consistent = 0;
@@ -1405,7 +1423,7 @@ sub intersect () {
 	$seq =~ s/://g;
 	@s_i = split(//,$seq);
 	$newseq = "";
-	
+
 	$ADD = 0;
 	@INS_i = split(/\+/,$seq);
 	$insertions_length_in_prefix=0;
@@ -1466,25 +1484,42 @@ sub intersect () {
     }
 }
 
-sub addJunctionsToSeq () {
-    ($seq, $spans) = @_;
+
+sub getave {
+    my ($spans_x) = @_;
+
+    my @spans = split(/, /, $spans_x);
+    my $ave = 0;
+    my $len = 0;
+    for my $span (@spans) {
+	my ($start, $end) = split(/-/, $span);
+	$ave = $ave + $end*($end+1)/2 - $start*($start-1)/2;
+	$len = $len + $end - $start + 1;
+    }
+    $ave = $ave / $len;
+
+    return $ave;
+}
+
+sub addJunctionsToSeq {
+    my ($seq, $spans) = @_;
     $seq =~ s/://g;
-    @s_j = split(//,$seq);
-    @b_j = split(/, /,$spans);
-    $seq_out = "";
-    $place = 0;
-    for($j_j=0; $j_j<@b_j; $j_j++) {
-	@c_j = split(/-/,$b_j[$j_j]);
-	$len_j = $c_j[1] - $c_j[0] + 1;
+    my @s_j = split(//,$seq);
+    my @b_j = split(/, /,$spans);
+    my $seq_out = "";
+    my $place = 0;
+    for(my $j_j=0; $j_j<@b_j; $j_j++) {
+	my @c_j = split(/-/,$b_j[$j_j]);
+	my $len_j = ($c_j[1]||0) - ($c_j[0]||0) + 1;
 	if($seq_out =~ /\S/) { # to avoid putting a colon at the beginning
 	    $seq_out = $seq_out . ":";
 	}
-	for($k_j=0; $k_j<$len_j; $k_j++) {
-	    if($s_j[$place] eq "+") {
-		$seq_out = $seq_out . $s_j[$place];
+	for(my $k_j=0; $k_j<$len_j; $k_j++) {
+	    if(defined($s_j[$place]) && $s_j[$place] eq "+") {
+		$seq_out = $seq_out . ($s_j[$place]||"");
 		$place++;
-		until($s_j[$place] eq "+") {
-		    $seq_out = $seq_out . $s_j[$place];
+		until(defined($s_j[$place]) && $s_j[$place] eq "+") {
+		    $seq_out = $seq_out . ($s_j[$place]||"");
 		    $place++;
 		    if($place > @s_j-1) {
 			last;
@@ -1492,25 +1527,9 @@ sub addJunctionsToSeq () {
 		}
 		$k_j--;
 	    }
-	    $seq_out = $seq_out . $s_j[$place];
+	    $seq_out = $seq_out . ($s_j[$place]||"");
 	    $place++;
 	}
     }
     return $seq_out;
-}
-
-sub getave () {
-    ($spans_x) = @_;
-
-    @SS3 = split(/, /, $spans_x);
-    $spanave = 0;
-    $spanlen = 0;
-    for($ss3=0; $ss3<@SS3; $ss3++) {
-	@SS4 = split(/-/, $SS3[$ss3]);
-	$spanave = $spanave + $SS4[1]*($SS4[1]+1)/2 - $SS4[0]*($SS4[0]-1)/2;
-	$spanlen = $spanlen + $SS4[1] - $SS4[0] + 1;
-    }
-    $spanave = $spanave / $spanlen;
-
-    return $spanave;
 }
