@@ -399,15 +399,19 @@ public class ChIP_Chip_Peak_Finder {
 	int chrNum = 0;
 	int numChromosomes = 0;
 	Object[] answer = new Object[6];
-	int[] probeCnt = new int[500];
+	/*
+         int[] probeCnt = new int[500];
+	*/
 	int maxProbes = 0;
 	int numProbes = 0;
 	String line = "";
 	String firstline = "";
 	boolean header = false;
-	for(int i=0; i<500; i++) {
+	/*
+        for(int i=0; i<500; i++) {
 	    probeCnt[i] = 0;
 	}
+        */
         try {
             inFile = new FileInputStream(file);
         } catch(FileNotFoundException e) {
@@ -473,6 +477,9 @@ public class ChIP_Chip_Peak_Finder {
 	    String tmp = (String) e2.nextElement();
 	    names[contigs.get(tmp)] = tmp;
 	}
+	
+        int[] probeCnt = new int[contigs.size()];
+
 	try {
             inFile = new FileInputStream(file);
             BufferedReader br = new BufferedReader(new InputStreamReader(inFile));
