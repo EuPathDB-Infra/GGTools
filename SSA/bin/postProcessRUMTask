@@ -85,13 +85,8 @@ if (!-e "$mainResultDir/RUM_NU") {
   print STDERR "  DONE\n";
 }
 
-my $NumSeqs;
-$date = `date`; chomp $date;
-if(-e "$mainResultDir/RUM_sam.1"){  #createSAMFile=true, so need to concatenate RUM_sam.* to RUM.sam, and run samtools to create soreted bam file
 
-    print STDERR "[$date] Concatenating RUM.sam files\n";
-    if (!-e "$mainResultDir/RUM.bam") { 
-	unlink("$mainResultDir/RUM.sam_tmp");
+if (!-e "$mainResultDir/sam_header"){
 	my %samheader;
 	my @samheaders = &sortResultFiles('sam_header.*');
 	foreach my $f (@samheaders) {
@@ -103,17 +98,28 @@ if(-e "$mainResultDir/RUM_sam.1"){  #createSAMFile=true, so need to concatenate 
 	    }
 	    close(SAMHEADER);
 	}
-	open(SAMOUT, ">RUM.sam_tmp");
+	open(SAMOUT, ">$mainResultDir/sam_header");
 	foreach my $key (sort {cmpChrs($a,$b)} keys %samheader) {
 	    my $shout = $samheader{$key};
 	    print SAMOUT "$shout\n";
 	}
 	close(SAMOUT);
+}
+
+my $NumSeqs;
+$date = `date`; chomp $date;
+if(-e "$mainResultDir/RUM_sam.1"){  #createSAMFile=true, so need to concatenate RUM_sam.* to RUM.sam, and run samtools to create soreted bam file
+
+    print STDERR "[$date] Concatenating RUM.sam files\n";
+    if (!-e "$mainResultDir/RUM.bam") { 
+	unlink("$mainResultDir/RUM.sam_tmp");
+
 	foreach my $f (&sortResultFiles('RUM_sam.*')) {
 	    print STDERR "  Adding $f\n";
 	    &runCmd("cat $mainResultDir/$f >> $mainResultDir/RUM.sam_tmp");
 	}
-	&runCmd("/bin/mv $mainResultDir/RUM.sam_tmp $mainResultDir/RUM.sam");
+	&runCmd("cat $mainResultDir/sam_header $mainResultDir/RUM.sam_tmp > $mainResultDir/RUM.sam");
+
 	foreach my $f (&sortResultFiles('RUM_sam.*')) {
 	    unlink($f);
 	}
@@ -298,7 +304,9 @@ if ($strandSpecific) {
     &runCmd("perl $perlScriptsDir/breakup_RUM_files_by_strand.pl $mainResultDir/RUM_Unique.sorted $mainResultDir/RUM_Unique.sorted.plus.tmp $mainResultDir/RUM_Unique.sorted.minus 2>> $mainResultDir/PostProcessing-errorlog");
     &runCmd("/bin/mv $mainResultDir/RUM_Unique.sorted.plus.tmp $mainResultDir/RUM_Unique.sorted.plus");
   }
-    &runCmd("perl $perlScriptsDir/rum2sam.pl $mainResultDir/RUM_Unique.sorted.plus none $readsFile $qualFile $mainResultDir/RUM_Unique_plus.sam 2>> $mainResultDir/PostProcessing-errorlog");
+    &runCmd("perl $perlScriptsDir/rum2sam.pl $mainResultDir/RUM_Unique.sorted.plus none $readsFile $qualFile $mainResultDir/RUM_Unique_plus.sam_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+    
+    &runCmd("cat $mainResultDir/sam_header $mainResultDir/RUM_Unique_plus.sam_tmp > $mainResultDir/RUM_Unique_plus.sam");
 
    if (!-e "$mainResultDir/RUM_Unique_plus.bam") {
 	unlink("$mainResultDir/RUM_Unique_plus.bam_tmp");
@@ -323,7 +331,9 @@ if ($strandSpecific) {
 	&runCmd("/bin/mv $mainResultDir/RUM_Unique_plus.bw_tmp $mainResultDir/RUM_Unique_plus.bw");
     }
 
-    &runCmd("perl $perlScriptsDir/rum2sam.pl $mainResultDir/RUM_Unique.sorted.minus none $readsFile $qualFile $mainResultDir/RUM_Unique_minus.sam 2>> $mainResultDir/PostProcessing-errorlog");
+    &runCmd("perl $perlScriptsDir/rum2sam.pl $mainResultDir/RUM_Unique.sorted.minus none $readsFile $qualFile $mainResultDir/RUM_Unique_minus.sam_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+
+    &runCmd("cat $mainResultDir/sam_header $mainResultDir/RUM_Unique_minus.sam_tmp > $mainResultDir/RUM_Unique_minus.sam");
 
    if (!-e "$mainResultDir/RUM_Unique_minus.bam") {
 	unlink("$mainResultDir/RUM_Unique_minus.bam_tmp");
@@ -354,8 +364,14 @@ if ($strandSpecific) {
     &runCmd("perl $perlScriptsDir/breakup_RUM_files_by_strand.pl $mainResultDir/RUM_NU.sorted $mainResultDir/RUM_NU.sorted.plus.tmp $mainResultDir/RUM_NU.sorted.minus 2>> $mainResultDir/PostProcessing-errorlog");
     &runCmd("/bin/mv $mainResultDir/RUM_NU.sorted.plus.tmp $mainResultDir/RUM_NU.sorted.plus");
   }
-    &runCmd("perl $perlScriptsDir/rum2sam.pl none $mainResultDir/RUM_NU.sorted.plus $readsFile $qualFile $mainResultDir/RUM_NU_plus.sam 2>> $mainResultDir/PostProcessing-errorlog");
-    &runCmd("perl $perlScriptsDir/rum2sam.pl none $mainResultDir/RUM_NU.sorted.minus $readsFile $qualFile $mainResultDir/RUM_NU_minus.sam 2>> $mainResultDir/PostProcessing-errorlog");
+    &runCmd("perl $perlScriptsDir/rum2sam.pl none $mainResultDir/RUM_NU.sorted.plus $readsFile $qualFile $mainResultDir/RUM_NU_plus.sam_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+
+    &runCmd("cat $mainResultDir/sam_header $mainResultDir/RUM_NU_plus.sam_tmp > $mainResultDir/RUM_NU_plus.sam");
+
+    &runCmd("perl $perlScriptsDir/rum2sam.pl none $mainResultDir/RUM_NU.sorted.minus $readsFile $qualFile $mainResultDir/RUM_NU_minus.sam_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+
+    &runCmd("cat $mainResultDir/sam_header $mainResultDir/RUM_NU_minus.sam_tmp > $mainResultDir/RUM_NU_minus.sam");
+
    if (!-e "$mainResultDir/RUM_NU_plus.bam") {
 	unlink("$mainResultDir/RUM_NU_plus.bam_tmp");
 	&runCmd("samtools view -b -S $mainResultDir/RUM_NU_plus.sam > $mainResultDir/RUM_NU_plus.bam_tmp");
@@ -399,8 +415,14 @@ if ($strandSpecific) {
 	&runCmd("/bin/mv $mainResultDir/RUM_NU_minus.bw_tmp $mainResultDir/RUM_NU_minus.bw");
     }
 }else {
-    &runCmd("perl $perlScriptsDir/rum2sam.pl $mainResultDir/RUM_Unique.sorted none $readsFile $qualFile $mainResultDir/RUM_Unique.sam 2>> $mainResultDir/PostProcessing-errorlog");
-    &runCmd("perl $perlScriptsDir/rum2sam.pl none $mainResultDir/RUM_NU.sorted $readsFile $qualFile $mainResultDir/RUM_NU.sam 2>> $mainResultDir/PostProcessing-errorlog");
+    &runCmd("perl $perlScriptsDir/rum2sam.pl $mainResultDir/RUM_Unique.sorted none $readsFile $qualFile $mainResultDir/RUM_Unique.sam_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+
+    &runCmd("cat $mainResultDir/sam_header $mainResultDir/RUM_Unique.sam_tmp > $mainResultDir/RUM_Unique.sam");
+
+    &runCmd("perl $perlScriptsDir/rum2sam.pl none $mainResultDir/RUM_NU.sorted $readsFile $qualFile $mainResultDir/RUM_NU.sam_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+
+    &runCmd("cat $mainResultDir/sam_header $mainResultDir/RUM_NU.sam_tmp > $mainResultDir/RUM_NU.sam");
+
    if (!-e "$mainResultDir/RUM_Unique.bam") {
 	unlink("$mainResultDir/RUM_Unique.bam_tmp");
 	&runCmd("samtools view -b -S $mainResultDir/RUM_Unique.sam > $mainResultDir/RUM_Unique.bam_tmp");
@@ -450,32 +472,26 @@ if ($strandSpecific) {
 $date = `date`; chomp $date;
 print STDERR "[$date] Cleaning up temp files\n";
 
-#if ($strandSpecific) {
-#  `rm RUM_Unique.sorted.plus`;
-#  `rm RUM_Unique.sorted.minus`;
-#  `rm RUM_NU.sorted.plus`;
-#  `rm RUM_NU.sorted.minus`;
-#}
 for (my $j=1; $j<$numchunks+1; $j++) {
-#  `rm RUM_Unique.sorted.$j`;
-#  `rm RUM_NU.sorted.$j`;
+  `rm RUM_Unique.sorted.$j`;
+  `rm RUM_NU.sorted.$j`;
 }    
 if ($haveTranscripts) {
-#  `rm quant*`;
+  `rm quant*`;
   if ($strandSpecific) {
-#    `rm feature_quantifications.ps`;
-#    `rm feature_quantifications.ms`;
-#    `rm feature_quantifications.pa`;
-#    `rm feature_quantifications.ma`;
-#    `rm feature_quantifications_normalized.ps`;
-#    `rm feature_quantifications_normalized.ms`;
-#    `rm feature_quantifications_normalized.pa`;
-#    `rm feature_quantifications_normalized.ma`;
+    `rm feature_quantifications.ps`;
+    `rm feature_quantifications.ms`;
+    `rm feature_quantifications.pa`;
+    `rm feature_quantifications.ma`;
+    `rm feature_quantifications_normalized.ps`;
+    `rm feature_quantifications_normalized.ms`;
+    `rm feature_quantifications_normalized.pa`;
+    `rm feature_quantifications_normalized.ma`;
   }
 }
-#`rm RUM.sam*`;
-#`rm chr_counts*`;
-#`rm sam_header*`;
+`rm RUM.sam*`;
+`rm chr_counts*`;
+`rm sam_header*`;
 
 $date = `date`; chomp $date;
 print STDERR "[$date] Post processing steps complete\n";
