@@ -8,7 +8,7 @@ use Getopt::Long;
 
 
 
-my($inputDir, $mainResultDir, $haveTranscripts,$genomeFastaFile, $geneAnnotationFile,$strandSpecific,$createJunctions,$readsFile,$qualFile,$topLevelSeqSizeFile) = @_;
+my($inputDir, $mainResultDir, $haveTranscripts,$genomeFastaFile, $geneAnnotationFile,$strandSpecific,$createJunctions,$readsFile,$qualFile,$topLevelSeqSizeFile,$createBigWigFile) = @_;
 
 my $perlScriptsDir = "$ENV{GUS_HOME}/bin";
 
@@ -19,6 +19,7 @@ my $perlScriptsDir = "$ENV{GUS_HOME}/bin";
             "haveTranscripts!" => \$haveTranscripts, 
             "strandSpecific!" => \$strandSpecific, 
             "createJunctions!" => \$createJunctions, 
+            "createBigWigFile!" => \$createBigWigFile, 
             "readsFile=s" => \$readsFile, 
             "qualFile=s" => \$qualFile, 
             "topLevelSeqSizeFile=s" => \$topLevelSeqSizeFile 
@@ -85,6 +86,7 @@ if (!-e "$mainResultDir/RUM_NU") {
   print STDERR "  DONE\n";
 }
 
+if ($createBigWigFile){#create bigwig file
 
 if (!-e "$mainResultDir/sam_header"){
 	my %samheader;
@@ -111,7 +113,7 @@ $date = `date`; chomp $date;
 if(-e "$mainResultDir/RUM_sam.1"){  #createSAMFile=true, so need to concatenate RUM_sam.* to RUM.sam, and run samtools to create soreted bam file
 
     print STDERR "[$date] Concatenating RUM.sam files\n";
-    if (!-e "$mainResultDir/RUM.bam") { 
+    if (!-e "$mainResultDir/RUM.sam") { 
 	unlink("$mainResultDir/RUM.sam_tmp");
 
 	foreach my $f (&sortResultFiles('RUM_sam.*')) {
@@ -119,6 +121,7 @@ if(-e "$mainResultDir/RUM_sam.1"){  #createSAMFile=true, so need to concatenate 
 	    &runCmd("cat $mainResultDir/$f >> $mainResultDir/RUM.sam_tmp");
 	}
 	&runCmd("cat $mainResultDir/sam_header $mainResultDir/RUM.sam_tmp > $mainResultDir/RUM.sam");
+        unlink("$mainResultDir/RUM.sam_tmp");
 
 	foreach my $f (&sortResultFiles('RUM_sam.*')) {
 	    unlink($f);
@@ -144,22 +147,22 @@ if(-e "$mainResultDir/RUM_sam.1"){  #createSAMFile=true, so need to concatenate 
 	}
     }
     $date = `date`; chomp $date;
-    print STDERR "[$date] running samtools on file to create sorted bam file\n";
-    if (!-e "$mainResultDir/RUM.bam") {
-	unlink("$mainResultDir/RUM.bam_tmp");
-	&runCmd("samtools view -b -S $mainResultDir/RUM.sam > $mainResultDir/RUM.bam_tmp");
-	&runCmd("/bin/mv $mainResultDir/RUM.bam_tmp $mainResultDir/RUM.bam");
-    }
-    if (!-e "$mainResultDir/RUM.sorted.bam") {
-	unlink("$mainResultDir/RUM.sorted_tmp.bam");
-	&runCmd("samtools sort $mainResultDir/RUM.bam $mainResultDir/RUM.sorted_tmp");
-	&runCmd("/bin/mv $mainResultDir/RUM.sorted_tmp.bam $mainResultDir/RUM.sorted.bam");
-    }
-    if (!-e "$mainResultDir/RUM.sorted.bam.bai") {
-	unlink("$mainResultDir/RUM.sorted.bam_tmp.bai");
-	&runCmd("samtools index $mainResultDir/RUM.sorted.bam $mainResultDir/RUM.sorted.bam_tmp.bai");
-	&runCmd("/bin/mv $mainResultDir/RUM.sorted.bam_tmp.bai $mainResultDir/RUM.sorted.bam.bai");
-    }
+    #print STDERR "[$date] running samtools on file to create sorted bam file\n";
+    #if (!-e "$mainResultDir/RUM.bam") {
+    #	unlink("$mainResultDir/RUM.bam_tmp");
+    #	&runCmd("samtools view -b -S $mainResultDir/RUM.sam > $mainResultDir/RUM.bam_tmp");
+    #	&runCmd("/bin/mv $mainResultDir/RUM.bam_tmp $mainResultDir/RUM.bam");
+    #    }
+    #    if (!-e "$mainResultDir/RUM.sorted.bam") {
+    #	unlink("$mainResultDir/RUM.sorted_tmp.bam");
+    #	&runCmd("samtools sort $mainResultDir/RUM.bam $mainResultDir/RUM.sorted_tmp");
+    #	&runCmd("/bin/mv $mainResultDir/RUM.sorted_tmp.bam $mainResultDir/RUM.sorted.bam");
+    #}
+    #    if (!-e "$mainResultDir/RUM.sorted.bam.bai") {
+    #	unlink("$mainResultDir/RUM.sorted.bam_tmp.bai");
+    #	&runCmd("samtools index $mainResultDir/RUM.sorted.bam $mainResultDir/RUM.sorted.bam_tmp.bai");
+    #	&runCmd("/bin/mv $mainResultDir/RUM.sorted.bam_tmp.bai $mainResultDir/RUM.sorted.bam.bai");
+    #    }
 }
 
 $date = `date`; chomp $date;
@@ -308,6 +311,8 @@ if ($strandSpecific) {
     
     &runCmd("cat $mainResultDir/sam_header $mainResultDir/RUM_Unique_plus.sam_tmp > $mainResultDir/RUM_Unique_plus.sam");
 
+    unlink("$mainResultDir/RUM_Unique_plus.sam_tmp");
+
    if (!-e "$mainResultDir/RUM_Unique_plus.bam") {
 	unlink("$mainResultDir/RUM_Unique_plus.bam_tmp");
 	&runCmd("samtools view -b -S $mainResultDir/RUM_Unique_plus.sam > $mainResultDir/RUM_Unique_plus.bam_tmp");
@@ -317,24 +322,26 @@ if ($strandSpecific) {
 	unlink("$mainResultDir/RUM_Unique_plus.sorted_tmp.bam");
 	&runCmd("samtools sort $mainResultDir/RUM_Unique_plus.bam $mainResultDir/RUM_Unique_plus.sorted_tmp");
 	&runCmd("/bin/mv $mainResultDir/RUM_Unique_plus.sorted_tmp.bam $mainResultDir/RUM_Unique_plus.sorted.bam");
+	unlink("$mainResultDir/RUM_Unique_plus.bam");
     }
 
     if (!-e "$mainResultDir/RUM_Unique_plus.bedgraph") {
 	unlink("$mainResultDir/RUM_Unique_plus.bedgraph_tmp");
 	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_Unique_plus.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_Unique_plus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_Unique_plus.bedgraph_tmp $mainResultDir/RUM_Unique_plus.bedgraph");
+	unlink("$mainResultDir/RUM_Unique_plus.sorted.bam");
     }
 
-    if (!-e "$mainResultDir/RUM_Unique_plus.bw") {
-	unlink("$mainResultDir/RUM_Unique_plus.bw_tmp");
-	&runCmd("bedGraphToBigWig $mainResultDir/RUM_Unique_plus.bedgraph $topLevelSeqSizeFile $mainResultDir/RUM_Unique_plus.bw_tmp 2>> $mainResultDir/PostProcessing-errorlog");
-	&runCmd("/bin/mv $mainResultDir/RUM_Unique_plus.bw_tmp $mainResultDir/RUM_Unique_plus.bw");
-    }
+    #if (!-e "$mainResultDir/RUM_Unique_plus.bw") {
+    #	unlink("$mainResultDir/RUM_Unique_plus.bw_tmp");
+    #	&runCmd("bedGraphToBigWig $mainResultDir/RUM_Unique_plus.bedgraph $topLevelSeqSizeFile $mainResultDir/RUM_Unique_plus.bw_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+    #	&runCmd("/bin/mv $mainResultDir/RUM_Unique_plus.bw_tmp $mainResultDir/RUM_Unique_plus.bw");
+    #    }
 
     &runCmd("perl $perlScriptsDir/rum2sam.pl $mainResultDir/RUM_Unique.sorted.minus none $readsFile $qualFile $mainResultDir/RUM_Unique_minus.sam_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 
     &runCmd("cat $mainResultDir/sam_header $mainResultDir/RUM_Unique_minus.sam_tmp > $mainResultDir/RUM_Unique_minus.sam");
-
+	unlink("$mainResultDir/RUM_Unique_minus.sam_tmp");
    if (!-e "$mainResultDir/RUM_Unique_minus.bam") {
 	unlink("$mainResultDir/RUM_Unique_minus.bam_tmp");
 	&runCmd("samtools view -b -S $mainResultDir/RUM_Unique_minus.sam > $mainResultDir/RUM_Unique_minus.bam_tmp");
@@ -344,19 +351,21 @@ if ($strandSpecific) {
 	unlink("$mainResultDir/RUM_Unique_minus.sorted_tmp.bam");
 	&runCmd("samtools sort $mainResultDir/RUM_Unique_minus.bam $mainResultDir/RUM_Unique_minus.sorted_tmp");
 	&runCmd("/bin/mv $mainResultDir/RUM_Unique_minus.sorted_tmp.bam $mainResultDir/RUM_Unique_minus.sorted.bam");
+        unlink("$mainResultDir/RUM_Unique_minus.bam");
     }
 
     if (!-e "$mainResultDir/RUM_Unique_minus.bedgraph") {
 	unlink("$mainResultDir/RUM_Unique_minus.bedgraph_tmp");
 	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_Unique_minus.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_Unique_minus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_Unique_minus.bedgraph_tmp $mainResultDir/RUM_Unique_minus.bedgraph");
+        unlink("$mainResultDir/RUM_Unique_minus.sorted.bam");
     }
 
-    if (!-e "$mainResultDir/RUM_Unique_minus.bw") {
-	unlink("$mainResultDir/RUM_Unique_minus.bw_tmp");
-	&runCmd("bedGraphToBigWig $mainResultDir/RUM_Unique_minus.bedgraph $topLevelSeqSizeFile $mainResultDir/RUM_Unique_minus.bw_tmp 2>> $mainResultDir/PostProcessing-errorlog");
-	&runCmd("/bin/mv $mainResultDir/RUM_Unique_minus.bw_tmp $mainResultDir/RUM_Unique_minus.bw");
-    }
+    #if (!-e "$mainResultDir/RUM_Unique_minus.bw") {
+    #	unlink("$mainResultDir/RUM_Unique_minus.bw_tmp");
+    #	&runCmd("bedGraphToBigWig $mainResultDir/RUM_Unique_minus.bedgraph $topLevelSeqSizeFile $mainResultDir/RUM_Unique_minus.bw_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+    #	&runCmd("/bin/mv $mainResultDir/RUM_Unique_minus.bw_tmp $mainResultDir/RUM_Unique_minus.bw");
+    #    }
 
     # breakup RUM_NU into plus and minus, create NU_plus/minus sam/bam, sorted bam and BigWig
   if (!-e "$mainResultDir/RUM_NU.sorted.plus") {
@@ -368,9 +377,13 @@ if ($strandSpecific) {
 
     &runCmd("cat $mainResultDir/sam_header $mainResultDir/RUM_NU_plus.sam_tmp > $mainResultDir/RUM_NU_plus.sam");
 
+    unlink("$mainResultDir/RUM_NU_plus.sam_tmp");
+
     &runCmd("perl $perlScriptsDir/rum2sam.pl none $mainResultDir/RUM_NU.sorted.minus $readsFile $qualFile $mainResultDir/RUM_NU_minus.sam_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 
     &runCmd("cat $mainResultDir/sam_header $mainResultDir/RUM_NU_minus.sam_tmp > $mainResultDir/RUM_NU_minus.sam");
+
+    unlink("$mainResultDir/RUM_NU_minus.sam_tmp");
 
    if (!-e "$mainResultDir/RUM_NU_plus.bam") {
 	unlink("$mainResultDir/RUM_NU_plus.bam_tmp");
@@ -379,20 +392,22 @@ if ($strandSpecific) {
     }
     if (!-e "$mainResultDir/RUM_NU_plus.sorted.bam") {
 	unlink("$mainResultDir/RUM_NU_plus.sorted_tmp.bam");
-	&runCmd("samtools sort $mainResultDir/RUM_NU_plus.bam $mainResultDir/RUM_NU_plus.sorted_tmp");
+	&runCmd("samtools sort $mainResultDir/RUM_NU_plus.bam $mainResultDir/RUM_NU_plus.sorted_tmp.bam");
 	&runCmd("/bin/mv $mainResultDir/RUM_NU_plus.sorted_tmp.bam $mainResultDir/RUM_NU_plus.sorted.bam");
+	unlink("$mainResultDir/RUM_NU_plus.bam")
     }
     if (!-e "$mainResultDir/RUM_NU_plus.bedgraph") {
 	unlink("$mainResultDir/RUM_NU_plus.bedgraph_tmp");
 	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_NU_plus.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_NU_plus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_NU_plus.bedgraph_tmp $mainResultDir/RUM_NU_plus.bedgraph");
+	unlink("$mainResultDir/RUM_NU_plus.sorted.bam")
     }
 
-    if (!-e "$mainResultDir/RUM_NU_plus.bw") {
-	unlink("$mainResultDir/RUM_NU_plus.bw_tmp");
-	&runCmd("bedGraphToBigWig $mainResultDir/RUM_NU_plus.bedgraph $topLevelSeqSizeFile $mainResultDir/RUM_NU_plus.bw_tmp 2>> $mainResultDir/PostProcessing-errorlog");
-	&runCmd("/bin/mv $mainResultDir/RUM_NU_plus.bw_tmp $mainResultDir/RUM_NU_plus.bw");
-    }
+    #if (!-e "$mainResultDir/RUM_NU_plus.bw") {
+    #	unlink("$mainResultDir/RUM_NU_plus.bw_tmp");
+    #	&runCmd("bedGraphToBigWig $mainResultDir/RUM_NU_plus.bedgraph $topLevelSeqSizeFile $mainResultDir/RUM_NU_plus.bw_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+    #	&runCmd("/bin/mv $mainResultDir/RUM_NU_plus.bw_tmp $mainResultDir/RUM_NU_plus.bw");
+    #    }
    if (!-e "$mainResultDir/RUM_NU_minus.bam") {
 	unlink("$mainResultDir/RUM_NU_minus.bam_tmp");
 	&runCmd("samtools view -b -S $mainResultDir/RUM_NU_minus.sam > $mainResultDir/RUM_NU_minus.bam_tmp");
@@ -402,18 +417,20 @@ if ($strandSpecific) {
 	unlink("$mainResultDir/RUM_NU_minus.sorted_tmp.bam");
 	&runCmd("samtools sort $mainResultDir/RUM_NU_minus.bam $mainResultDir/RUM_NU_minus.sorted_tmp");
 	&runCmd("/bin/mv $mainResultDir/RUM_NU_minus.sorted_tmp.bam $mainResultDir/RUM_NU_minus.sorted.bam");
+	unlink("$mainResultDir/RUM_NU_minus.bam");
     }
    if (!-e "$mainResultDir/RUM_NU_minus.bedgraph") {
 	unlink("$mainResultDir/RUM_NU_minus.bedgraph_tmp");
 	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_NU_minus.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_NU_minus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_NU_minus.bedgraph_tmp $mainResultDir/RUM_NU_minus.bedgraph");
+	unlink("$mainResultDir/RUM_NU_minus.sorted.bam");
     }
 
-    if (!-e "$mainResultDir/RUM_NU_minus.bw") {
-	unlink("$mainResultDir/RUM_NU_minus.bw_tmp");
-	&runCmd("bedGraphToBigWig $mainResultDir/RUM_NU_minus.bedgraph $topLevelSeqSizeFile $mainResultDir/RUM_NU_minus.bw_tmp 2>> $mainResultDir/PostProcessing-errorlog");
-	&runCmd("/bin/mv $mainResultDir/RUM_NU_minus.bw_tmp $mainResultDir/RUM_NU_minus.bw");
-    }
+    #if (!-e "$mainResultDir/RUM_NU_minus.bw") {
+    #	unlink("$mainResultDir/RUM_NU_minus.bw_tmp");
+    #	&runCmd("bedGraphToBigWig $mainResultDir/RUM_NU_minus.bedgraph $topLevelSeqSizeFile $mainResultDir/RUM_NU_minus.bw_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+    #	&runCmd("/bin/mv $mainResultDir/RUM_NU_minus.bw_tmp $mainResultDir/RUM_NU_minus.bw");
+    #    }
 }else {
     &runCmd("perl $perlScriptsDir/rum2sam.pl $mainResultDir/RUM_Unique.sorted none $readsFile $qualFile $mainResultDir/RUM_Unique.sam_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 
@@ -494,6 +511,8 @@ if ($haveTranscripts) {
 `rm sam_header*`;
 
 $date = `date`; chomp $date;
+}# end of 
+
 print STDERR "[$date] Post processing steps complete\n";
 chdir("$currDir") || die "$!";
 
