@@ -392,7 +392,7 @@ if ($strandSpecific) {
     }
     if (!-e "$mainResultDir/RUM_NU_plus.sorted.bam") {
 	unlink("$mainResultDir/RUM_NU_plus.sorted_tmp.bam");
-	&runCmd("samtools sort $mainResultDir/RUM_NU_plus.bam $mainResultDir/RUM_NU_plus.sorted_tmp.bam");
+	&runCmd("samtools sort $mainResultDir/RUM_NU_plus.bam $mainResultDir/RUM_NU_plus.sorted_tmp");
 	&runCmd("/bin/mv $mainResultDir/RUM_NU_plus.sorted_tmp.bam $mainResultDir/RUM_NU_plus.sorted.bam");
 	unlink("$mainResultDir/RUM_NU_plus.bam")
     }
