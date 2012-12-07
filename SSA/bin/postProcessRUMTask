@@ -313,23 +313,26 @@ if ($strandSpecific) {
 
     unlink("$mainResultDir/RUM_Unique_plus.sam_tmp");
 
-   if (!-e "$mainResultDir/RUM_Unique_plus.bam") {
-	unlink("$mainResultDir/RUM_Unique_plus.bam_tmp");
-	&runCmd("samtools view -b -S $mainResultDir/RUM_Unique_plus.sam > $mainResultDir/RUM_Unique_plus.bam_tmp");
-	&runCmd("/bin/mv $mainResultDir/RUM_Unique_plus.bam_tmp $mainResultDir/RUM_Unique_plus.bam");
-    }
-    if (!-e "$mainResultDir/RUM_Unique_plus.sorted.bam") {
-	unlink("$mainResultDir/RUM_Unique_plus.sorted_tmp.bam");
-	&runCmd("samtools sort $mainResultDir/RUM_Unique_plus.bam $mainResultDir/RUM_Unique_plus.sorted_tmp");
-	&runCmd("/bin/mv $mainResultDir/RUM_Unique_plus.sorted_tmp.bam $mainResultDir/RUM_Unique_plus.sorted.bam");
-	unlink("$mainResultDir/RUM_Unique_plus.bam");
-    }
+# commented out by Haiming Wang 12-07-2012. use rum2cov.pl to generate bedgraph file instead
+#   if (!-e "$mainResultDir/RUM_Unique_plus.bam") {
+#	unlink("$mainResultDir/RUM_Unique_plus.bam_tmp");
+#	&runCmd("samtools view -b -S $mainResultDir/RUM_Unique_plus.sam > $mainResultDir/RUM_Unique_plus.bam_tmp");
+#	&runCmd("/bin/mv $mainResultDir/RUM_Unique_plus.bam_tmp $mainResultDir/RUM_Unique_plus.bam");
+#    }
+#    if (!-e "$mainResultDir/RUM_Unique_plus.sorted.bam") {
+#	unlink("$mainResultDir/RUM_Unique_plus.sorted_tmp.bam");
+#	&runCmd("samtools sort $mainResultDir/RUM_Unique_plus.bam $mainResultDir/RUM_Unique_plus.sorted_tmp");
+#	&runCmd("/bin/mv $mainResultDir/RUM_Unique_plus.sorted_tmp.bam $mainResultDir/RUM_Unique_plus.sorted.bam");
+#	unlink("$mainResultDir/RUM_Unique_plus.bam");
+#    }
 
     if (!-e "$mainResultDir/RUM_Unique_plus.bedgraph") {
 	unlink("$mainResultDir/RUM_Unique_plus.bedgraph_tmp");
-	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_Unique_plus.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_Unique_plus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+# commented out by Haiming Wang 12-07-2012. use rum2cov.pl to generate bedgraph file instead
+#	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_Unique_plus.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_Unique_plus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+	&runCmd("perl $perlScriptsDir/rum2cov.pl RUM_Unique.sorted.plus  >$mainResultDir/RUM_Unique_plus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_Unique_plus.bedgraph_tmp $mainResultDir/RUM_Unique_plus.bedgraph");
-	unlink("$mainResultDir/RUM_Unique_plus.sorted.bam");
+#	unlink("$mainResultDir/RUM_Unique_plus.sorted.bam");
     }
 
     #if (!-e "$mainResultDir/RUM_Unique_plus.bw") {
@@ -342,23 +345,27 @@ if ($strandSpecific) {
 
     &runCmd("cat $mainResultDir/sam_header $mainResultDir/RUM_Unique_minus.sam_tmp > $mainResultDir/RUM_Unique_minus.sam");
 	unlink("$mainResultDir/RUM_Unique_minus.sam_tmp");
-   if (!-e "$mainResultDir/RUM_Unique_minus.bam") {
-	unlink("$mainResultDir/RUM_Unique_minus.bam_tmp");
-	&runCmd("samtools view -b -S $mainResultDir/RUM_Unique_minus.sam > $mainResultDir/RUM_Unique_minus.bam_tmp");
-	&runCmd("/bin/mv $mainResultDir/RUM_Unique_minus.bam_tmp $mainResultDir/RUM_Unique_minus.bam");
-    }
-    if (!-e "$mainResultDir/RUM_Unique_minus.sorted.bam") {
-	unlink("$mainResultDir/RUM_Unique_minus.sorted_tmp.bam");
-	&runCmd("samtools sort $mainResultDir/RUM_Unique_minus.bam $mainResultDir/RUM_Unique_minus.sorted_tmp");
-	&runCmd("/bin/mv $mainResultDir/RUM_Unique_minus.sorted_tmp.bam $mainResultDir/RUM_Unique_minus.sorted.bam");
-        unlink("$mainResultDir/RUM_Unique_minus.bam");
-    }
+
+
+# commented out by Haiming Wang 12-07-2012. use rum2cov.pl to generate bedgraph file instead
+#   if (!-e "$mainResultDir/RUM_Unique_minus.bam") {
+#	unlink("$mainResultDir/RUM_Unique_minus.bam_tmp");
+#	&runCmd("samtools view -b -S $mainResultDir/RUM_Unique_minus.sam > $mainResultDir/RUM_Unique_minus.bam_tmp");
+#	&runCmd("/bin/mv $mainResultDir/RUM_Unique_minus.bam_tmp $mainResultDir/RUM_Unique_minus.bam");
+#    }
+#    if (!-e "$mainResultDir/RUM_Unique_minus.sorted.bam") {
+#	unlink("$mainResultDir/RUM_Unique_minus.sorted_tmp.bam");
+#	&runCmd("samtools sort $mainResultDir/RUM_Unique_minus.bam $mainResultDir/RUM_Unique_minus.sorted_tmp");
+#	&runCmd("/bin/mv $mainResultDir/RUM_Unique_minus.sorted_tmp.bam $mainResultDir/RUM_Unique_minus.sorted.bam");
+#        unlink("$mainResultDir/RUM_Unique_minus.bam");
+#    }
 
     if (!-e "$mainResultDir/RUM_Unique_minus.bedgraph") {
 	unlink("$mainResultDir/RUM_Unique_minus.bedgraph_tmp");
-	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_Unique_minus.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_Unique_minus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+#	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_Unique_minus.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_Unique_minus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+	&runCmd("perl $perlScriptsDir/rum2cov.pl $mainResultDir/RUM_Unique.sorted.minus >$mainResultDir/RUM_Unique_minus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_Unique_minus.bedgraph_tmp $mainResultDir/RUM_Unique_minus.bedgraph");
-        unlink("$mainResultDir/RUM_Unique_minus.sorted.bam");
+#        unlink("$mainResultDir/RUM_Unique_minus.sorted.bam");
     }
 
     #if (!-e "$mainResultDir/RUM_Unique_minus.bw") {
@@ -385,22 +392,25 @@ if ($strandSpecific) {
 
     unlink("$mainResultDir/RUM_NU_minus.sam_tmp");
 
-   if (!-e "$mainResultDir/RUM_NU_plus.bam") {
-	unlink("$mainResultDir/RUM_NU_plus.bam_tmp");
-	&runCmd("samtools view -b -S $mainResultDir/RUM_NU_plus.sam > $mainResultDir/RUM_NU_plus.bam_tmp");
-	&runCmd("/bin/mv $mainResultDir/RUM_NU_plus.bam_tmp $mainResultDir/RUM_NU_plus.bam");
-    }
-    if (!-e "$mainResultDir/RUM_NU_plus.sorted.bam") {
-	unlink("$mainResultDir/RUM_NU_plus.sorted_tmp.bam");
-	&runCmd("samtools sort $mainResultDir/RUM_NU_plus.bam $mainResultDir/RUM_NU_plus.sorted_tmp");
-	&runCmd("/bin/mv $mainResultDir/RUM_NU_plus.sorted_tmp.bam $mainResultDir/RUM_NU_plus.sorted.bam");
-	unlink("$mainResultDir/RUM_NU_plus.bam")
-    }
+# commented out by Haiming Wang 12-07-2012. use rum2cov.pl to generate bedgraph file instead
+#   if (!-e "$mainResultDir/RUM_NU_plus.bam") {
+#	unlink("$mainResultDir/RUM_NU_plus.bam_tmp");
+#	&runCmd("samtools view -b -S $mainResultDir/RUM_NU_plus.sam > $mainResultDir/RUM_NU_plus.bam_tmp");
+#	&runCmd("/bin/mv $mainResultDir/RUM_NU_plus.bam_tmp $mainResultDir/RUM_NU_plus.bam");
+#    }
+#    if (!-e "$mainResultDir/RUM_NU_plus.sorted.bam") {
+#	unlink("$mainResultDir/RUM_NU_plus.sorted_tmp.bam");
+#	&runCmd("samtools sort $mainResultDir/RUM_NU_plus.bam $mainResultDir/RUM_NU_plus.sorted_tmp");
+#	&runCmd("/bin/mv $mainResultDir/RUM_NU_plus.sorted_tmp.bam $mainResultDir/RUM_NU_plus.sorted.bam");
+#	unlink("$mainResultDir/RUM_NU_plus.bam")
+#    }
+
     if (!-e "$mainResultDir/RUM_NU_plus.bedgraph") {
 	unlink("$mainResultDir/RUM_NU_plus.bedgraph_tmp");
-	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_NU_plus.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_NU_plus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+#	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_NU_plus.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_NU_plus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+	&runCmd("perl $perlScriptsDir/rum2cov.pl $mainResultDir/RUM_NU.sorted.plus >$mainResultDir/RUM_NU_plus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_NU_plus.bedgraph_tmp $mainResultDir/RUM_NU_plus.bedgraph");
-	unlink("$mainResultDir/RUM_NU_plus.sorted.bam")
+#	unlink("$mainResultDir/RUM_NU_plus.sorted.bam")
     }
 
     #if (!-e "$mainResultDir/RUM_NU_plus.bw") {
@@ -408,22 +418,27 @@ if ($strandSpecific) {
     #	&runCmd("bedGraphToBigWig $mainResultDir/RUM_NU_plus.bedgraph $topLevelSeqSizeFile $mainResultDir/RUM_NU_plus.bw_tmp 2>> $mainResultDir/PostProcessing-errorlog");
     #	&runCmd("/bin/mv $mainResultDir/RUM_NU_plus.bw_tmp $mainResultDir/RUM_NU_plus.bw");
     #    }
-   if (!-e "$mainResultDir/RUM_NU_minus.bam") {
-	unlink("$mainResultDir/RUM_NU_minus.bam_tmp");
-	&runCmd("samtools view -b -S $mainResultDir/RUM_NU_minus.sam > $mainResultDir/RUM_NU_minus.bam_tmp");
-	&runCmd("/bin/mv $mainResultDir/RUM_NU_minus.bam_tmp $mainResultDir/RUM_NU_minus.bam");
-    }
-    if (!-e "$mainResultDir/RUM_NU_minus.sorted.bam") {
-	unlink("$mainResultDir/RUM_NU_minus.sorted_tmp.bam");
-	&runCmd("samtools sort $mainResultDir/RUM_NU_minus.bam $mainResultDir/RUM_NU_minus.sorted_tmp");
-	&runCmd("/bin/mv $mainResultDir/RUM_NU_minus.sorted_tmp.bam $mainResultDir/RUM_NU_minus.sorted.bam");
-	unlink("$mainResultDir/RUM_NU_minus.bam");
-    }
+
+
+# commented out by Haiming Wang 12-07-2012. use rum2cov.pl to generate bedgraph file instead
+#   if (!-e "$mainResultDir/RUM_NU_minus.bam") {
+#	unlink("$mainResultDir/RUM_NU_minus.bam_tmp");
+#	&runCmd("samtools view -b -S $mainResultDir/RUM_NU_minus.sam > $mainResultDir/RUM_NU_minus.bam_tmp");
+#	&runCmd("/bin/mv $mainResultDir/RUM_NU_minus.bam_tmp $mainResultDir/RUM_NU_minus.bam");
+#    }
+#    if (!-e "$mainResultDir/RUM_NU_minus.sorted.bam") {
+#	unlink("$mainResultDir/RUM_NU_minus.sorted_tmp.bam");
+#	&runCmd("samtools sort $mainResultDir/RUM_NU_minus.bam $mainResultDir/RUM_NU_minus.sorted_tmp");
+#	&runCmd("/bin/mv $mainResultDir/RUM_NU_minus.sorted_tmp.bam $mainResultDir/RUM_NU_minus.sorted.bam");
+#	unlink("$mainResultDir/RUM_NU_minus.bam");
+#    }
+
    if (!-e "$mainResultDir/RUM_NU_minus.bedgraph") {
 	unlink("$mainResultDir/RUM_NU_minus.bedgraph_tmp");
-	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_NU_minus.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_NU_minus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+#	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_NU_minus.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_NU_minus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+	&runCmd("perl $perlScriptsDir/rum2cov.pl $mainResultDir/RUM_NU.sorted.minus >$mainResultDir/RUM_NU_minus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_NU_minus.bedgraph_tmp $mainResultDir/RUM_NU_minus.bedgraph");
-	unlink("$mainResultDir/RUM_NU_minus.sorted.bam");
+	#unlink("$mainResultDir/RUM_NU_minus.sorted.bam");
     }
 
     #if (!-e "$mainResultDir/RUM_NU_minus.bw") {
@@ -440,19 +455,22 @@ if ($strandSpecific) {
 
     &runCmd("cat $mainResultDir/sam_header $mainResultDir/RUM_NU.sam_tmp > $mainResultDir/RUM_NU.sam");
 
-   if (!-e "$mainResultDir/RUM_Unique.bam") {
-	unlink("$mainResultDir/RUM_Unique.bam_tmp");
-	&runCmd("samtools view -b -S $mainResultDir/RUM_Unique.sam > $mainResultDir/RUM_Unique.bam_tmp");
-	&runCmd("/bin/mv $mainResultDir/RUM_Unique.bam_tmp $mainResultDir/RUM_Unique.bam");
-    }
-    if (!-e "$mainResultDir/RUM_Unique.sorted.bam") {
-	unlink("$mainResultDir/RUM_Unique.sorted_tmp.bam");
-	&runCmd("samtools sort $mainResultDir/RUM_Unique.bam $mainResultDir/RUM_Unique.sorted_tmp");
-	&runCmd("/bin/mv $mainResultDir/RUM_Unique.sorted_tmp.bam $mainResultDir/RUM_Unique.sorted.bam");
-    }
+# commented out by Haiming Wang 12-07-2012. use rum2cov.pl to generate bedgraph file instead
+#   if (!-e "$mainResultDir/RUM_Unique.bam") {
+#	unlink("$mainResultDir/RUM_Unique.bam_tmp");
+#	&runCmd("samtools view -b -S $mainResultDir/RUM_Unique.sam > $mainResultDir/RUM_Unique.bam_tmp");
+#	&runCmd("/bin/mv $mainResultDir/RUM_Unique.bam_tmp $mainResultDir/RUM_Unique.bam");
+#    }
+#    if (!-e "$mainResultDir/RUM_Unique.sorted.bam") {
+#	unlink("$mainResultDir/RUM_Unique.sorted_tmp.bam");
+#	&runCmd("samtools sort $mainResultDir/RUM_Unique.bam $mainResultDir/RUM_Unique.sorted_tmp");
+#	&runCmd("/bin/mv $mainResultDir/RUM_Unique.sorted_tmp.bam $mainResultDir/RUM_Unique.sorted.bam");
+#    }
+
    if (!-e "$mainResultDir/RUM_Unique.bedgraph") {
 	unlink("$mainResultDir/RUM_Unique.bedgraph_tmp");
-	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_Unique.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_Unique.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+#	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_Unique.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_Unique.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+	&runCmd("perl $perlScriptsDir/rum2cov.pl $mainResultDir/RUM_Unique.sorted >$mainResultDir/RUM_Unique.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_Unique.bedgraph_tmp $mainResultDir/RUM_Unique.bedgraph");
     }
 
@@ -461,19 +479,23 @@ if ($strandSpecific) {
 	&runCmd("bedGraphToBigWig $mainResultDir/RUM_Unique.bedgraph $topLevelSeqSizeFile $mainResultDir/RUM_Unique.bw_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_Unique.bw_tmp $mainResultDir/RUM_Unique.bw");
     }
-   if (!-e "$mainResultDir/RUM_NU.bam") {
-	unlink("$mainResultDir/RUM_NU.bam_tmp");
-	&runCmd("samtools view -b -S $mainResultDir/RUM_NU.sam > $mainResultDir/RUM_NU.bam_tmp");
-	&runCmd("/bin/mv $mainResultDir/RUM_NU.bam_tmp $mainResultDir/RUM_NU.bam");
-    }
-    if (!-e "$mainResultDir/RUM_NU.sorted.bam") {
-	unlink("$mainResultDir/RUM_NU.sorted_tmp.bam");
-	&runCmd("samtools sort $mainResultDir/RUM_NU.bam $mainResultDir/RUM_NU.sorted_tmp");
-	&runCmd("/bin/mv $mainResultDir/RUM_NU.sorted_tmp.bam $mainResultDir/RUM_NU.sorted.bam");
-    }
+
+# commented out by Haiming Wang 12-07-2012. use rum2cov.pl to generate bedgraph file instead
+#   if (!-e "$mainResultDir/RUM_NU.bam") {
+#	unlink("$mainResultDir/RUM_NU.bam_tmp");
+#	&runCmd("samtools view -b -S $mainResultDir/RUM_NU.sam > $mainResultDir/RUM_NU.bam_tmp");
+#	&runCmd("/bin/mv $mainResultDir/RUM_NU.bam_tmp $mainResultDir/RUM_NU.bam");
+#    }
+#    if (!-e "$mainResultDir/RUM_NU.sorted.bam") {
+#	unlink("$mainResultDir/RUM_NU.sorted_tmp.bam");
+#	&runCmd("samtools sort $mainResultDir/RUM_NU.bam $mainResultDir/RUM_NU.sorted_tmp");
+#	&runCmd("/bin/mv $mainResultDir/RUM_NU.sorted_tmp.bam $mainResultDir/RUM_NU.sorted.bam");
+#    }
+
    if (!-e "$mainResultDir/RUM_NU.bedgraph") {
 	unlink("$mainResultDir/RUM_NU.bedgraph_tmp");
-	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_NU.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_NU.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+#   &runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_NU.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_NU.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+   &runCmd("perl $perlScriptsDir/rum2cov.pl $mainResultDir/RUM_NU.sorted >$mainResultDir/RUM_NU.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_NU.bedgraph_tmp $mainResultDir/RUM_NU.bedgraph");
     }
 
