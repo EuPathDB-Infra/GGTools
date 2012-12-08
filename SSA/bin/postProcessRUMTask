@@ -330,7 +330,7 @@ if ($strandSpecific) {
 	unlink("$mainResultDir/RUM_Unique_plus.bedgraph_tmp");
 # commented out by Haiming Wang 12-07-2012. use rum2cov.pl to generate bedgraph file instead
 #	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_Unique_plus.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_Unique_plus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
-	&runCmd("perl $perlScriptsDir/rum2cov.pl RUM_Unique.sorted.plus  >$mainResultDir/RUM_Unique_plus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+	&runCmd("perl $perlScriptsDir/rum2cov.pl $mainResultDir/RUM_Unique.sorted.plus $mainResultDir/RUM_Unique_plus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_Unique_plus.bedgraph_tmp $mainResultDir/RUM_Unique_plus.bedgraph");
 #	unlink("$mainResultDir/RUM_Unique_plus.sorted.bam");
     }
@@ -363,7 +363,7 @@ if ($strandSpecific) {
     if (!-e "$mainResultDir/RUM_Unique_minus.bedgraph") {
 	unlink("$mainResultDir/RUM_Unique_minus.bedgraph_tmp");
 #	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_Unique_minus.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_Unique_minus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
-	&runCmd("perl $perlScriptsDir/rum2cov.pl $mainResultDir/RUM_Unique.sorted.minus >$mainResultDir/RUM_Unique_minus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+	&runCmd("perl $perlScriptsDir/rum2cov.pl $mainResultDir/RUM_Unique.sorted.minus $mainResultDir/RUM_Unique_minus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_Unique_minus.bedgraph_tmp $mainResultDir/RUM_Unique_minus.bedgraph");
 #        unlink("$mainResultDir/RUM_Unique_minus.sorted.bam");
     }
@@ -408,7 +408,7 @@ if ($strandSpecific) {
     if (!-e "$mainResultDir/RUM_NU_plus.bedgraph") {
 	unlink("$mainResultDir/RUM_NU_plus.bedgraph_tmp");
 #	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_NU_plus.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_NU_plus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
-	&runCmd("perl $perlScriptsDir/rum2cov.pl $mainResultDir/RUM_NU.sorted.plus >$mainResultDir/RUM_NU_plus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+	&runCmd("perl $perlScriptsDir/rum2cov.pl $mainResultDir/RUM_NU.sorted.plus $mainResultDir/RUM_NU_plus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_NU_plus.bedgraph_tmp $mainResultDir/RUM_NU_plus.bedgraph");
 #	unlink("$mainResultDir/RUM_NU_plus.sorted.bam")
     }
@@ -436,7 +436,7 @@ if ($strandSpecific) {
    if (!-e "$mainResultDir/RUM_NU_minus.bedgraph") {
 	unlink("$mainResultDir/RUM_NU_minus.bedgraph_tmp");
 #	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_NU_minus.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_NU_minus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
-	&runCmd("perl $perlScriptsDir/rum2cov.pl $mainResultDir/RUM_NU.sorted.minus >$mainResultDir/RUM_NU_minus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+	&runCmd("perl $perlScriptsDir/rum2cov.pl $mainResultDir/RUM_NU.sorted.minus $mainResultDir/RUM_NU_minus.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_NU_minus.bedgraph_tmp $mainResultDir/RUM_NU_minus.bedgraph");
 	#unlink("$mainResultDir/RUM_NU_minus.sorted.bam");
     }
@@ -470,7 +470,7 @@ if ($strandSpecific) {
    if (!-e "$mainResultDir/RUM_Unique.bedgraph") {
 	unlink("$mainResultDir/RUM_Unique.bedgraph_tmp");
 #	&runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_Unique.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_Unique.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
-	&runCmd("perl $perlScriptsDir/rum2cov.pl $mainResultDir/RUM_Unique.sorted >$mainResultDir/RUM_Unique.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+	&runCmd("perl $perlScriptsDir/rum2cov.pl $mainResultDir/RUM_Unique.sorted $mainResultDir/RUM_Unique.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_Unique.bedgraph_tmp $mainResultDir/RUM_Unique.bedgraph");
     }
 
@@ -495,7 +495,7 @@ if ($strandSpecific) {
    if (!-e "$mainResultDir/RUM_NU.bedgraph") {
 	unlink("$mainResultDir/RUM_NU.bedgraph_tmp");
 #   &runCmd("genomeCoverageBed -bg -ibam $mainResultDir/RUM_NU.sorted.bam -g $topLevelSeqSizeFile >$mainResultDir/RUM_NU.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
-   &runCmd("perl $perlScriptsDir/rum2cov.pl $mainResultDir/RUM_NU.sorted >$mainResultDir/RUM_NU.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
+   &runCmd("perl $perlScriptsDir/rum2cov.pl $mainResultDir/RUM_NU.sorted $mainResultDir/RUM_NU.bedgraph_tmp 2>> $mainResultDir/PostProcessing-errorlog");
 	&runCmd("/bin/mv $mainResultDir/RUM_NU.bedgraph_tmp $mainResultDir/RUM_NU.bedgraph");
     }
 
