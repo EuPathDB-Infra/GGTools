@@ -158,6 +158,12 @@ if($non_uniquers eq "true") {
     if(!($a[4] =~ /^[ACGTN:+]+$/)) {
 	$flag = 1;
     }
+
+    ## if the un-unique file is empty, set the flag = 0, then the script does not die
+    if (-z "$rum_nu_file") {
+        $flag = 0;
+    }
+
     if($flag == 1) {
 	die "\nERROR: in script rum2sam.pl: the first line of the file '$rum_nu_file' is misformatted,\nit does not look like a RUM output file.\n";
     }
