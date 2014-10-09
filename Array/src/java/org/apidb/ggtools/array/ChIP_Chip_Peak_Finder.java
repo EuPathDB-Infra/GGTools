@@ -1,16 +1,18 @@
 package org.apidb.ggtools.array;
 
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
-import java.lang.Math;
-import java.util.Comparator;
-import java.util.Hashtable;
-import java.io.*;
-import java.lang.Exception;
-import java.lang.NullPointerException;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.Array;
-import java.util.Date;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Enumeration;
+import java.util.Hashtable;
 
 /*
   args[0] = input filename
@@ -25,7 +27,6 @@ import java.util.Date;
 public class ChIP_Chip_Peak_Finder {
     public static void main(String[] args) {
 	try {
-	    theApp = new ChIP_Chip_Peak_Finder();
 	    boolean inspect = false;
 	    File dataFile = null;
 	    if(Array.getLength(args) == 1) {
@@ -33,7 +34,7 @@ public class ChIP_Chip_Peak_Finder {
 		inspect = true;
 	    }
 	    if((Array.getLength(args) < 7 && Array.getLength(args) > 1) || Array.getLength(args) == 0) {
-		theApp.printUsage();
+		printUsage();
 		System.exit(0);
 	    }
 	    boolean output_smoothed = true;
@@ -89,11 +90,12 @@ public class ChIP_Chip_Peak_Finder {
 	    }
 	    System.err.println("");
 	    System.err.println("Assessing data file...");
-	    Object[] fileSpecs = theApp.assessFile(dataFile);
+	    Object[] fileSpecs = assessFile(dataFile);
 	    int numChromosomes = (Integer) (fileSpecs[0]);
 	    int maxProbesOneSpan = (Integer) (fileSpecs[1]);
 	    int numProbes = (Integer) (fileSpecs[2]);
-	    Hashtable<String, Integer> contigs = (Hashtable) (fileSpecs[3]);
+	    @SuppressWarnings("unchecked")
+	    Hashtable<String, Integer> contigs = (Hashtable<String, Integer>) (fileSpecs[3]);
 	    String[] names = (String[]) (fileSpecs[4]);
 	    boolean header = (Boolean) (fileSpecs[5]);
 	    if(!inspect) {
@@ -103,9 +105,9 @@ public class ChIP_Chip_Peak_Finder {
 		out.write("# smoothing max gap = " + smoother_maxgap + "\n");
 		out.write("# num consecutive probes cutoff = " + num_consecutive_probes + "\n");
 		out.write("# num chromosomes = " + numChromosomes + "\n");
-		String mm = theApp.format((long)maxProbesOneSpan);
+		String mm = format(maxProbesOneSpan);
 		out.write("# max probes on one chromosome in the data file = " + mm + "\n");
-		mm = theApp.format((long)numProbes);
+		mm = format(numProbes);
 		out.write("# num probes in data file = " + mm + "\n");
 		out.flush();
 	    }
@@ -116,28 +118,28 @@ public class ChIP_Chip_Peak_Finder {
 		System.out.println("smoothing max gap = " + smoother_maxgap);
 		System.out.println("num consecutive probes cutoff = " + num_consecutive_probes);
 		System.out.println("num chromosomes = " + numChromosomes);
-		String mm = theApp.format((long)maxProbesOneSpan);
+		String mm = format(maxProbesOneSpan);
 		System.out.println("max probes on one chromosome in the data file = " + mm);
-		mm = theApp.format((long)numProbes);
+		mm = format(numProbes);
 		System.out.println("num probes in data file = " + mm);
 	    }
 	    System.err.println("");
 	    System.err.println("Reading the data file...");
-	    Object[] readfileOutput = theApp.readFile(dataFile, numChromosomes, maxProbesOneSpan, numProbes, contigs, header);
+	    Object[] readfileOutput = readFile(dataFile, numChromosomes, maxProbesOneSpan, numProbes, contigs, header);
 	    int[][] locationArray = (int[][])readfileOutput[0];
 	    float[][] logratioArray = (float[][])readfileOutput[1];
 	    int[] readCnt = (int[])readfileOutput[2];
 	    genomelength = (Long)readfileOutput[3];
-	    long[] chrMin = ((long[])readfileOutput[4]);
-	    long[] chrMax = ((long[])readfileOutput[5]);
-	    String mm = theApp.format((long)maxProbesOneSpan);
+	    //long[] chrMin = ((long[])readfileOutput[4]);
+	    //long[] chrMax = ((long[])readfileOutput[5]);
+	    String mm = format(maxProbesOneSpan);
 	    if(!inspect) {
 		out.write("# max probes on one chromosome = " + mm + "\n");
 	    }
 	    else {
 		System.out.println("max probes on one chromosome = " + mm);
 	    }
-	    mm = theApp.format((long)genomelength);
+	    mm = format(genomelength);
 	    if(!inspect) {
 		out.write("# genomelength = " + mm + "\n");
 	    }
@@ -191,7 +193,7 @@ public class ChIP_Chip_Peak_Finder {
 
 	    System.err.println("\nSmoothing...");
 	    for(int chr=0; chr<numChromosomes; chr++) {
-		logratioArray[chr] = theApp.Smooth(logratioArray[chr], locationArray[chr], readCnt[chr], smoother_maxgap);
+		logratioArray[chr] = Smooth(logratioArray[chr], locationArray[chr], readCnt[chr], smoother_maxgap);
 	    }
 
 	    if(output_smoothed) {
@@ -218,8 +220,8 @@ public class ChIP_Chip_Peak_Finder {
 		out3.close();
 	    }
 
-	    double SD = theApp.computeSD(logratioArray, readCnt, numChromosomes);
-	    double mean = theApp.computeMEAN(logratioArray, readCnt, numChromosomes);
+	    double SD = computeSD(logratioArray, readCnt, numChromosomes);
+	    double mean = computeMEAN(logratioArray, readCnt, numChromosomes);
 	    double X = SD * mult_of_SD_cutoff + mean;
 	    out.write("# SD = " + SD + "\n");
 	    out.write("# mean = " + mean + "\n");
@@ -278,13 +280,13 @@ public class ChIP_Chip_Peak_Finder {
 	    }	    
 	    out.flush();
 	} catch (Exception e) { 
-	    theApp.printUsage();
+	    printUsage();
 	    e.printStackTrace(System.err);
             System.exit(0);
 	}
     }
 
-    public double computeSD(float[][] logratioArray, int[] readCnt, int numChromosomes) {
+    public static double computeSD(float[][] logratioArray, int[] readCnt, int numChromosomes) {
 	double mean = 0;
 	int cnt = 0;
 	for(int chr=0; chr<numChromosomes; chr++) {
@@ -293,7 +295,7 @@ public class ChIP_Chip_Peak_Finder {
 		cnt++;
 	    }
 	}
-	mean = mean / (double) cnt;
+	mean = mean / cnt;
 	double sd = 0;
 	for(int chr=0; chr<numChromosomes; chr++) {
 	    for(int i=0; i<readCnt[chr]; i++) {
@@ -306,7 +308,7 @@ public class ChIP_Chip_Peak_Finder {
 	return sd;
     }
 
-    public double computeMEAN(float[][] logratioArray, int[] readCnt, int numChromosomes) {
+    public static double computeMEAN(float[][] logratioArray, int[] readCnt, int numChromosomes) {
 	double mean = 0;
 	int cnt = 0;
 	for(int chr=0; chr<numChromosomes; chr++) {
@@ -315,18 +317,18 @@ public class ChIP_Chip_Peak_Finder {
 		cnt++;
 	    }
 	}
-	mean = mean / (double) cnt;
+	mean = mean / cnt;
 
 	return mean;
     }
 
-    private Object[] readFile(File file, int numChromosomes, int maxProbesOneSpan, int numProbes, Hashtable<String, Integer> contigs, boolean header) {
+    private static Object[] readFile(File file, int numChromosomes, int maxProbesOneSpan, int numProbes, Hashtable<String, Integer> contigs, boolean header) {
         FileInputStream inFile = null;
 	int[][] locationArray = new int[numChromosomes][maxProbesOneSpan];
 	float[][] logratioArray = new float[numChromosomes][maxProbesOneSpan];
 	System.out.println("numChromosomes = " + numChromosomes);
 	System.out.println("maxProbesOneSpan = " + maxProbesOneSpan);
-	int maxReadLength = 0;
+	//int maxReadLength = 0;
 	int[] readCnt = new int[numChromosomes];
         try {
             inFile = new FileInputStream(file);
@@ -343,7 +345,7 @@ public class ChIP_Chip_Peak_Finder {
 	for(int i=0; i<numChromosomes; i++) {
 	    readCnt[i] = 0;
 	}
-	int flag = 0;
+	//int flag = 0;
         try {
             inFile = new FileInputStream(file);
             BufferedReader br = new BufferedReader(new InputStreamReader(inFile));
@@ -371,7 +373,7 @@ public class ChIP_Chip_Peak_Finder {
 		temparray[i][0] = locationArray[chr][i];
 		temparray[i][1] = logratioArray[chr][i];
 	    }
-	    Arrays.sort(temparray, theApp.FirstIndexComparator);
+	    Arrays.sort(temparray, FirstIndexComparator);
 	    for(int i=0; i<readCnt[chr]; i++) {
 		locationArray[chr][i] = (int)temparray[i][0];
 		logratioArray[chr][i] = temparray[i][1];
@@ -393,10 +395,9 @@ public class ChIP_Chip_Peak_Finder {
 	return RETURN;
     }
 
-    private Object[] assessFile(File file) {
-        FileInputStream inFile = null;
-        int x = 0;
-	int chrNum = 0;
+    private static Object[] assessFile(File file) {
+        //int x = 0;
+	//int chrNum = 0;
 	int numChromosomes = 0;
 	Object[] answer = new Object[6];
         /*
@@ -412,96 +413,107 @@ public class ChIP_Chip_Peak_Finder {
 	    probeCnt[i] = 0;
 	}
         */
-        try {
-            inFile = new FileInputStream(file);
-        } catch(FileNotFoundException e) {
-	    System.err.println("The file " + file + " does not seem to exist...");
-            System.exit(1);
-        }
-        try {
-            BufferedReader br = new BufferedReader(new InputStreamReader(inFile));
-	    firstline = br.readLine();
-	    if(firstline == null) {
-		System.err.println("This file is empty...");
-		System.exit(1);
-	    }
-	    String[] temp = firstline.split("\\s+", 0);	
-	    int n = Array.getLength(temp);
-	    if(n < 3) {
-		System.err.println("\nError: the file must have three tab delimited columns, check line one.\n\n");
-		System.exit(0);
-	    }
-	    try {
-		Float.parseFloat(temp[1]);
-		Float.parseFloat(temp[2]);
-	    } catch(Exception e5) {
-		header = true;
-	    }
-            inFile.close();
-        } catch(IOException e2) {
-	    e2.printStackTrace(System.err);
-            System.exit(1);
-        }
-	int linecounter = 0;
+    BufferedReader br = null;
+	try {
+	  br = new BufferedReader(new InputStreamReader( new FileInputStream(file)));
+	  firstline = br.readLine();
+	  if(firstline == null) {
+	    System.err.println("This file is empty...");
+	    System.exit(1);
+	  }
+	  String[] temp = firstline.split("\\s+", 0);	
+	  int n = Array.getLength(temp);
+	  if(n < 3) {
+	    System.err.println("\nError: the file must have three tab delimited columns, check line one.\n\n");
+	    System.exit(0);
+	  }
+	  try {
+	    Float.parseFloat(temp[1]);
+	    Float.parseFloat(temp[2]);
+	  }
+	  catch(Exception e5) {
+	    header = true;
+	  }
+    }
+    catch(FileNotFoundException e) {
+      System.err.println("The file " + file + " does not seem to exist...");
+      System.exit(1);
+    }
+	catch(IOException e2) {
+	  e2.printStackTrace(System.err);
+	  System.exit(1);
+	}
+	finally {
+	  closeQuietly(br);
+	}
+	//int linecounter = 0;
 	Hashtable<String, Integer> contigs = new Hashtable<String, Integer>();
 
-        try {
-	    inFile = new FileInputStream(file);
-	    BufferedReader br = new BufferedReader(new InputStreamReader(inFile));
-	    if(header) {
-		line = br.readLine();
-		linecounter++;
+	br = null;
+	try {
+	  br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+	  if(header) {
+	    line = br.readLine();
+		//linecounter++;
+	  }
+	  int cntr = 0;
+	  while((line = br.readLine()) != null) {
+	    String[] temp = line.split("\\s+", 0);
+	    if(!contigs.containsKey(temp[0])) {
+	      contigs.put(temp[0], new Integer(cntr));
+	      cntr++;
 	    }
-	    int cntr = 0;
-            while((line = br.readLine()) != null) {
-		String[] temp = line.split("\\s+", 0);
-		if(!contigs.containsKey(temp[0])) {
-		    contigs.put(temp[0], new Integer(cntr));
-		    cntr++;
-		}
-	    }
-	} catch(IOException e3) {
-	    e3.printStackTrace(System.err);
-	    System.exit(1);
+	  }
 	}
-	Enumeration e = contigs.keys();
+	catch(IOException e3) {
+	  e3.printStackTrace(System.err);
+	  System.exit(1);
+	}
+	finally {
+	  closeQuietly(br);
+	}
+	
+	Enumeration<String> e = contigs.keys();
 	int cnt=0;
 	while( e.hasMoreElements() ){
-	    e.nextElement();
-	    cnt++;
+	  e.nextElement();
+	  cnt++;
 	}
 	numChromosomes = cnt;
 	String[] names = new String[cnt];
-	Enumeration e2 = contigs.keys();
+	Enumeration<String> e2 = contigs.keys();
 	while( e2.hasMoreElements() ){
-	    String tmp = (String) e2.nextElement();
-	    names[contigs.get(tmp)] = tmp;
+	  String tmp = e2.nextElement();
+	  names[contigs.get(tmp)] = tmp;
 	}
 
 	int[] probeCnt = new int[contigs.size()];
 
+	br = null;
 	try {
-            inFile = new FileInputStream(file);
-            BufferedReader br = new BufferedReader(new InputStreamReader(inFile));
-	    if(header) {
-		line = br.readLine();
-		linecounter++;
+	  br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+	  if(header) {
+	    line = br.readLine();
+	    //linecounter++;
+	  }
+	  //int flag = 0;
+	  while((line = br.readLine()) != null) {
+	    //linecounter++;
+	    //flag = 0;
+	    String[] temp = line.split("\\s+", 0);
+	    numProbes++;
+	    probeCnt[contigs.get(temp[0])]++;
+	    if(probeCnt[contigs.get(temp[0])] > maxProbes) {
+	      maxProbes = probeCnt[contigs.get(temp[0])];
 	    }
-	    int flag = 0;
-            while((line = br.readLine()) != null) {
-		linecounter++;
-		flag = 0;
-		String[] temp = line.split("\\s+", 0);
-		numProbes++;
-		probeCnt[contigs.get(temp[0])]++;
-		if(probeCnt[contigs.get(temp[0])] > maxProbes) {
-		    maxProbes = probeCnt[contigs.get(temp[0])];
-		}
-	    }
-	    inFile.close();
-	} catch(IOException e4) {
-	    e4.printStackTrace(System.err);
-	    System.exit(1);
+	  }
+	}
+	catch(IOException e4) {
+	  e4.printStackTrace(System.err);
+	  System.exit(1);
+	}
+	finally {
+	  closeQuietly(br);
 	}
 
 	answer[0] = numChromosomes;
@@ -513,7 +525,13 @@ public class ChIP_Chip_Peak_Finder {
 	return answer;
     }
 
-    public String format (long num) {
+    private static void closeQuietly(BufferedReader br) {
+      if (br != null)
+        try { br.close(); }
+        catch (IOException e) { }
+    }
+
+    public static String format (long num) {
         String s = Long.toString(num);
         String answer = "";
         String[] temp = s.split("", 0);
@@ -531,7 +549,7 @@ public class ChIP_Chip_Peak_Finder {
         return answer;
     }
 
-    public float[] Smooth (float[] input_vector, int[] location_vector, int readCnt, int max_gap) {
+    public static float[] Smooth (float[] input_vector, int[] location_vector, int readCnt, int max_gap) {
 
 	int w = max_gap;
 	int vector_length = readCnt;
@@ -856,7 +874,7 @@ public class ChIP_Chip_Peak_Finder {
 	return smoothed_vector;
     }    
     
-    public float[] LS(float[] X_vect, float[] Y_vect) {
+    public static float[] LS(float[] X_vect, float[] Y_vect) {
 	
 	int X_vect_length=Array.getLength(X_vect);
 	int Y_vect_length=Array.getLength(Y_vect);
@@ -886,7 +904,7 @@ public class ChIP_Chip_Peak_Finder {
 	return ls;
     }
 
-    public String TextBarGraph(float[] vector, String[] labels, int yResolution) {
+    public static String TextBarGraph(float[] vector, String[] labels, int yResolution) {
 	int num_bars = Array.getLength(vector);
 	float max = vector[0];
 	for(int i=0; i<num_bars; i++) {
@@ -988,22 +1006,21 @@ public class ChIP_Chip_Peak_Finder {
 	return graph;
     }
 
-    public void printUsage() {
+    public static void printUsage() {
 	    System.err.println("\n========================================USAGE============================================\n\njava -jar ChIP_Chip_Peak_Finder.jar <input file> <peaks output filename> <smoothed data output filename> <SD mult cutoff> <num consec probes> <feature max gap> <smoother max gap> [options]\n\n\n* Input file should have three tab delimited columns: 'chr', 'location', 'log ratio'\n - chr can be any string (without tabs).\n - location is an integer representing the position of the probe on the chromosome.\n - There can be a header, which also must have three tab delimited columns.\n    (Header is auto-detected as long as it doesn't look like data.)\n\nPeaks are called if <num consec probes> neighboring probes all exceed\nM + <SD mult cutoff> * SD, where M is the mean log ratio (over the entire\narray) and SD is the standard deviation of the log ratios.\n\n<feature max gap> is an integer, neighboring probes separated by more\n                  than this amount are not used in the same feature\n\n<smoother max gap> is an interger, neighboring probes separated by more\n                   than this amount are not used to smooth each other\n\nSmoothed data will be written to <smoothed data output filename>, to skip\nwriting smoothed data put 'false' for this argument.\n\n[options] (options come last):\n -gbrowse : Output files will be in gbrowse uploadable format\n -inspect : Output basic array info to stdout, including breakdown of probe distances.\n            (Alternatively: run with just one argument: the data file name.)\n\nNOTE: if you get an 'out of memory' error, try running with the option -Xmx1000m\n(put this right after the word 'java')\n==========================================================================================\n\n");
     }
 
-    public static Comparator FirstIndexComparator = new Comparator() {
-	    public int compare(Object array1, Object array2) {
-		int r=0;
-		if(((float[])array1)[0] - ((float[])array2)[0] < 0)
+    public static Comparator<float[]> FirstIndexComparator = new Comparator<float[]>() {
+	  @Override
+	  public int compare(float[] array1, float[] array2) {
+		  int r=0;
+		  if(array1[0] - array2[0] < 0)
 		    r = -1;
-		if(((float[])array1)[0] - ((float[])array2)[0] > 0)
+		  if(array1[0] - array2[0] > 0)
 		    r = 1;
-		if(((float[])array1)[0] - ((float[])array2)[0] == 0)
+		  if(array1[0] - array2[0] == 0)
 		    r = 0;
-		return r;
+		  return r;
 	    }
     };
-    
-    public static ChIP_Chip_Peak_Finder theApp;
 }
