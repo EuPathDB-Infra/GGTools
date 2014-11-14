@@ -94,7 +94,7 @@ while($mergeFLAG < $numfiles) {
 	    }
 	}
     }
-    if($entry[$argmin] =~ /\S/) {
+    if($entry[$argmin] =~ /^seq/) {
 	print OUTFILE "$entry[$argmin]\n";
     }
     &getNext1($argmin);
