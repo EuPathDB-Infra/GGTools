@@ -102,8 +102,8 @@ open(OUTFILE, ">$outfile");
 for($i=0; $i<$cnt; $i++) {
     $NL = $counts[$i]{len} / 1000;
     if($countsonly eq "false") {
-	$ucnt_normalized = int( $counts[$i]{Ucnt} / $NL / $num_reads * 10000 ) / 10000;
-	$totalcnt_normalized = int( ($counts[$i]{NUcnt}+$counts[$i]{Ucnt}) / $NL / $num_reads * 10000 ) / 10000;
+	$ucnt_normalized = eval{int( $counts[$i]{Ucnt} / $NL / $num_reads * 10000 ) / 10000};
+	$totalcnt_normalized =  eval{int( ($counts[$i]{NUcnt}+$counts[$i]{Ucnt}) / $NL / $num_reads * 10000 ) / 10000};
     } else {
 	$ucnt_normalized = $counts[$i]{Ucnt};
 	$totalcnt_normalized = $counts[$i]{NUcnt}+$counts[$i]{Ucnt};
