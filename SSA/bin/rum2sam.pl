@@ -136,9 +136,9 @@ if($uniquers eq "true") {
     if(!($a[4] =~ /^[ACGTN:+]+$/)) {
 	$flag = 1;
     }
-    if($flag == 1) {
-	die "\nERROR: in script rum2sam.pl: the first line of the file '$rum_unique_file' is misformatted,\nit does not look like a RUM output file.\n";
-    }
+#    if($flag == 1) {
+#	die "\nERROR: in script rum2sam.pl: the first line of the file '$rum_unique_file' is misformatted,\nit does not look like a RUM output file.\n";
+#    }
     open(RUMU, $rum_unique_file) or die "\nERROR: in script rum2sam.pl: cannot open the file '$rum_unique_file' for reading\n\n";
 }
 if($non_uniquers eq "true") {
@@ -164,9 +164,9 @@ if($non_uniquers eq "true") {
         $flag = 0;
     }
 
-    if($flag == 1) {
-	die "\nERROR: in script rum2sam.pl: the first line of the file '$rum_nu_file' is misformatted,\nit does not look like a RUM output file.\n";
-    }
+    #if($flag == 1) {
+#	die "\nERROR: in script rum2sam.pl: the first line of the file '$rum_nu_file' is misformatted,\nit does not look like a RUM output file.\n";
+#    }
     open(RUMNU, $rum_nu_file) or die "\nERROR: in script rum2sam.pl: cannot open the file '$rum_nu_file' for reading\n\n";
 }
 
