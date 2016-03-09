@@ -68,7 +68,6 @@ if($ARGV[3] =~ /none/ || $ARGV[3] =~ /.none./) {
 }
 $sam_outfile = $ARGV[4];
 
-
 open(INFILE, $reads_file);
 $line = <INFILE>;
 chomp($line);
@@ -136,9 +135,9 @@ if($uniquers eq "true") {
     if(!($a[4] =~ /^[ACGTN:+]+$/)) {
 	$flag = 1;
     }
-#    if($flag == 1) {
-#	die "\nERROR: in script rum2sam.pl: the first line of the file '$rum_unique_file' is misformatted,\nit does not look like a RUM output file.\n";
-#    }
+    if($flag == 1) {
+	die "\nERROR: in script rum2sam.pl: the first line of the file '$rum_unique_file' is misformatted,\nit does not look like a RUM output file.\n";
+    }
     open(RUMU, $rum_unique_file) or die "\nERROR: in script rum2sam.pl: cannot open the file '$rum_unique_file' for reading\n\n";
 }
 if($non_uniquers eq "true") {
@@ -164,9 +163,9 @@ if($non_uniquers eq "true") {
         $flag = 0;
     }
 
-    #if($flag == 1) {
-#	die "\nERROR: in script rum2sam.pl: the first line of the file '$rum_nu_file' is misformatted,\nit does not look like a RUM output file.\n";
-#    }
+    if($flag == 1) {
+	die "\nERROR: in script rum2sam.pl: the first line of the file '$rum_nu_file' is misformatted,\nit does not look like a RUM output file.\n";
+    }
     open(RUMNU, $rum_nu_file) or die "\nERROR: in script rum2sam.pl: cannot open the file '$rum_nu_file' for reading\n\n";
 }
 
@@ -328,13 +327,11 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    }
 	}
     }
-
     if($unique_mapper_found eq "true" || $non_unique_mappers_found eq "true") {
 	for($mapper=0; $mapper<$num_mappers; $mapper++) {
 	    $rum_u_forward = $FORWARD[$mapper];
 	    $rum_u_reverse = $REVERSE[$mapper];
 	    $rum_u_joined = $JOINED[$mapper];
-	    
 	    
 	    # SET THE BITSCORE
 	    
@@ -369,7 +366,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    if($rum_u_joined =~ /\S/) {
 		# FORWARD AND REVERSE MAPPED, AND THEY ARE JOINED, GATHER INFO
 		$joined = "true";
-# 		print "rum_u_joined = $rum_u_joined\n";
+ 		#print  "rum_u_joined = $rum_u_joined\n";
 		undef @piecelength;
 		@ruj = split(/\t/,$rum_u_joined);
 		$ruj[4] =~ s/://g;
@@ -427,7 +424,6 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 			}
 		    }
 		}
-		
 		$prefix_offset_upstream = $prefix_offset_upstream_current_best;
 		$suffix_offset_upstream = $suffix_offset_upstream_current_best;
 		
@@ -644,7 +640,6 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		}
 		
 	    }
-	    
 	    if($rum_u_forward =~ /\S/) {
 		# COLLECT INFO FROM FORWARD RUM RECORD
 		# note: this might be a joined read for which the surrogate forward was created above
@@ -688,11 +683,14 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 			    until($x =~ /^$y/) {
 				$x =~ s/^.//;
 				$prefix_offset_forward++;
-				if($x eq '') {
+				if($x eq '' && $Flag==1) {
 				    $Flag=0;
 				    $x = reversecomplement($forward_read);
 				    $prefix_offset_forward = 0;
+				}elsif ($x eq '' && $Flag==0){
+					$x = $y;	
 				}
+
 			    }
 			}
 		    }
@@ -753,9 +751,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		}
 	    }
 	    
-	    
 	    if($rum_u_reverse =~ /\S/) {
-		
 		# COLLECT INFO FROM REVERSE RUM RECORD
 		# note: this might be a joined read for which the surrogate forward was created above
 		
