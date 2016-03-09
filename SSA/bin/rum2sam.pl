@@ -677,22 +677,22 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    if($rum_u_forward_length < $readlength_forward) {
 			$x = $forward_read;
 			$y = $ruf[4];
-			$Flag=0;
-			while($Flag == 0) {
-			    $Flag = 1;
-			    until($x =~ /^$y/) {
+			$Flag=1;
+#			while($Flag == 0) {
+#			    $Flag = 1;
+
+                            my $hasBeenRevComp;
+			    until($x =~ /^$y/ || ($x eq '' && $hasBeenRevComp)) {
 				$x =~ s/^.//;
 				$prefix_offset_forward++;
-				if($x eq '' && $Flag==1) {
-				    $Flag=0;
+				if($x eq '') {
 				    $x = reversecomplement($forward_read);
 				    $prefix_offset_forward = 0;
-				}elsif ($x eq '' && $Flag==0){
-					$x = $y;	
+                                    $hasBeenRevComp = 1;
 				}
-
 			    }
-			}
+
+#                        }
 		    }
 		}
 		$CIGAR_f = "";
@@ -791,20 +791,22 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    if($rum_u_reverse_length < $readlength_reverse) {
 			$x = $reverse_read;
 			$y = $rur[4];
-			$Flag=0;
-			while($Flag == 0) {
-			    $Flag = 1;
-			    until($x =~ /^$y/ || $Flag == 0) {
+			$Flag=1;
+#			while($Flag == 0) {
+
+                            my $hasBeenRevComp;
+			    until($x =~ /^$y/ || ($x eq '' && $hasBeenRevComp)) {
 				$x =~ s/^.//;
 				$prefix_offset_reverse++;
 				if($x eq '') {
-				    $Flag=0;
+                                    $hasBeenRevComp = 1;
 				    $x = reversecomplement($reverse_read);
 				    $prefix_offset_reverse = 0;
 				}
 #				print " ";
 			    }
-			}
+			    $Flag = 1;
+#			}
 		    }
 		}
 #	    print "$rur[4]\n\n";
