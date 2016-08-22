@@ -68,6 +68,7 @@ if($ARGV[3] =~ /none/ || $ARGV[3] =~ /.none./) {
 }
 $sam_outfile = $ARGV[4];
 
+
 open(INFILE, $reads_file);
 $line = <INFILE>;
 chomp($line);
@@ -327,11 +328,13 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    }
 	}
     }
+
     if($unique_mapper_found eq "true" || $non_unique_mappers_found eq "true") {
 	for($mapper=0; $mapper<$num_mappers; $mapper++) {
 	    $rum_u_forward = $FORWARD[$mapper];
 	    $rum_u_reverse = $REVERSE[$mapper];
 	    $rum_u_joined = $JOINED[$mapper];
+	    
 	    
 	    # SET THE BITSCORE
 	    
@@ -366,7 +369,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 	    if($rum_u_joined =~ /\S/) {
 		# FORWARD AND REVERSE MAPPED, AND THEY ARE JOINED, GATHER INFO
 		$joined = "true";
- 		#print  "rum_u_joined = $rum_u_joined\n";
+# 		print "rum_u_joined = $rum_u_joined\n";
 		undef @piecelength;
 		@ruj = split(/\t/,$rum_u_joined);
 		$ruj[4] =~ s/://g;
@@ -424,6 +427,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 			}
 		    }
 		}
+		
 		$prefix_offset_upstream = $prefix_offset_upstream_current_best;
 		$suffix_offset_upstream = $suffix_offset_upstream_current_best;
 		
@@ -640,6 +644,7 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		}
 		
 	    }
+	    
 	    if($rum_u_forward =~ /\S/) {
 		# COLLECT INFO FROM FORWARD RUM RECORD
 		# note: this might be a joined read for which the surrogate forward was created above
@@ -677,22 +682,19 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    if($rum_u_forward_length < $readlength_forward) {
 			$x = $forward_read;
 			$y = $ruf[4];
-			$Flag=1;
-#			while($Flag == 0) {
-#			    $Flag = 1;
-
-                            my $hasBeenRevComp;
-			    until($x =~ /^$y/ || ($x eq '' && $hasBeenRevComp)) {
+			$Flag=0;
+			while($Flag == 0) {
+			    $Flag = 1;
+			    until($x =~ /^$y/) {
 				$x =~ s/^.//;
 				$prefix_offset_forward++;
 				if($x eq '') {
+				    $Flag=0;
 				    $x = reversecomplement($forward_read);
 				    $prefix_offset_forward = 0;
-                                    $hasBeenRevComp = 1;
 				}
 			    }
-
-#                        }
+			}
 		    }
 		}
 		$CIGAR_f = "";
@@ -751,7 +753,9 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		}
 	    }
 	    
+	    
 	    if($rum_u_reverse =~ /\S/) {
+		
 		# COLLECT INFO FROM REVERSE RUM RECORD
 		# note: this might be a joined read for which the surrogate forward was created above
 		
@@ -791,22 +795,20 @@ for($seqnum = $firstseqnum; $seqnum <= $lastseqnum; $seqnum++) {
 		    if($rum_u_reverse_length < $readlength_reverse) {
 			$x = $reverse_read;
 			$y = $rur[4];
-			$Flag=1;
-#			while($Flag == 0) {
-
-                            my $hasBeenRevComp;
-			    until($x =~ /^$y/ || ($x eq '' && $hasBeenRevComp)) {
+			$Flag=0;
+			while($Flag == 0) {
+			    $Flag = 1;
+			    until($x =~ /^$y/ || $Flag == 0) {
 				$x =~ s/^.//;
 				$prefix_offset_reverse++;
 				if($x eq '') {
-                                    $hasBeenRevComp = 1;
+				    $Flag=0;
 				    $x = reversecomplement($reverse_read);
 				    $prefix_offset_reverse = 0;
 				}
 #				print " ";
 			    }
-			    $Flag = 1;
-#			}
+			}
 		    }
 		}
 #	    print "$rur[4]\n\n";
