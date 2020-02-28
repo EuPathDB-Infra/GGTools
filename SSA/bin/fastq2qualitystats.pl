@@ -25,7 +25,8 @@ for(my $i=0; $i<@a; $i++) {
 #}
 
 open(INFILE, $ARGV[0]);
-my $num_seqs = 0;
+my $num_seqs_total;
+my @num_seqs;
 my @sum_of_quals;
 while(my $line = <INFILE>) {
     $line = <INFILE>;
@@ -35,19 +36,17 @@ while(my $line = <INFILE>) {
     chomp($line);
     my @a = split(//,$line);
     for(my $i=0; $i<@a; $i++) {
-      $sum_of_quals[$i] = $sum_of_quals[$i] + $qualitychar2score{$a[$i]};
-#      print "i, $sum_of_quals[$i]\n";
+      $sum_of_quals[$i] += $qualitychar2score{$a[$i]};
+      $num_seqs[$i] += 1;
     }
-    $num_seqs++;
-}
-#print "$num_seqs\n";
-my @ave_of_quals;
-for (my $i=0; $i<@sum_of_quals; $i++) {
-  $ave_of_quals[$i] = $sum_of_quals[$i] / $num_seqs;
+    $num_seqs_total++;
 }
 
-print "POSITION\tAVG_Q\tP\n";
-for (my $i=1;$i<=@ave_of_quals;$i++) {
-  my $p = 10**(-$ave_of_quals[$i-1]/10);
-  print "ave qual position $i\t$ave_of_quals[$i-1]\t$p\n";
+print "POSITION\tFRAC_READS\tAVG_Q\n";
+for (my $i=1;$i<=@num_seqs;$i++) {
+  printf("%s\t%.3f\t%.1f\n",
+    $i,
+    $num_seqs[$i-1] / $num_seqs_total,
+    $sum_of_quals[$i-1] / $num_seqs[$i-1],
+ );
 }
