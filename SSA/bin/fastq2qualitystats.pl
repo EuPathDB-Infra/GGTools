@@ -1,5 +1,4 @@
-# Written by Elisabetta Manduchi, based on a script by Greg Grant
-# University of Pennslyvania, 2010
+#!/usr/bin/env perl
 
 use strict;
 
